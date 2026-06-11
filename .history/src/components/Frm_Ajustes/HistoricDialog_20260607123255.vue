@@ -1,0 +1,318 @@
+<template>
+    <Dialog v-model:visible="visible" modal :header="'Análisis de Actividad para ' + selectedUserName"
+        :style="{ width: '1000px', height: '650px' }" class="kiwik-dialog" :dismissableMask="true">
+        <div class="reset-container">
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <i class="pi pi-calendar-times text-blue-500"></i>
+                    <div>
+                        <p>Total Registros</p>
+                        <strong>{{ stats.totalRecords }}</strong>
+
+
+
+
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="pi pi-chart-bar text-purple-500"></i>
+                    <div>
+                        <p>Media diaria</p>
+                        <strong>{{ stats.dailyAverage }}</strong>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="pi pi-clock text-green-500"></i>
+                    <div>
+                        <p>Última Actividad</p>
+                        <strong>{{ allLoadedData.length > 0 ? formatSafe(allLoadedData[0].date).split(' ')[0] : '-'
+                        }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-grid">
+                <div class="panel glass-effect">
+                    <h4 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
+                        <i class="pi pi-chart-line"></i> Tendencia de Conexiones
+                    </h4>
+                    <div class="chart-wrapper">
+                        <Chart type="line" :data="chartData" :options="chartOptions" />
+                    </div>
+                </div>
+
+                <div class="panel glass-effect">
+                    <h4 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
+                        <i class="pi pi-history"></i> Historial Reciente
+                    </h4>
+                    <div class="table-wrapper">
+
+                        <GenericDataTable :endpoint="apiUrl" ref="dataTableRef" dataKey="id"
+                            v-model:selection="selectedRow" @data-loaded="handleDataLoaded" @row-select="onRowSelect">
+
+                            <Column field="date" header="Fecha de Conexión" sortable>
+                                <template #body="slotProps">
+                                    <span class="date-badge">{{ formatSafe(slotProps.data?.date) }}</span>
+                                </template>
+                            </Column>
+                        </GenericDataTable>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kiwik-separator"></div>
+
+            <div class="flex justify-content-end">
+                <Button label="Cerrar" @click="visible = false" class="kiwik-btn-auto-right" />
+            </div>
+        </div>
+    </Dialog>
+</template>
+
+<style scoped>
+/* Stats Row */
+
+
+panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+    /* Asegura que el panel ocupe toda la altura del grid */
+    /* ... resto de tus estilos ... */
+}
+
+.table-wrapper {
+    flex-grow: 1;
+    /* Toma el espacio disponible */
+    min-height: 0;
+    /* Vital para que el flex interno no se desborde */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* Fuerza al wrapper a ocupar el espacio del panel */
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--surface-card);
+    border: 1px solid var(--surface-border);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.stat-card i {
+    font-size: 1.5rem;
+    background: var(--surface-100);
+    padding: 0.75rem;
+    border-radius: 10px;
+}
+
+.stat-card p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+}
+
+.stat-card strong {
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+/* Main Grid */
+.main-grid {
+    display: grid;
+    grid-template-columns: 1fr 0.45fr;
+    gap: 1.5rem;
+    height: 350px;
+    margin-bottom: 1rem;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface-card);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+date-badge {
+    background: var(--surface-hover);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    display: inline-block;
+}
+
+.chart-wrapper,
+
+.chart-wrapper>div {
+    width: 100% !important;
+    height: 100% !important;
+}
+</style>
+
+
+
+
+
+<script setup lang="ts">
+import { ref, nextTick } from 'vue';
+import { HelperDates } from '../../libs/HelperDates.ts';
+import GenericDataTable from '../../components/shared/GenericDataTable.vue';
+import Chart from 'primevue/chart';
+
+const stats = ref({
+    totalRecords: '0',
+    dailyAverage: '0.0'
+});
+
+const selectedUserName = ref('');
+const selectedRow = ref();
+const visible = ref(false);
+const apiUrl = ref('');
+const allLoadedData = ref<any[]>([]);
+const totalRecordsFromAPI = ref(0);
+
+const chartOptions = ref({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+});
+
+const chartData = ref({
+    labels: [] as string[],
+    datasets: [{ label: 'Conexiones', data: [] as number[], borderColor: '#3B82F6', tension: 0.3, fill: true }]
+});
+
+const onRowSelect = (event: any) => console.log("Fila:", event.data);
+
+const parseToDateObj = (dateStr: string): Date => {
+    if (!dateStr) return new Date();
+    try {
+        const parts = dateStr.split(' ');
+        const mesMap: Record<string, number> = { 'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5, 'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11 };
+        const y = parseInt(parts[2]);
+        const m = mesMap[parts[0].replace('.', '').toLowerCase()] || 0;
+        const d = parseInt(parts[1].replace(',', ''));
+        return new Date(y, m, d);
+    } catch { return new Date(); }
+};
+
+
+const handleDataLoaded = (data: any[], total: number) => {
+    console.log("--- 1. Evento data-loaded recibido ---");
+    console.log("Total registros recibidos en handleDataLoaded:", total);
+    console.log("Array completo (primeros elementos):", data.slice(0, 5));
+
+    allLoadedData.value = data;
+    totalRecordsFromAPI.value = total;
+
+    // Filtramos nulos antes de pasar a la gráfica
+    const validData = data.filter(item => item !== null);
+    console.log("--- 2. Datos filtrados para gráfica ---");
+    console.log("Registros válidos (sin nulos):", validData.length);
+
+    updateChart(validData);
+};
+
+const updateChart = (data: any[]) => {
+    console.log("--- 3. Procesando gráfica ---");
+
+    const counts: Record<string, number> = {};
+
+    data.forEach(item => {
+        if (!item.date) {
+            console.warn("Registro detectado sin fecha:", item);
+            return;
+        }
+        const key = parseToDateKey(item.date);
+        counts[key] = (counts[key] || 0) + 1;
+    });
+
+    console.log("Conteo agrupado por fecha:", counts);
+
+    const sortedDates = Object.keys(counts).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    console.log("Fechas ordenadas para etiquetas:", sortedDates);
+
+    nextTick(() => {
+        chartData.value = {
+            labels: sortedDates,
+            datasets: [{
+                ...chartData.value.datasets[0],
+                data: sortedDates.map(date => counts[date])
+            }]
+        };
+        console.log("--- 4. Gráfica actualizada con:", chartData.value.datasets[0].data, "puntos ---");
+
+        data.forEach(item => {
+            console.log("Fecha original:", item.date); // <-- ¿Qué imprime aquí?
+            const key = parseToDateKey(item.date);
+            console.log("Fecha clave extraída:", key); // <-- ¿Qué imprime aquí?
+        });
+
+    });
+};
+
+
+// Se corrige el manejo de parámetros para evitar undefined
+// Cambia esto en tu script
+
+
+
+const open = async (userId: number, userName: string) => {
+    selectedUserName.value = userName;
+    visible.value = true;
+    apiUrl.value = `https://localhost:8083/api/historicuser/${userId}`;
+
+    // 1. Llamada a estadísticas (Media y Total)
+    try {
+        const resStats = await fetch(`https://localhost:8083/api/historicuser/${userId}/stats`);
+        const data = await resStats.json();
+
+        // Aseguramos que sea un número antes de formatear
+        const total = Number(data.totalRecords);
+        const avg = Number(data.dailyAverage);
+
+        stats.value = {
+            // 'es-ES' garantiza el punto para miles y coma para decimales
+            totalRecords: new Intl.NumberFormat('es-ES').format(total),
+            dailyAverage: avg.toFixed(1).replace('.', ',') // Forzamos formato español
+        };
+    } catch (e) { console.error("Error stats", e); }
+
+
+};
+
+const formatSafe = (dateValue: string) => {
+    try { return HelperDates.formatDateFromLocale(dateValue); }
+    catch { return dateValue || 'N/A'; }
+};
+
+const parseToDateKey = (dateString: string) => {
+    if (!dateString) return '';
+    // Corregido: Dividimos el parámetro recibido, NO new Date()
+    return dateString.split('T')[0]; 
+};
+
+
+defineExpose({ open });
+</script>

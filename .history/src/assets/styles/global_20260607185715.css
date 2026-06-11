@@ -1,0 +1,149 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+html { font-size: 12px; }
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  background-image: url('/logos/wallpaper.jpg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+/* =====================================================
+   🎯 KIWIK DIALOG SYSTEM (LAYOUT CORREGIDO)
+   ===================================================== */
+
+/* Contenedor principal del diálogo */
+.kiwik-dialog.p-dialog {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Forzamos que el contenido del diálogo sea un flexbox flexible */
+.kiwik-dialog .p-dialog-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  overflow: hidden !important; /* Evita que el contenido desborde */
+  padding: 1.5rem 2rem !important;
+}
+
+/* Header */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.25rem 4rem 1.25rem 1.5rem !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  min-height: 60px;
+  flex-shrink: 0; /* El header no debe encogerse */
+}
+
+.kiwik-dialog .p-dialog-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1.25rem;
+  text-align: center;
+  flex: 1;
+}
+
+/* Botón cerrar */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute !important;
+  right: 1.25rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 36px !important;
+  height: 36px !important;
+  background-color: #f9fbe7 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  transition: all 0.2s ease;
+}
+
+.kiwik-dialog .p-dialog-header-close:hover { background-color: #B1D70E !important; }
+
+/* =====================================================
+   📊 TABLE & PAGINATOR LAYOUT
+   ===================================================== */
+
+.table-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Vital para flexbox */
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+/* La tabla ocupa el espacio flexible */
+:deep(.p-datatable) { 
+  flex: 1; 
+  min-height: 0; 
+}
+
+/* Footer (Info + Paginator) */
+.footer-container {
+  flex-shrink: 0;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.info-bar {
+  padding: 0.25rem 1rem;
+  font-size: 0.75rem;
+  color: #666;
+  border-bottom: 1px solid #f3f4f6;
+  background: #ffffff;
+}
+
+.p-paginator-sm {
+  padding: 0.5rem 1rem !important;
+  background: #f9fafb !important;
+}
+
+.p-paginator-sm :deep(.p-paginator-page),
+.p-paginator-sm :deep(.p-paginator-next),
+.p-paginator-sm :deep(.p-paginator-prev) {
+  padding: 0.2rem 0.4rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+
+/* Dropdown Compacto */
+.custom-dropdown-sm {
+  height: 1.5rem !important;
+  min-width: 4rem !important;
+  display: flex;
+  align-items: center;
+  border-radius: 4px !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.custom-dropdown-sm :deep(.p-dropdown-label) {
+  padding: 0 0.5rem !important;
+  font-size: 0.8rem;
+  line-height: 1.5rem;
+  color: #374151;
+}
+
+.custom-dropdown-sm :deep(.p-dropdown-trigger) {
+  width: 1.5rem !important;
+  color: #6b7280;
+}
+
+.custom-dropdown-sm:hover { border-color: #3b82f6 !important; }

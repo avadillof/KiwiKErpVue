@@ -1,0 +1,69 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+/* Badge circular premium con colores KiwiK */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute !important;
+  right: 1.5rem;
+  top: 1.5rem;
+  
+  width: 36px;
+  height: 36px;
+  
+  /* Fondo verde muy suave */
+  background-color: #f9fbe7 !important; 
+  border-radius: 50% !important;
+  
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  
+  transition: all 0.3s ease;
+  border: 1px solid #dce8a0; /* Borde sutil del color corporativo */
+}
+
+/* Color de la X (icono) en verde principal */
+.kiwik-dialog .p-dialog-header-close .p-icon {
+  color: #B1D70E !important;
+  font-weight: bold;
+}
+
+/* Efecto al pasar el ratón (Hover) */
+.kiwik-dialog .p-dialog-header-close:hover {
+  background-color: #B1D70E !important; /* Fondo verde sólido */
+  transform: rotate(90deg) scale(1.1);
+}
+
+.kiwik-dialog .p-dialog-header-close:hover .p-icon {
+  color: #ffffff !important; /* X blanca al pasar el ratón */
+}
+
+
+

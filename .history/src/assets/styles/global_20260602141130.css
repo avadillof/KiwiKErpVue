@@ -1,0 +1,73 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+
+
+
+
+/* Cabecera principal: Flexbox para alinear elementos */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.5rem;
+  background: white;
+  position: relative;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Mantiene el título centrado */
+}
+
+/* El título: Ocupa el espacio central, le damos margen para que no toque nada */
+.kiwik-dialog .p-dialog-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1.25rem;
+  margin: 0 2rem; /* Margen para asegurar separación de la X */
+}
+
+/* LA CLAVE: Forzamos la X a la derecha absoluta */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute !important;
+  right: 1.5rem; /* Separación desde el borde derecho */
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0 !important; /* Eliminamos márgenes que puedan venir del framework */
+}
+
+/* La línea verde KiwiK debajo del borde gris */
+.kiwik-dialog .p-dialog-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; /* Se ajusta a la posición bajo la línea gris */
+  left: 35%;
+  right: 35%;
+  height: 3px;
+  background: #B1D70E;
+  border-radius: 2px;
+}

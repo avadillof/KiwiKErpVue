@@ -1,0 +1,93 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+/* 1. Contenedor principal: Oculta cualquier desbordamiento */
+.kiwik-dialog .p-dialog {
+  border-radius: 24px !important;
+  overflow: hidden !important;
+}
+
+/* 2. Header: Usa flexbox y asegura que los bordes superiores sean redondos */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.25rem 1.5rem;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* IMPORTANTE: Esto evita que el fondo del header oculte el borde del diálogo */
+  border-top-left-radius: 24px !important;
+  border-top-right-radius: 24px !important;
+}
+
+/* 3. Título: Protegido por márgenes laterales */
+.kiwik-dialog .p-dialog-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1.25rem;
+  margin: 0 3.5rem; /* Margen amplio para evitar colisión con la X */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 4. Badge circular para la X: Anclado a la derecha */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute !important;
+  right: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  
+  width: 36px;
+  height: 36px;
+  background-color: #f3f4f6 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+}
+
+/* 5. Línea decorativa verde KiwiK */
+.kiwik-dialog .p-dialog-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 35%;
+  right: 35%;
+  height: 3px;
+  background: #B1D70E;
+  border-radius: 2px;
+}
+
+
+

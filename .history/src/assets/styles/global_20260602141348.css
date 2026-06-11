@@ -1,0 +1,64 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+
+
+
+
+/* Cabecera principal: Flexbox para alinear elementos */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.5rem;
+  background: white;
+  position: relative;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Mantiene el título centrado */
+}
+
+/* Corrección definitiva para las esquinas superiores del Dialog */
+.kiwik-dialog .p-dialog {
+  border-radius: 24px !important; /* Mismo radio que el resto de tu app */
+  overflow: hidden !important;    /* Obliga a los hijos a no salirse */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Asegurar que el header no se escape del contenedor padre */
+.kiwik-dialog .p-dialog-header {
+  border-top-left-radius: 24px !important;
+  border-top-right-radius: 24px !important;
+  /* Mantenemos tus estilos anteriores aquí debajo */
+}
+
+/* Si el botón de cerrar o la línea siguen causando problemas, esto los recorta */
+.kiwik-dialog {
+  border-radius: 24px !important;
+}

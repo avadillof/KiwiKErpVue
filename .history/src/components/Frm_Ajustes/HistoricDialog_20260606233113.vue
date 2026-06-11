@@ -1,0 +1,102 @@
+<template>
+    <Dialog v-model:visible="visible" modal header="Análisis de Actividad y Conexiones" :style="{ width: '800px' }"
+        class="kiwik-dialog">
+
+        <div class="reset-container">
+            <div class="activity-chart mb-4">
+                <h5 class="text-center">Actividad mensual del usuario</h5>
+                <div style="height: 150px;">
+                    <Chart type="line" :data="chartData" :options="chartOptions" />
+                </div>
+            </div>
+
+            <div class="kiwik-separator mb-3"></div>
+
+            <GenericDataTable :key="apiUrl" :endpoint="apiUrl" scrollHeight="300px" @data-loaded="handleDataLoaded">
+                <Column field="date" header="Fecha y Hora">
+                    <template #body="slotProps">
+                        <span class="text-sm font-medium">{{ formatSafe(slotProps.data?.date) }}</span>
+                    </template>
+                </Column>
+                <Column field="userName" header="Usuario">
+                    <template #body="slotProps">
+                        <span class="text-sm">{{ slotProps.data?.userName }}</span>
+                    </template>
+                </Column>
+            </GenericDataTable>
+
+            <div class="flex justify-content-end mt-3">
+                <Button label="Cerrar" size="small" @click="visible = false" />
+            </div>
+        </div>
+    </Dialog>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { HelperDates } from '../../libs/HelperDates.ts';
+import GenericDataTable from '../../components/shared/GenericDataTable.vue';
+
+const visible = ref(false);
+const apiUrl = ref('');
+
+interface ConnectionLog {
+    id: number;
+    date: string;
+    userName: string;
+}
+
+// Se ejecuta cuando la tabla carga nuevos datos
+const handleDataLoaded = (data: ConnectionLog[]) => {
+    console.log("LOG [handleDataLoaded]: Datos recibidos del componente:", data);
+    // Aquí puedes realizar validaciones si lo necesitas, pero sin actualizar gráficas
+};
+
+const open = (userId: number) => {
+    apiUrl.value = `https://localhost:8083/api/historicuser/${userId}`;
+    visible.value = true;
+};
+
+const formatSafe = (dateValue: string) => {
+    if (!dateValue) return 'Fecha no disponible';
+    if (typeof dateValue === 'string' && dateValue.includes(',')) return dateValue;
+    try {
+        return HelperDates.formatDateFromLocale(dateValue);
+    } catch (e) {
+        return dateValue;
+    }
+};
+
+defineExpose({ open });
+</script>
+
+<template>
+    <Dialog v-model:visible="visible" modal header="Análisis de Actividad y Conexiones" 
+            :style="{ width: '800px' }" class="kiwik-dialog">
+
+        <div class="reset-container">
+            <GenericDataTable :key="apiUrl" :endpoint="apiUrl" scrollHeight="300px" @data-loaded="handleDataLoaded">
+                <Column field="date" header="Fecha y Hora">
+                    <template #body="slotProps">
+                        <span class="text-sm font-medium">{{ formatSafe(slotProps.data?.date) }}</span>
+                    </template>
+                </Column>
+                <Column field="userName" header="Usuario">
+                    <template #body="slotProps">
+                        <span class="text-sm">{{ slotProps.data?.userName }}</span>
+                    </template>
+                </Column>
+            </GenericDataTable>
+
+            <div class="flex justify-content-end mt-3">
+                <Button label="Cerrar" size="small" @click="visible = false" />
+            </div>
+        </div>
+    </Dialog>
+</template>
+
+<style scoped>
+.reset-container {
+    padding: 1rem;
+}
+</style>

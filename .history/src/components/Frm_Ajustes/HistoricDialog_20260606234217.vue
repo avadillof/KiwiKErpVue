@@ -1,0 +1,211 @@
+<template>
+    <Dialog v-model:visible="visible" modal header="Análisis de Actividad y Conexiones" :style="{ width: '800px' }"
+        class="kiwik-dialog">
+
+        <div class="reset-container">
+            <div class="activity-chart mb-4">
+                <h5 class="text-center">Actividad mensual del usuario</h5>
+                <div style="height: 150px;">
+                    <Chart type="line" :data="chartData" :options="chartOptions" />
+                </div>
+            </div>
+
+            <div class="kiwik-separator mb-3"></div>
+
+            <GenericDataTable :key="apiUrl" :endpoint="apiUrl" scrollHeight="300px" @data-loaded="handleDataLoaded">
+                <Column field="date" header="Fecha y Hora">
+                    <template #body="slotProps">
+                        <span class="text-sm font-medium">{{ formatSafe(slotProps.data?.date) }}</span>
+                    </template>
+                </Column>
+                <Column field="userName" header="Usuario">
+                    <template #body="slotProps">
+                        <span class="text-sm">{{ slotProps.data?.userName }}</span>
+                    </template>
+                </Column>
+            </GenericDataTable>
+
+            <div class="flex justify-content-end mt-3">
+                <Button label="Cerrar" size="small" @click="visible = false" />
+            </div>
+        </div>
+    </Dialog>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { HelperDates } from '../../libs/HelperDates.ts';
+import GenericDataTable from '../../components/shared/GenericDataTable.vue';
+
+import Chart from 'primevue/chart';
+
+const visible = ref(false);
+const apiUrl = ref('');
+// Almacenamos todos los registros cargados para que la gráfica tenga contexto global
+const allLoadedData = ref<ConnectionLog[]>([]);
+
+interface ConnectionLog {
+    id: number;
+    date: string;
+    userName: string;
+}
+
+interface ChartData {
+    labels: (string | number)[];
+    datasets: {
+        label: string;
+        data: number[];
+        backgroundColor: string;
+    }[];
+}
+
+const chartOptions = ref({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: {
+            ticks: {
+                autoSkip: false, // Importante: muestra TODAS las fechas (01, 02, etc.)
+                maxRotation: 45
+            }
+        },
+        y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+        }
+    }
+});
+
+const chartData = ref<ChartData>({
+    labels: Array.from({ length: 31 }, (_, i) => i + 1),
+    datasets: [{
+        label: 'Conexiones',
+        data: new Array(31).fill(0),
+        backgroundColor: '#3B82F6'
+    }]
+});
+
+// Esta función procesa los datos y actualiza la gráfica
+const updateChart = (data: ConnectionLog[]) => {
+    if (data.length === 0) return;
+
+    // 1. Agrupamos los datos existentes
+    const countsMap: Record<string, number> = {};
+    
+    data.forEach((item: ConnectionLog) => {
+        try {
+            // Extraemos los componentes de tu fecha: "jun. 06, 2026..."
+            const parts = item.date.split(' ');
+            const mesStr = parts[0].replace('.', '').toLowerCase();
+            const diaStr = parts[1].replace(',', '').padStart(2, '0');
+            const anioStr = parts[2];
+
+            const meses: Record<string, string> = { 
+                'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 'may': '05', 'jun': '06', 
+                'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12' 
+            };
+            
+            const dateKey = `${anioStr}-${meses[mesStr]}-${diaStr}`;
+            countsMap[dateKey] = (countsMap[dateKey] || 0) + 1;
+        } catch (e) {
+            console.error("Error procesando fecha:", item.date);
+        }
+    });
+
+    // 2. Ordenamos las fechas existentes para identificar el rango total
+    const sortedDates = Object.keys(countsMap).sort();
+    const startDate = new Date(sortedDates[0]);
+    const endDate = new Date(sortedDates[sortedDates.length - 1]);
+
+    // 3. Generamos el array completo de días con ceros para los huecos
+    const finalLabels: string[] = [];
+    const finalData: number[] = [];
+    
+    let currentDate = new Date(startDate);
+    
+    // Mientras la fecha actual sea menor o igual a la última encontrada
+    while (currentDate <= endDate) {
+        const key = currentDate.toISOString().split('T')[0]; // Formato "YYYY-MM-DD"
+        
+        // Formato para la etiqueta: "DD/MM"
+        const [y, m, d] = key.split('-');
+        finalLabels.push(`${d}/${m}`);
+        
+        // Si no hay datos para este día, el valor será 0
+        finalData.push(countsMap[key] || 0);
+        
+        // Sumamos un día
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // 4. Actualizamos el gráfico
+    chartData.value = {
+        labels: finalLabels,
+        datasets: [{
+            ...chartData.value.datasets[0],
+            data: finalData
+        }]
+    };
+};
+// Se ejecuta cuando la tabla carga nuevos datos (Asegúrate de conectar este evento en el template)
+const handleDataLoaded = (data: ConnectionLog[]) => {
+    console.log("LOG [handleDataLoaded]: Datos recibidos del componente:", data);
+
+    if (!data || data.length === 0) {
+        console.warn("LOG [handleDataLoaded]: Los datos recibidos están vacíos o son nulos.");
+        return;
+    }
+
+    allLoadedData.value = [...allLoadedData.value, ...data];
+    console.log("LOG [handleDataLoaded]: Acumulador total:", allLoadedData.value);
+
+    updateChart(allLoadedData.value);
+};
+
+const open = (userId: number) => {
+    // Reseteamos datos al abrir
+    allLoadedData.value = [];
+    chartData.value.datasets[0].data = new Array(31).fill(0);
+
+    apiUrl.value = `https://localhost:8083/api/historicuser/${userId}`;
+    visible.value = true;
+};
+
+const formatSafe = (dateValue: string) => {
+    if (!dateValue) return 'Fecha no disponible';
+    if (typeof dateValue === 'string' && dateValue.includes(',')) return dateValue;
+    try {
+        return HelperDates.formatDateFromLocale(dateValue);
+    } catch (e) {
+        return dateValue;
+    }
+};
+
+defineExpose({ open });
+</script>
+
+<style scoped>
+/* Estas clases aseguran que el estilo sea idéntico al de tus otros diálogos */
+.reset-container {
+    padding: 1rem;
+}
+
+.reset-header {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.icon-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--primary-50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+}
+</style>

@@ -1,0 +1,70 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+
+
+
+
+/* Forzar que el contenedor principal respete el redondeo */
+/* Estilos para el header del Dialog */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.5rem;
+  background: white;
+  position: relative;
+  border-bottom: 1px solid #e5e7eb; /* ESTA ES LA LÍNEA GRIS CLARITA */
+  justify-content: center; /* Centra el título */
+}
+
+/* El título */
+.kiwik-dialog .p-dialog-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1.25rem;
+}
+
+/* La línea verde KiwiK (Acento corporativo) */
+.kiwik-dialog .p-dialog-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; /* Se sitúa justo debajo del borde gris */
+  left: 35%;
+  right: 35%;
+  height: 3px;
+  background: #B1D70E;
+  border-radius: 2px;
+}
+
+/* Ajuste de la X de cerrar para que no moleste */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+}

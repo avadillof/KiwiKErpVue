@@ -1,0 +1,70 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+/* Cabecera del Dialog con Flexbox estructurado */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.25rem 1.5rem;
+  background: white;
+  position: relative;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Centra el título en el eje X */
+  min-height: 60px;
+}
+
+/* El título se asegura de no invadir el espacio de la X */
+.kiwik-dialog .p-dialog-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1.25rem;
+  flex: 0 1 auto; /* Permite que el texto se encoja si es necesario */
+  margin: 0 3rem;  /* ESPACIO DE SEGURIDAD: 3rem a cada lado para evitar choque */
+}
+
+/* El Badge de cierre (la X) */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute !important;
+  right: 1.5rem; 
+  top: 50%;
+  transform: translateY(-50%);
+  
+  width: 36px; /* Tamaño del círculo */
+  height: 36px;
+  background-color: #f3f4f6 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+
+

@@ -1,0 +1,73 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+
+
+
+
+/* Corrección de la cabecera del Dialog */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.25rem 1.5rem; /* Padding equilibrado */
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Mantiene título y botón separados */
+  position: relative;
+  background: white;
+}
+
+/* Forzamos el título a estar centrado y dejamos espacio al botón */
+.kiwik-dialog .p-dialog-title {
+  flex-grow: 1;
+  text-align: center;
+  font-weight: 700;
+  color: #333;
+  margin-right: 2rem; /* Espacio extra para que la X no lo pise */
+}
+
+/* Alineación precisa del botón de cierre */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+/* La línea verde decorativa */
+.kiwik-dialog .p-dialog-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  right: 25%;
+  height: 3px;
+  background: #B1D70E;
+  border-radius: 2px;
+}

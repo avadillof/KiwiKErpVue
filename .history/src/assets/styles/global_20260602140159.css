@@ -1,0 +1,65 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+
+
+
+
+/* Esto hace que el header sea igual en todos los diálogos */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+  border-bottom: none;
+  background: white;
+  justify-content: center; /* Centra el título */
+  position: relative;
+}
+
+.kiwik-dialog .p-dialog-title {
+  font-weight: 700;
+  color: #333333;
+  font-size: 1.25rem;
+}
+
+/* La línea verde decorativa (la marca KiwiK) */
+.kiwik-dialog .p-dialog-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 30%;
+  right: 30%;
+  height: 3px;
+  background: #B1D70E; /* Tu color corporativo */
+  border-radius: 2px;
+}
+
+/* Espaciado interno general */
+.kiwik-dialog .p-dialog-content {
+  padding: 1.5rem;
+}

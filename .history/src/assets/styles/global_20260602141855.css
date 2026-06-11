@@ -1,0 +1,102 @@
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+/* Forzamos el redondeo del contenedor raíz del diálogo */
+/* 1. Contenedor del Dialog */
+.kiwik-dialog.p-dialog {
+  border-radius: 24px !important;
+  overflow: hidden !important;
+}
+
+/* 2. Header: Espacio reservado para el badge */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.25rem 4rem 0.5rem 4rem !important; /* MÁS ESPACIO LATERAL */
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  border-top-left-radius: 24px !important;
+  border-top-right-radius: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  min-height: 60px;
+}
+
+/* 3. Título: Limitado para que no toque la X */
+.kiwik-dialog .p-dialog-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%; /* NUNCA pasará del 70% del ancho */
+  text-align: center;
+}
+
+/* 4. Badge circular de la X */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute !important;
+  right: 1.25rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  
+  width: 36px !important;
+  height: 36px !important;
+  background-color: #f9fbe7 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99 !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* 5. Asegurar que el icono (la X) esté centrado dentro del círculo */
+.kiwik-dialog .p-dialog-header-close .p-icon {
+  color: #B1D70E !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* 6. Línea verde decorativa (la dejamos centrada debajo) */
+.kiwik-dialog .p-dialog-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 35%;
+  right: 35%;
+  height: 3px;
+  background: #B1D70E;
+  border-radius: 2px;
+}
+
+
