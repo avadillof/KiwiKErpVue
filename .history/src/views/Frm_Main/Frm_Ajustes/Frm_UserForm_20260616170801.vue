@@ -197,7 +197,7 @@ const open = async (user: UserFormData | null = null) => {
             severity: 'error',
             summary: 'Error',
             detail: 'No se pudieron cargar los datos necesarios.',
-            life: companyStore.companyInfo.toastDuration ?? 100
+            life: 3000
         });
     }
 };
@@ -216,7 +216,7 @@ const save = async () => {
             severity: 'warn',
             summary: 'Campos incompletos',
             detail: 'El código, nombre, email, rol y fecha de alta son obligatorios.',
-            life: companyStore.companyInfo.toastDuration ?? 100
+            life: 3000
         });
         return;
     }
@@ -255,7 +255,7 @@ const save = async () => {
         if (status === 409) {
             toast.add({ severity: 'warn', summary: 'Atención', detail: errorMessage, life: companyStore.companyInfo.toastDuration ?? 100 });
         } else {
-            toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: companyStore.companyInfo.toastDuration ?? 100 });
+            toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: 5000 });
         }
     }
 };

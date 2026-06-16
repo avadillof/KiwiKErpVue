@@ -216,7 +216,7 @@ const save = async () => {
             severity: 'warn',
             summary: 'Campos incompletos',
             detail: 'El código, nombre, email, rol y fecha de alta son obligatorios.',
-            life: companyStore.companyInfo.toastDuration ?? 100
+            life: 3000
         });
         return;
     }

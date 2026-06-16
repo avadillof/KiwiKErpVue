@@ -197,7 +197,7 @@ const open = async (user: UserFormData | null = null) => {
             severity: 'error',
             summary: 'Error',
             detail: 'No se pudieron cargar los datos necesarios.',
-            life: companyStore.companyInfo.toastDuration ?? 100
+            life: 3000
         });
     }
 };
@@ -216,7 +216,7 @@ const save = async () => {
             severity: 'warn',
             summary: 'Campos incompletos',
             detail: 'El código, nombre, email, rol y fecha de alta son obligatorios.',
-            life: companyStore.companyInfo.toastDuration ?? 100
+            life: 3000
         });
         return;
     }

@@ -98,12 +98,11 @@ import Tooltip from 'primevue/tooltip';
 const toast = useToast(); // Inicializa el hook
 const visible = ref(false);
 const vTooltip = Tooltip;
-import { storeToRefs } from 'pinia'; // Importamos esto
 import { useCompanyStore } from '../../../stores/companyStore';
 
 
 const companyStore = useCompanyStore();
-const { companyInfo: formDataCompany } = storeToRefs(companyStore);
+const { companyInfo: formData1 } = storeToRefs(companyStore);
 
 const formData = ref<UserFormData>({
     pkid: 0,
@@ -197,7 +196,7 @@ const open = async (user: UserFormData | null = null) => {
             severity: 'error',
             summary: 'Error',
             detail: 'No se pudieron cargar los datos necesarios.',
-            life: companyStore.companyInfo.toastDuration ?? 100
+            life: 3000
         });
     }
 };
@@ -216,7 +215,7 @@ const save = async () => {
             severity: 'warn',
             summary: 'Campos incompletos',
             detail: 'El código, nombre, email, rol y fecha de alta son obligatorios.',
-            life: companyStore.companyInfo.toastDuration ?? 100
+            life: 3000
         });
         return;
     }
@@ -244,7 +243,7 @@ const save = async () => {
     // 4. Envío al servidor
     try {
         await axios.post(`${import.meta.env.VITE_API_URL}/WebSaveUser`, dataToSend);
-        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario guardado correctamente', life: companyStore.companyInfo.toastDuration ?? 100 });
+        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario guardado correctamente', life: companyStore.companyInfo.toastDuration });
         visible.value = false;
         emit('saved');
     } catch (error: any) {
@@ -253,9 +252,9 @@ const save = async () => {
 
         // Si es un conflicto (409), mostramos el mensaje específico que viene del back
         if (status === 409) {
-            toast.add({ severity: 'warn', summary: 'Atención', detail: errorMessage, life: companyStore.companyInfo.toastDuration ?? 100 });
+            toast.add({ severity: 'warn', summary: 'Atención', detail: errorMessage, life: 5000 });
         } else {
-            toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: companyStore.companyInfo.toastDuration ?? 100 });
+            toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: 5000 });
         }
     }
 };
