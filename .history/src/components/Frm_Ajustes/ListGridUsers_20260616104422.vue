@@ -2,12 +2,16 @@
   <div class="card" style="height: 500px; display: flex; flex-direction: column;">
     <Toolbar class="mb-3">
       <template #start>
-        <Button label="Nuevo Usuario" icon="pi pi-plus" size="small" variant="text" outlined @click="userFormRef.open(null)" />
+        <Button label="Nuevo Usuario" icon="pi pi-plus" size="small" variant="text" outlined @click="emitEdit(null)" />
       </template>
       <template #end>
 
       </template>
     </Toolbar>
+
+
+
+
 
 
     <GenericDataTable style="min-height: 400px;" ref="tableRef" dataKey="userKyId" :endpoint="apiUrl"
@@ -81,7 +85,6 @@
   </div>
 
   <HistoricDialog ref="historicDialogRef" />
-  <Frm_UserForm ref="userFormRef" @saved="refreshTable" />
 
 </template>
 
@@ -96,7 +99,7 @@ import { HelperDates } from '../../libs/HelperDates';
 import { HelperString } from '../../libs/HelperString';
 import HistoricDialog from './Dg_HitoricUserConnections.vue';
 import type { MenuItem } from 'primevue/menuitem';
-import Frm_UserForm from '../../views/Frm_Main/Frm_Ajustes/Frm_UserForm.vue';
+import Frm_UserForm from './Frm_UserForm.vue';
 
 const userSelected = ref<User | null>(null);
 const historicDialogRef = ref();
@@ -106,7 +109,7 @@ const menuOptionRegistro = ref();
 const apiUrl = ref('WebGetUsers');
 
 const tableRef = ref<any>(null);
-const userFormRef = ref();
+
 
 type User = {
   pkid: number;
@@ -118,7 +121,7 @@ type User = {
 
 
 const menuItems = ref([
-  { label: 'Editar', icon: 'pi pi-pencil', command: () =>userFormRef.value.open(userSelected.value) },
+  { label: 'Editar', icon: 'pi pi-pencil', command: () => emit('edit', userSelected.value) },
   {
     label: 'Historial Conexiones',
     icon: 'pi pi-history',

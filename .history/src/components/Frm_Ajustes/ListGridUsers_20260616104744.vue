@@ -10,6 +10,10 @@
     </Toolbar>
 
 
+
+
+
+
     <GenericDataTable style="min-height: 400px;" ref="tableRef" dataKey="userKyId" :endpoint="apiUrl"
       :showPaginator="true" :filterable="true" selectionMode="single" v-model:selection="userSelected"
       @row-select="handleRowSelect" @data-loaded="handleDataLoaded" :showActions="true">
@@ -118,7 +122,7 @@ type User = {
 
 
 const menuItems = ref([
-  { label: 'Editar', icon: 'pi pi-pencil', command: () =>userFormRef.value.open(userSelected.value) },
+  { label: 'Editar', icon: 'pi pi-pencil', command: () =>userFormRef.value.open(userSelected.value); },
   {
     label: 'Historial Conexiones',
     icon: 'pi pi-history',

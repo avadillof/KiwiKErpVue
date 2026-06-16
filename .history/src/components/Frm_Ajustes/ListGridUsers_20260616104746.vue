@@ -10,6 +10,10 @@
     </Toolbar>
 
 
+
+
+
+
     <GenericDataTable style="min-height: 400px;" ref="tableRef" dataKey="userKyId" :endpoint="apiUrl"
       :showPaginator="true" :filterable="true" selectionMode="single" v-model:selection="userSelected"
       @row-select="handleRowSelect" @data-loaded="handleDataLoaded" :showActions="true">

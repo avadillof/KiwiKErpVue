@@ -2,12 +2,16 @@
   <div class="card" style="height: 500px; display: flex; flex-direction: column;">
     <Toolbar class="mb-3">
       <template #start>
-        <Button label="Nuevo Usuario" icon="pi pi-plus" size="small" variant="text" outlined @click="userFormRef.open(null)" />
+        <Button label="Nuevo Usuario" icon="pi pi-plus" size="small" variant="text" outlined @click="emitEdit(null)" />
       </template>
       <template #end>
 
       </template>
     </Toolbar>
+
+
+
+
 
 
     <GenericDataTable style="min-height: 400px;" ref="tableRef" dataKey="userKyId" :endpoint="apiUrl"
@@ -82,7 +86,7 @@
 
   <HistoricDialog ref="historicDialogRef" />
   <Frm_UserForm ref="userFormRef" @saved="refreshTable" />
-
+  
 </template>
 
 
@@ -118,7 +122,7 @@ type User = {
 
 
 const menuItems = ref([
-  { label: 'Editar', icon: 'pi pi-pencil', command: () =>userFormRef.value.open(userSelected.value) },
+  { label: 'Editar', icon: 'pi pi-pencil', command: () => emit('edit', userSelected.value) },
   {
     label: 'Historial Conexiones',
     icon: 'pi pi-history',
