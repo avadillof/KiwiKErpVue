@@ -6,22 +6,12 @@
 
             <div class="col-left flex flex-column align-items-center pt-2">
                 <div class="relative">
-
-
-
-
                     <div class="border-circle overflow-hidden border-3 shadow-2 flex align-items-center justify-content-center"
                         style="width: 120px; height: 120px; background: #f8f9fa; border-color: var(--primary-color);">
-
-                        <img v-if="formData.profilePhoto && formData.profilePhoto.startsWith('data:')"
-                            :src="formData.profilePhoto" class="w-full h-full object-cover" />
-
-                        <img v-else-if="formData.pkid > 0 && formData.profilePhoto !== 'ERROR'"
-                            :src="getProfilePhotoUrl()" class="w-full h-full object-cover" @error="handleImageError" />
-
+                        <img v-if="formData.profilePhoto" :src="formData.profilePhoto"
+                            class="w-full h-full object-cover" />
                         <i v-else class="pi pi-user text-5xl text-gray-300"></i>
                     </div>
-
                     <Button icon="pi pi-camera" rounded class="absolute bottom-0 right-0 p-2" @click="openCamera"
                         severity="primary" v-tooltip.left="'Cambiar foto'" />
                 </div>
@@ -82,9 +72,9 @@
 
     <Dialog v-model:visible="cameraVisible" modal header="Capturar Foto" :style="{ width: '400px' }"
         :dismissableMask="true" class="kiwik-dialog" @hide="stopCamera">
-
-        <div class="flex flex-column" v-if="cameraVisible"> <video ref="videoRef" autoplay playsinline
-                class="w-full border-round shadow-2" style="background: #000; min-height: 250px;"></video>
+        <div class="flex flex-column gap-3">
+            <video ref="videoRef" autoplay playsinline class="w-full border-round shadow-2"
+                style="background: #000; min-height: 250px;"></video>
 
             <div class="kiwik-separator"></div>
 
@@ -92,6 +82,17 @@
                 <Button icon="pi pi-camera" label="Capturar Foto" @click="takePhoto" />
             </div>
         </div>
+
+            <div class="flex flex-column">
+                <video ref="videoRef" autoplay playsinline class="w-full border-round shadow-2"
+                    style="background: #000; min-height: 250px;"></video>
+
+                <div class="kiwik-separator"></div>
+
+                <div class="flex justify-content-end">
+                    <Button icon="pi pi-camera" label="Capturar Foto" @click="takePhoto" />
+                </div>
+            </div>
     </Dialog>
 </template>
 
@@ -117,9 +118,10 @@ import Tooltip from 'primevue/tooltip';
 import { storeToRefs } from 'pinia'; // Importamos esto
 import { useCompanyStore } from '../../../stores/companyStore';
 
-const emit = defineEmits(['saved']);
+
+
 const toast = useToast(); // Inicializa el hook
-const visible = ref(false); const vTooltip = Tooltip;
+const visible = ref(false);const vTooltip = Tooltip;
 const companyStore = useCompanyStore();
 const { companyInfo: formDataCompany } = storeToRefs(companyStore);
 const videoRef = ref<HTMLVideoElement | null>(null);
@@ -135,12 +137,10 @@ const formData = ref<UserFormData>({
     active: true,
     pin: '',
     userDtDateUp: null,
-    profilePhoto: undefined
+    profilePhoto: null,
 
 
 });
-
-const activeStream = ref<MediaStream | null>(null);
 
 
 interface UserFormData {
@@ -153,9 +153,7 @@ interface UserFormData {
     active: boolean;
     pin: string;
     userDtDateUp: Date | null;
-    profilePhoto: string | undefined; // Guardará el base64
-
-
+    profilePhoto: string | null; // Guardará el base64
 }
 
 
@@ -200,7 +198,7 @@ const open = async (user: UserFormData | null = null) => {
                 pin: user.pin || '',
                 userDtDateUp: user.userDtDateUp ? new Date(user.userDtDateUp) : new Date(),
                 groupKyId: Number(user.groupKyId),
-                profilePhoto: user.profilePhoto || undefined
+                profilePhoto: user.profilePhoto || null
             };
         } else {
             // Reset limpio
@@ -213,7 +211,7 @@ const open = async (user: UserFormData | null = null) => {
                 groupKyId: 0,
                 active: true,
                 pin: '',
-                profilePhoto: undefined,
+                profilePhoto: null,
                 userDtDateUp: null
 
             };
@@ -307,7 +305,15 @@ const generateCode = async () => {
     }
 };
 
-
+const openCamera = async () => {
+    cameraVisible.value = true;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.value) videoRef.value.srcObject = stream;
+    } catch (err) {
+        console.error("Error al acceder a la cámara:", err);
+    }
+};
 
 const takePhoto = () => {
 
@@ -340,54 +346,6 @@ const takePhoto = () => {
     }
 };
 
-
-
-const openCamera = async () => {
-    cameraVisible.value = true;
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        activeStream.value = stream; // Guardamos el stream
-        if (videoRef.value) {
-            videoRef.value.srcObject = stream;
-        }
-    } catch (err) {
-        console.error("Error al acceder a la cámara:", err);
-    }
-};
-
-
-const getProfilePhotoUrl = () => {
-    if (formData.value.pkid > 0) {
-
-        const timestamp = new Date().getTime();
-        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
-
-
-    }
-    return undefined; // Si es usuario nuevo, no hay pkid aún
-};
-
-
-const stopCamera = () => {
-    // Detener y liberar TODOS los tracks del stream activo
-    if (activeStream.value) {
-        activeStream.value.getTracks().forEach(track => {
-            track.stop();
-            track.enabled = false;
-        });
-        activeStream.value = null;
-    }
-
-    // Limpiar el componente de video
-    if (videoRef.value) {
-        videoRef.value.srcObject = null;
-    }
-};
-
-const handleImageError = (event: Event) => {
-    // Marcamos como 'ERROR' para que el v-else-if de la imagen la oculte
-    formData.value.profilePhoto = 'ERROR';
-};
 
 defineExpose({ open });
 </script>

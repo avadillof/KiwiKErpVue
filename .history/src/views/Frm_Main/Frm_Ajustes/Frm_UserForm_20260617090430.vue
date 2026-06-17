@@ -358,11 +358,9 @@ const openCamera = async () => {
 
 const getProfilePhotoUrl = () => {
     if (formData.value.pkid > 0) {
-
-        const timestamp = new Date().getTime();
-        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
-
-
+        // Esta es la ruta que configuraste en tu ResourceHandler
+        // El timestamp (?t=...) es vital para que al cambiar la foto se refresque la imagen
+        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${new Date().getTime()}`;
     }
     return undefined; // Si es usuario nuevo, no hay pkid aún
 };
@@ -386,7 +384,7 @@ const stopCamera = () => {
 
 const handleImageError = (event: Event) => {
     // Marcamos como 'ERROR' para que el v-else-if de la imagen la oculte
-    formData.value.profilePhoto = 'ERROR';
+    formData.value.profilePhoto = 'ERROR'; 
 };
 
 defineExpose({ open });

@@ -16,7 +16,7 @@ export default defineComponent({
         const useserverTime = useServerTime();
         const userPkid = computed(() => authStore.user?.pkid || 0);
         
-
+        
         
         // Control del margen nativo del navegador
         onMounted(function() {
@@ -67,13 +67,6 @@ export default defineComponent({
             };
         });
 
-
-        const getProfilePhotoUrl = (pkid: number) => {
-            if (!pkid || pkid === 0) return '';
-            const timestamp = new Date().getTime();
-            return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${timestamp}`;
-        };
-
         function verMensajes(): void {
             console.log("Mensajes abiertos");
         }
@@ -103,9 +96,7 @@ export default defineComponent({
             verPerfilUsuario,
             desconectar,
             getCompanyInfo,
-            companyStore,
-            userPkid,
-            getProfilePhotoUrl
+            companyStore
 
         };
     }

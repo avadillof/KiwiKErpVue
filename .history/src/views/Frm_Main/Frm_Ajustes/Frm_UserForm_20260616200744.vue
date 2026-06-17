@@ -1,44 +1,31 @@
 <template>
     <Dialog v-model:visible="visible" modal :header="formData.pkid > 0 ? 'Editar Usuario' : 'Nuevo Usuario'"
         :style="{ width: '700px' }" class="kiwik-dialog" :dismissableMask="true">
-
+        
         <div class="kiwik-form-container grid-layout">
-
+            
             <div class="col-left flex flex-column align-items-center pt-2">
-                <div class="relative">
-
-
-
-
+                <div class="relative mb-4">
                     <div class="border-circle overflow-hidden border-3 shadow-2 flex align-items-center justify-content-center"
                         style="width: 120px; height: 120px; background: #f8f9fa; border-color: var(--primary-color);">
-
-                        <img v-if="formData.profilePhoto && formData.profilePhoto.startsWith('data:')"
-                            :src="formData.profilePhoto" class="w-full h-full object-cover" />
-
-                        <img v-else-if="formData.pkid > 0 && formData.profilePhoto !== 'ERROR'"
-                            :src="getProfilePhotoUrl()" class="w-full h-full object-cover" @error="handleImageError" />
-
+                        <img v-if="formData.profilePhoto" :src="formData.profilePhoto" class="w-full h-full object-cover" />
                         <i v-else class="pi pi-user text-5xl text-gray-300"></i>
                     </div>
-
-                    <Button icon="pi pi-camera" rounded class="absolute bottom-0 right-0 p-2" @click="openCamera"
-                        severity="primary" v-tooltip.left="'Cambiar foto'" />
+                    <Button icon="pi pi-camera" rounded class="absolute bottom-0 right-0 p-2" 
+                        @click="openCamera" severity="primary" v-tooltip.left="'Cambiar foto'" />
+                </div>
+                
+                <div class="w-full">
+                    <label class="text-xs text-gray-500 mb-1 ml-1">Fecha de Alta</label>
+                    <DatePicker v-model="formData.userDtDateUp" class="w-full" showIcon iconDisplay="input"
+                        dateFormat="dd/mm/yy" :disabled="formData.pkid > 0" />
                 </div>
             </div>
 
             <div class="col-right flex flex-column gap-4">
-
-                <FloatLabel variant="on" class="w-full">
-                    <DatePicker id="user_date" v-model="formData.userDtDateUp" class="w-full" showIcon
-                        iconDisplay="input" dateFormat="dd/mm/yy" :disabled="formData.pkid > 0" />
-                    <label for="user_date">Fecha de Alta</label>
-                </FloatLabel>
-
                 <InputGroup>
                     <FloatLabel variant="on" class="w-full">
-                        <InputText id="user_code" v-model="formData.userDsCode" class="w-full"
-                            :disabled="formData.pkid > 0" />
+                        <InputText id="user_code" v-model="formData.userDsCode" class="w-full" :disabled="formData.pkid > 0" />
                         <label for="user_code">Código de Usuario</label>
                     </FloatLabel>
                     <Button icon="pi pi-id-card" @click="generateCode" :disabled="formData.pkid > 0"
@@ -55,11 +42,8 @@
                     <label for="user_email">Correo Electrónico</label>
                 </FloatLabel>
 
-                <FloatLabel variant="on" class="w-full">
-                    <Select id="user_group" v-model="formData.groupKyId" :options="groupOptions" optionLabel="label"
-                        optionValue="value" class="w-full" />
-                    <label for="user_group">Rol / Grupo</label>
-                </FloatLabel>
+                <Select v-model="formData.groupKyId" :options="groupOptions" optionLabel="label" optionValue="value"
+                    class="w-full" placeholder="Seleccionar Rol / Grupo" />
 
                 <FloatLabel variant="on" class="w-full">
                     <Password id="user_pass" v-model="formData.password" class="w-full" toggleMask :feedback="false" />
@@ -74,35 +58,29 @@
         </div>
 
         <div class="kiwik-separator"></div>
-
+        
         <div class="flex justify-content-end">
             <Button label="Guardar usuario" icon="pi pi-check" @click="save" />
         </div>
     </Dialog>
 
-    <Dialog v-model:visible="cameraVisible" modal header="Capturar Foto" :style="{ width: '400px' }"
-        :dismissableMask="true" class="kiwik-dialog" @hide="stopCamera">
-
-        <div class="flex flex-column" v-if="cameraVisible"> <video ref="videoRef" autoplay playsinline
-                class="w-full border-round shadow-2" style="background: #000; min-height: 250px;"></video>
-
-            <div class="kiwik-separator"></div>
-
-            <div class="flex justify-content-end">
-                <Button icon="pi pi-camera" label="Capturar Foto" @click="takePhoto" />
-            </div>
+    <Dialog v-model:visible="cameraVisible" header="Capturar Foto" modal :style="{ width: '400px' }">
+        <video ref="videoRef" autoplay playsinline class="w-full border-round"></video>
+        <div class="flex justify-content-center mt-3">
+            <Button icon="pi pi-camera" label="Capturar" @click="takePhoto" />
         </div>
     </Dialog>
+
+    <Toast position="top-right" />
 </template>
 
 <style scoped>
 .grid-layout {
     display: grid;
     grid-template-columns: 140px 1fr;
-    gap: 2rem;
+    gap: 1.5rem;
     align-items: start;
 }
-
 .kiwik-separator {
     border-top: 2px solid var(--primary-color);
     margin: 1.5rem 0;
@@ -114,16 +92,16 @@ import { ref } from 'vue';
 import axios from 'axios';
 import { useToast } from 'primevue/usetoast'; // Importa el hook de Toast
 import Tooltip from 'primevue/tooltip';
+
+const toast = useToast(); // Inicializa el hook
+const visible = ref(false);
+const vTooltip = Tooltip;
 import { storeToRefs } from 'pinia'; // Importamos esto
 import { useCompanyStore } from '../../../stores/companyStore';
 
-const emit = defineEmits(['saved']);
-const toast = useToast(); // Inicializa el hook
-const visible = ref(false); const vTooltip = Tooltip;
+
 const companyStore = useCompanyStore();
 const { companyInfo: formDataCompany } = storeToRefs(companyStore);
-const videoRef = ref<HTMLVideoElement | null>(null);
-const cameraVisible = ref(false);
 
 const formData = ref<UserFormData>({
     pkid: 0,
@@ -135,12 +113,10 @@ const formData = ref<UserFormData>({
     active: true,
     pin: '',
     userDtDateUp: null,
-    profilePhoto: undefined
-
+    profilePhoto: null,
+    
 
 });
-
-const activeStream = ref<MediaStream | null>(null);
 
 
 interface UserFormData {
@@ -153,9 +129,7 @@ interface UserFormData {
     active: boolean;
     pin: string;
     userDtDateUp: Date | null;
-    profilePhoto: string | undefined; // Guardará el base64
-
-
+    profilePhoto: string | null; // Guardará el base64
 }
 
 
@@ -199,8 +173,7 @@ const open = async (user: UserFormData | null = null) => {
                 active: user.active,
                 pin: user.pin || '',
                 userDtDateUp: user.userDtDateUp ? new Date(user.userDtDateUp) : new Date(),
-                groupKyId: Number(user.groupKyId),
-                profilePhoto: user.profilePhoto || undefined
+                groupKyId: Number(user.groupKyId)
             };
         } else {
             // Reset limpio
@@ -213,9 +186,7 @@ const open = async (user: UserFormData | null = null) => {
                 groupKyId: 0,
                 active: true,
                 pin: '',
-                profilePhoto: undefined,
                 userDtDateUp: null
-
             };
         }
 
@@ -232,7 +203,7 @@ const open = async (user: UserFormData | null = null) => {
     }
 };
 
-
+const emit = defineEmits(['saved']);
 const save = async () => {
     // 1. Validación de campos obligatorios
     // Añadimos !formData.value.userDtDateUp para validar que se haya seleccionado fecha
@@ -309,85 +280,35 @@ const generateCode = async () => {
 
 
 
-const takePhoto = () => {
-
-    const video = videoRef.value;
-    if (!video) {
-        console.error("El elemento de video no está disponible.");
-        return;
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-        ctx.drawImage(video, 0, 0);
-        const imageData = canvas.toDataURL('image/png');
-
-        // Asignación al formData
-        formData.value.profilePhoto = imageData;
-    }
-
-    // Cerrar cámara
-    cameraVisible.value = false;
-
-    // Detener stream correctamente
-    const stream = video.srcObject;
-    if (stream instanceof MediaStream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-};
-
-
+const videoRef = ref<HTMLVideoElement | null>(null);
+const cameraVisible = ref(false);
 
 const openCamera = async () => {
     cameraVisible.value = true;
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        activeStream.value = stream; // Guardamos el stream
-        if (videoRef.value) {
-            videoRef.value.srcObject = stream;
-        }
+        if (videoRef.value) videoRef.value.srcObject = stream;
     } catch (err) {
         console.error("Error al acceder a la cámara:", err);
     }
 };
 
-
-const getProfilePhotoUrl = () => {
-    if (formData.value.pkid > 0) {
-
-        const timestamp = new Date().getTime();
-        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
-
-
-    }
-    return undefined; // Si es usuario nuevo, no hay pkid aún
+const takePhoto = () => {
+    const video = videoRef.value;
+    const canvas = document.createElement('canvas');
+    canvas.width = video!.videoWidth;
+    canvas.height = video!.videoHeight;
+    canvas.getContext('2d')!.drawImage(video!, 0, 0);
+    
+    // Convertir a base64 para enviarlo al backend
+    const imageData = canvas.toDataURL('image/jpeg');
+    //formData.value.profilePhoto = imageData; // Guardar en tu DTO
+    
+    // Detener la cámara
+    (video!.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+    cameraVisible.value = false;
 };
 
-
-const stopCamera = () => {
-    // Detener y liberar TODOS los tracks del stream activo
-    if (activeStream.value) {
-        activeStream.value.getTracks().forEach(track => {
-            track.stop();
-            track.enabled = false;
-        });
-        activeStream.value = null;
-    }
-
-    // Limpiar el componente de video
-    if (videoRef.value) {
-        videoRef.value.srcObject = null;
-    }
-};
-
-const handleImageError = (event: Event) => {
-    // Marcamos como 'ERROR' para que el v-else-if de la imagen la oculte
-    formData.value.profilePhoto = 'ERROR';
-};
 
 defineExpose({ open });
 </script>

@@ -6,22 +6,16 @@
 
             <div class="col-left flex flex-column align-items-center pt-2">
                 <div class="relative">
-
-
-
-
                     <div class="border-circle overflow-hidden border-3 shadow-2 flex align-items-center justify-content-center"
                         style="width: 120px; height: 120px; background: #f8f9fa; border-color: var(--primary-color);">
 
                         <img v-if="formData.profilePhoto && formData.profilePhoto.startsWith('data:')"
                             :src="formData.profilePhoto" class="w-full h-full object-cover" />
 
-                        <img v-else-if="formData.pkid > 0 && formData.profilePhoto !== 'ERROR'"
-                            :src="getProfilePhotoUrl()" class="w-full h-full object-cover" @error="handleImageError" />
-
-                        <i v-else class="pi pi-user text-5xl text-gray-300"></i>
+                        <img v-else-if="formData.pkid > 0" :src="getProfilePhotoUrl()"
+                            class="w-full h-full object-cover" @error="formData.profilePhoto = null" /> <i v-else
+                            class="pi pi-user text-5xl text-gray-300"></i>
                     </div>
-
                     <Button icon="pi pi-camera" rounded class="absolute bottom-0 right-0 p-2" @click="openCamera"
                         severity="primary" v-tooltip.left="'Cambiar foto'" />
                 </div>
@@ -135,7 +129,7 @@ const formData = ref<UserFormData>({
     active: true,
     pin: '',
     userDtDateUp: null,
-    profilePhoto: undefined
+    profilePhoto: null,
 
 
 });
@@ -153,9 +147,7 @@ interface UserFormData {
     active: boolean;
     pin: string;
     userDtDateUp: Date | null;
-    profilePhoto: string | undefined; // Guardará el base64
-
-
+    profilePhoto: string | null; // Guardará el base64
 }
 
 
@@ -200,7 +192,7 @@ const open = async (user: UserFormData | null = null) => {
                 pin: user.pin || '',
                 userDtDateUp: user.userDtDateUp ? new Date(user.userDtDateUp) : new Date(),
                 groupKyId: Number(user.groupKyId),
-                profilePhoto: user.profilePhoto || undefined
+                profilePhoto: user.profilePhoto || null
             };
         } else {
             // Reset limpio
@@ -213,7 +205,7 @@ const open = async (user: UserFormData | null = null) => {
                 groupKyId: 0,
                 active: true,
                 pin: '',
-                profilePhoto: undefined,
+                profilePhoto: null,
                 userDtDateUp: null
 
             };
@@ -358,13 +350,11 @@ const openCamera = async () => {
 
 const getProfilePhotoUrl = () => {
     if (formData.value.pkid > 0) {
-
-        const timestamp = new Date().getTime();
-        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
-
-
+        // Esta es la ruta que configuraste en tu ResourceHandler
+        // El timestamp (?t=...) es vital para que al cambiar la foto se refresque la imagen
+        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${new Date().getTime()}`;
     }
-    return undefined; // Si es usuario nuevo, no hay pkid aún
+    return null; // Si es usuario nuevo, no hay pkid aún
 };
 
 
@@ -382,11 +372,6 @@ const stopCamera = () => {
     if (videoRef.value) {
         videoRef.value.srcObject = null;
     }
-};
-
-const handleImageError = (event: Event) => {
-    // Marcamos como 'ERROR' para que el v-else-if de la imagen la oculte
-    formData.value.profilePhoto = 'ERROR';
 };
 
 defineExpose({ open });

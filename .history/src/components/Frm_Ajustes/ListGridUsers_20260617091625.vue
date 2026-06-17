@@ -107,7 +107,6 @@ import HistoricDialog from './Dg_HitoricUserConnections.vue';
 import type { MenuItem } from 'primevue/menuitem';
 import Frm_UserForm from '../../views/Frm_Main/Frm_Ajustes/Frm_UserForm.vue';
 
-const imageErrors = ref<Record<number, boolean>>({});
 const userSelected = ref<User | null>(null);
 const historicDialogRef = ref();
 const emit = defineEmits(['edit']);
@@ -205,7 +204,8 @@ const handleRowSelect = (event: any) => {
 
 
 const handleDataLoaded = (data: any[], total: number) => {
-  imageErrors.value = {};
+
+
 };
 
 
@@ -239,18 +239,8 @@ const getProfilePhotoUrl = (pkid: number) => {
   // Si necesitas caché busting, mantén el timestamp, 
   // aunque en una tabla con muchos registros, a veces es mejor omitirlo para que el navegador cachee bien.
 
-    const timestamp = new Date().getTime();
-    return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${timestamp}`;
+  console.info(`${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg`);
+  return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg`;
 };
-
-
-
-const handleAvatarError = (pkid: number) => {
-    // Marcamos este pkid como "con error"
-    imageErrors.value[pkid] = true;
-};
-
-
-
 
 </script>

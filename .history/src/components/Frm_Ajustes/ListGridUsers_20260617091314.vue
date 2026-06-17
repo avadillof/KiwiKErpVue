@@ -30,16 +30,9 @@
       <Column header="Usuario" field="name" sortable style="width: 25%">
         <template #body="slotProps">
           <div class="flex align-items-center gap-2">
-            <Avatar shape="circle" style="background-color:#dee9fc; color: #1a2544">
-
-              <img v-if="!imageErrors[slotProps.data.pkid]" :src="getProfilePhotoUrl(slotProps.data.pkid)"
-                @error="handleAvatarError(slotProps.data.pkid)" class="w-full h-full" style="object-fit: cover;" />
-
-              <span v-else>
-                {{ HelperString.getInitialsFromString(slotProps.data.name) }}
-              </span>
-
-            </Avatar>
+            <Avatar :image="getProfilePhotoUrl(slotProps.data.pkid)"
+              :label="HelperString.getInitialsFromString(slotProps.data.name)"
+              style="background-color:#dee9fc; color: #1a2544" shape="circle" @error="(e: any) => e.target.src = ''" />
             <span class="font-bold">{{ slotProps.data.name }}</span>
           </div>
         </template>
@@ -107,7 +100,6 @@ import HistoricDialog from './Dg_HitoricUserConnections.vue';
 import type { MenuItem } from 'primevue/menuitem';
 import Frm_UserForm from '../../views/Frm_Main/Frm_Ajustes/Frm_UserForm.vue';
 
-const imageErrors = ref<Record<number, boolean>>({});
 const userSelected = ref<User | null>(null);
 const historicDialogRef = ref();
 const emit = defineEmits(['edit']);
@@ -205,7 +197,8 @@ const handleRowSelect = (event: any) => {
 
 
 const handleDataLoaded = (data: any[], total: number) => {
-  imageErrors.value = {};
+
+
 };
 
 
@@ -239,18 +232,8 @@ const getProfilePhotoUrl = (pkid: number) => {
   // Si necesitas caché busting, mantén el timestamp, 
   // aunque en una tabla con muchos registros, a veces es mejor omitirlo para que el navegador cachee bien.
 
-    const timestamp = new Date().getTime();
-    return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${timestamp}`;
+  console.i
+  return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg`;
 };
-
-
-
-const handleAvatarError = (pkid: number) => {
-    // Marcamos este pkid como "con error"
-    imageErrors.value[pkid] = true;
-};
-
-
-
 
 </script>

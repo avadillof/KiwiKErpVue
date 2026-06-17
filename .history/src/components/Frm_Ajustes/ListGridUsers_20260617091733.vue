@@ -239,8 +239,8 @@ const getProfilePhotoUrl = (pkid: number) => {
   // Si necesitas caché busting, mantén el timestamp, 
   // aunque en una tabla con muchos registros, a veces es mejor omitirlo para que el navegador cachee bien.
 
-    const timestamp = new Date().getTime();
-    return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${timestamp}`;
+  console.info(`${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg`);
+  return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg`;
 };
 
 

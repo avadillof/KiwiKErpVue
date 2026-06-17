@@ -48,13 +48,12 @@
 
 
             <Avatar size="large" shape="circle"
-              style="background-color: #f9fbe7; color: #648506; font-weight: 700; border: 2px solid #9cc10a; cursor: pointer; overflow: hidden; position: relative;"
+              style="background-color: #f9fbe7; color: #648506; font-weight: 700; border: 2px solid #9cc10a; cursor: pointer; overflow: hidden;"
               @click="verPerfilUsuario">
               <img v-if="userPkid > 0" :src="getProfilePhotoUrl(userPkid)"
-                @error="(e: any) => e.target.style.display = 'none'" class="w-full h-full"
-                style="object-fit: cover; position: absolute; top: 0; left: 0;" />
+                @error="(e: any) => e.target.style.display = 'none'" class="w-full h-full" style="object-fit: cover;" />
 
-              <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+              <span v-else style="display: flex; align-items: center; justify-content: center; height: 100%;">
                 {{ userInitials }}
               </span>
             </Avatar>

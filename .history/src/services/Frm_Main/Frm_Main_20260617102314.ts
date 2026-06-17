@@ -70,8 +70,7 @@ export default defineComponent({
 
         const getProfilePhotoUrl = (pkid: number) => {
             if (!pkid || pkid === 0) return '';
-            const timestamp = new Date().getTime();
-            return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${timestamp}`;
+            return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg`;
         };
 
         function verMensajes(): void {

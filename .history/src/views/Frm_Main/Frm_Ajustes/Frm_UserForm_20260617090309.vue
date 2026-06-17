@@ -5,72 +5,65 @@
         <div class="kiwik-form-container grid-layout">
 
             <div class="col-left flex flex-column align-items-center pt-2">
-                <div class="relative">
+                <div class="border-circle overflow-hidden border-3 shadow-2 flex align-items-center justify-content-center"
+                    style="width: 120px; height: 120px; background: #f8f9fa; border-color: var(--primary-color);">
 
+                    <img v-if="formData.profilePhoto && formData.profilePhoto.startsWith('data:')"
+                        :src="formData.profilePhoto" class="w-full h-full object-cover" />
 
+                    <img v-else-if="formData.pkid > 0 && formData.profilePhoto !== 'ERROR'" :src="getProfilePhotoUrl()"
+                        class="w-full h-full object-cover" @error="handleImageError" />
 
-
-                    <div class="border-circle overflow-hidden border-3 shadow-2 flex align-items-center justify-content-center"
-                        style="width: 120px; height: 120px; background: #f8f9fa; border-color: var(--primary-color);">
-
-                        <img v-if="formData.profilePhoto && formData.profilePhoto.startsWith('data:')"
-                            :src="formData.profilePhoto" class="w-full h-full object-cover" />
-
-                        <img v-else-if="formData.pkid > 0 && formData.profilePhoto !== 'ERROR'"
-                            :src="getProfilePhotoUrl()" class="w-full h-full object-cover" @error="handleImageError" />
-
-                        <i v-else class="pi pi-user text-5xl text-gray-300"></i>
-                    </div>
-
-                    <Button icon="pi pi-camera" rounded class="absolute bottom-0 right-0 p-2" @click="openCamera"
-                        severity="primary" v-tooltip.left="'Cambiar foto'" />
+                    <i v-else class="pi pi-user text-5xl text-gray-300"></i>
                 </div>
+                <Button icon="pi pi-camera" rounded class="absolute bottom-0 right-0 p-2" @click="openCamera"
+                    severity="primary" v-tooltip.left="'Cambiar foto'" />
             </div>
+        </div>
 
-            <div class="col-right flex flex-column gap-4">
+        <div class="col-right flex flex-column gap-4">
 
+            <FloatLabel variant="on" class="w-full">
+                <DatePicker id="user_date" v-model="formData.userDtDateUp" class="w-full" showIcon iconDisplay="input"
+                    dateFormat="dd/mm/yy" :disabled="formData.pkid > 0" />
+                <label for="user_date">Fecha de Alta</label>
+            </FloatLabel>
+
+            <InputGroup>
                 <FloatLabel variant="on" class="w-full">
-                    <DatePicker id="user_date" v-model="formData.userDtDateUp" class="w-full" showIcon
-                        iconDisplay="input" dateFormat="dd/mm/yy" :disabled="formData.pkid > 0" />
-                    <label for="user_date">Fecha de Alta</label>
+                    <InputText id="user_code" v-model="formData.userDsCode" class="w-full"
+                        :disabled="formData.pkid > 0" />
+                    <label for="user_code">Código de Usuario</label>
                 </FloatLabel>
+                <Button icon="pi pi-id-card" @click="generateCode" :disabled="formData.pkid > 0" severity="secondary" />
+            </InputGroup>
 
-                <InputGroup>
-                    <FloatLabel variant="on" class="w-full">
-                        <InputText id="user_code" v-model="formData.userDsCode" class="w-full"
-                            :disabled="formData.pkid > 0" />
-                        <label for="user_code">Código de Usuario</label>
-                    </FloatLabel>
-                    <Button icon="pi pi-id-card" @click="generateCode" :disabled="formData.pkid > 0"
-                        severity="secondary" />
-                </InputGroup>
+            <FloatLabel variant="on" class="w-full">
+                <InputText id="user_name" v-model="formData.name" class="w-full" />
+                <label for="user_name">Nombre Completo</label>
+            </FloatLabel>
 
-                <FloatLabel variant="on" class="w-full">
-                    <InputText id="user_name" v-model="formData.name" class="w-full" />
-                    <label for="user_name">Nombre Completo</label>
-                </FloatLabel>
+            <FloatLabel variant="on" class="w-full">
+                <InputText id="user_email" v-model="formData.email" class="w-full" />
+                <label for="user_email">Correo Electrónico</label>
+            </FloatLabel>
 
-                <FloatLabel variant="on" class="w-full">
-                    <InputText id="user_email" v-model="formData.email" class="w-full" />
-                    <label for="user_email">Correo Electrónico</label>
-                </FloatLabel>
+            <FloatLabel variant="on" class="w-full">
+                <Select id="user_group" v-model="formData.groupKyId" :options="groupOptions" optionLabel="label"
+                    optionValue="value" class="w-full" />
+                <label for="user_group">Rol / Grupo</label>
+            </FloatLabel>
 
-                <FloatLabel variant="on" class="w-full">
-                    <Select id="user_group" v-model="formData.groupKyId" :options="groupOptions" optionLabel="label"
-                        optionValue="value" class="w-full" />
-                    <label for="user_group">Rol / Grupo</label>
-                </FloatLabel>
+            <FloatLabel variant="on" class="w-full">
+                <Password id="user_pass" v-model="formData.password" class="w-full" toggleMask :feedback="false" />
+                <label for="user_pass">{{ formData.pkid > 0 ? 'Nueva Contraseña' : 'Contraseña' }}</label>
+            </FloatLabel>
 
-                <FloatLabel variant="on" class="w-full">
-                    <Password id="user_pass" v-model="formData.password" class="w-full" toggleMask :feedback="false" />
-                    <label for="user_pass">{{ formData.pkid > 0 ? 'Nueva Contraseña' : 'Contraseña' }}</label>
-                </FloatLabel>
-
-                <div class="flex align-items-center">
-                    <Checkbox v-model="formData.active" :binary="true" inputId="active_check" />
-                    <label for="active_check" class="ml-2">Usuario Activo</label>
-                </div>
+            <div class="flex align-items-center">
+                <Checkbox v-model="formData.active" :binary="true" inputId="active_check" />
+                <label for="active_check" class="ml-2">Usuario Activo</label>
             </div>
+        </div>
         </div>
 
         <div class="kiwik-separator"></div>
@@ -358,11 +351,9 @@ const openCamera = async () => {
 
 const getProfilePhotoUrl = () => {
     if (formData.value.pkid > 0) {
-
-        const timestamp = new Date().getTime();
-        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
-
-
+        // Esta es la ruta que configuraste en tu ResourceHandler
+        // El timestamp (?t=...) es vital para que al cambiar la foto se refresque la imagen
+        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${new Date().getTime()}`;
     }
     return undefined; // Si es usuario nuevo, no hay pkid aún
 };
@@ -385,8 +376,9 @@ const stopCamera = () => {
 };
 
 const handleImageError = (event: Event) => {
-    // Marcamos como 'ERROR' para que el v-else-if de la imagen la oculte
-    formData.value.profilePhoto = 'ERROR';
+    // Si la imagen no carga (porque no existe el archivo), reseteamos a null
+    // y el template mostrará automáticamente el icono <i v-else>
+    formData.value.profilePhoto = undefined;
 };
 
 defineExpose({ open });

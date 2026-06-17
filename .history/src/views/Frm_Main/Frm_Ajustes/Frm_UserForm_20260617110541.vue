@@ -358,9 +358,9 @@ const openCamera = async () => {
 
 const getProfilePhotoUrl = () => {
     if (formData.value.pkid > 0) {
-
-        const timestamp = new Date().getTime();
-        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
+        
+    const timestamp = new Date().getTime();
+    return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
 
 
     }

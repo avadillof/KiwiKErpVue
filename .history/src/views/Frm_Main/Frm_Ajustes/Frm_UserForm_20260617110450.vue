@@ -358,11 +358,9 @@ const openCamera = async () => {
 
 const getProfilePhotoUrl = () => {
     if (formData.value.pkid > 0) {
-
+        // Esta es la ruta que configuraste en tu ResourceHandler
         const timestamp = new Date().getTime();
-        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
-
-
+    return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${timestamp}`;
     }
     return undefined; // Si es usuario nuevo, no hay pkid aún
 };
