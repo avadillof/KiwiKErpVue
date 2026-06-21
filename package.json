@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@primevue/themes": "^4.5.4",
-    "axios": "^1.16.1",
+    "axios": "^1.18.0",
     "chart.js": "^4.5.1",
     "chartjs-plugin-zoom": "^2.2.0",
     "file-icons": "^0.0.0",
@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@primevue/auto-import-resolver": "^4.5.5",
+    "@types/axios": "^0.9.36",
     "@types/node": "^24.12.3",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/tsconfig": "^0.9.1",
