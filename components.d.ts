@@ -57,6 +57,8 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
     Skeleton: typeof import('primevue/skeleton')['default']
+    Splitter: typeof import('primevue/splitter')['default']
+    SplitterPanel: typeof import('primevue/splitterpanel')['default']
     Tab: typeof import('primevue/tab')['default']
     TabList: typeof import('primevue/tablist')['default']
     TabPanel: typeof import('primevue/tabpanel')['default']
@@ -65,6 +67,7 @@ declare module 'vue' {
     Tag: typeof import('primevue/tag')['default']
     Timeline: typeof import('primevue/timeline')['default']
     Toast: typeof import('primevue/toast')['default']
+    ToggleSwitch: typeof import('primevue/toggleswitch')['default']
     Toolbar: typeof import('primevue/toolbar')['default']
     UsuariosTabla: typeof import('./src/components/Frm_Ajustes/UsuariosTabla.vue')['default']
   }
