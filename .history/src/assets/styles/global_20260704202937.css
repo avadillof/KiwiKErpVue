@@ -1,0 +1,398 @@
+
+/* =====================================================
+   🌐 GLOBAL ERP THEME FIX
+   ===================================================== */
+
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:cover;
+  background-attachment: fixed;
+}
+
+
+
+/* =====================================================
+   🔘 BUTTON OVERRIDE
+   ===================================================== */
+
+.p-button {
+  color: #333333 !important;
+}
+
+/* Forzamos el redondeo del contenedor raíz del diálogo */
+/* 1. Contenedor principal: El overflow hidden asegura el radio de 24px */
+.kiwik-dialog.p-dialog {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Forzamos que el contenido del diálogo sea un flexbox flexible */
+.kiwik-dialog .p-dialog-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  overflow: hidden !important; /* Evita que el contenido desborde */
+  padding: 1.5rem 2rem !important;
+}
+
+
+/* 2. Header: Línea gris + diseño limpio */
+.kiwik-dialog .p-dialog-header {
+  padding: 1.25rem 4rem 1.25rem 1.5rem !important; /* Aumentado a 4rem a la derecha para dejar espacio a la X */
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important; /* LÍNEA SEPARADORA GRIS */
+  border-top-left-radius: 24px !important;
+  border-top-right-radius: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important; /* Título centrado */
+  position: relative !important;
+  min-height: 60px;
+}
+
+/* 3. Título: Protegido */
+.kiwik-dialog .p-dialog-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1.25rem;
+  text-align: center;
+  flex: 1; /* Ocupa el centro */
+  margin-right: 2rem; /* Separación extra por seguridad */
+}
+
+/* 4. Badge circular para la X (Alineado a la derecha) */
+.kiwik-dialog .p-dialog-header-close {
+  position: absolute !important;
+  right: 1.25rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  
+  width: 36px !important;
+  height: 36px !important;
+  background-color: #f9fbe7 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99 !important;
+  border: none !important;
+  padding: 0 !important;
+  transition: all 0.2s ease;
+}
+
+/* Efecto hover profesional */
+.kiwik-dialog .p-dialog-header-close:hover {
+  background-color: #B1D70E !important;
+  cursor: pointer;
+}
+
+.kiwik-dialog .p-dialog-header-close:hover .p-icon {
+  color: #ffffff !important;
+}
+
+/* 5. Icono verde */
+.kiwik-dialog .p-dialog-header-close .p-icon {
+  color: #B1D70E !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* 6. Línea verde KiwiK (Acento corporativo) debajo de la gris */
+.kiwik-dialog .p-dialog-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; /* Se posiciona justo bajo el borde gris */
+  left: 35%;
+  right: 35%;
+  height: 3px;
+  background: #B1D70E;
+  border-radius: 2px;
+  z-index: 10;
+  color: #B1D70E !important;
+}
+
+.kiwik-dialog .p-dialog-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;  
+  padding: 1.5rem 2rem !important;
+  overflow-y: auto;
+  flex: 1; 
+}
+
+.kiwik-separator {
+  width: 100%;
+  height: 1.5px;
+  background-color: #B1D70E;
+  
+  
+}
+
+.kiwik-btn-auto-left.p-button {
+  width: auto !important;
+  display: inline-flex !important;
+  margin: 0 !important; 
+  align-self: flex-start;
+  margin-top: 0.5rem !important; /* Un poco más de aire extra */
+}
+
+.kiwik-btn-auto-right.p-button {
+  width: auto !important;          
+  display: inline-flex !important; 
+  margin: 0 !important;            /* Reseteamos márgenes */
+  align-self: flex-end !important; /* <--- ESTO MUEVE EL BOTÓN A LA DERECHA */
+}
+
+
+
+
+.reset-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: auto !important; /* Asegurado */
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.reset-header {
+  text-align: center;
+}
+
+.icon-circle {
+  width: 60px;
+  height: 60px;
+  background: #f9fbe7; /* Color muy claro de tu tema */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.icon-circle i {
+  font-size: 1.5rem;
+  color: #B1D70E; /* Tu color corporativo */
+}
+
+.reset-subtitle {
+  color: #6b7280;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.feedback-area {
+  margin-top: auto; /* Esto empuja cualquier contenido posterior hacia abajo */
+}
+
+.p-paginator-sm {
+  padding: 0.5rem 1rem !important;
+  background: #f9fafb !important;
+}
+
+.p-paginator-sm :deep(.p-paginator-page),
+.p-paginator-sm :deep(.p-paginator-next),
+.p-paginator-sm :deep(.p-paginator-prev) {
+  padding: 0.2rem 0.4rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+
+/* Dropdown Compacto */
+.custom-dropdown-sm {
+  height: 1.5rem !important;
+  min-width: 4rem !important;
+  display: flex;
+  align-items: center;
+  border-radius: 4px !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.custom-dropdown-sm :deep(.p-dropdown-label) {
+  padding: 0 0.5rem !important;
+  font-size: 0.8rem;
+  line-height: 1.5rem;
+  color: #374151;
+}
+
+.custom-dropdown-sm :deep(.p-dropdown-trigger) {
+  width: 1.5rem !important;
+  color: #6b7280;
+}
+
+
+.p-tabpanel {
+    padding: 1.5rem;
+    border: 1px solid var(--surface-border);
+    border-top: none; /* Si quieres que se fusione con la pestaña */
+    border-bottom-left-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+}
+
+
+.custom-dropdown-sm:hover { border-color: #3b82f6 !important; }
+
+
+.security-page {
+    height: 100vh; /* Ocupa toda la pantalla */
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+    background: var(--surface-ground);
+}
+
+/* HEADER MÁS RESPIRADO */
+.security-header {
+    font-size: 18px;
+    font-weight: 600;
+    padding: 12px 16px;
+    background: var(--surface-card);
+    border-radius: 10px;
+    border: 1px solid var(--surface-border);
+}
+
+/* ZONA PRINCIPAL */
+.security-body {
+    flex: 1; /* Esto hace que el body crezca para llenar el espacio */
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* CRÍTICO: Permite que los hijos tengan scroll interno */
+}
+/* MÓDULOS */
+.security-modules {
+    background: var(--surface-card);
+    border-radius: 10px;
+    margin-bottom: 4px;
+    padding: 8px;
+    border: 1px solid var(--surface-border);
+}
+
+/* SPLITTER */
+.security-splitter {
+    flex: 1; /* El splitter crecerá para llenar el espacio disponible */
+    height: 100%; /* Asegura que el contenedor interno se estire */
+}
+.panel-left, .panel-right {
+    background: var(--surface-card);
+    border-radius: 10px;
+    border: 1px solid var(--surface-border);
+    padding: 1rem !important;
+}
+
+.security-table {
+    font-size: 13px;
+}
+
+
+
+
+/* ==========================================================
+   CABECERA PREMIUM KIWIK ERP
+========================================================== */
+
+.custom-header-table .p-datatable-thead {
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, .08);
+}
+
+.custom-header-table .p-datatable-thead > tr > th {
+
+    background: linear-gradient(
+        to bottom,
+        #d9f46d 0%,
+        #c8ea4a 55%,
+        #bddf39 100%
+    ) !important;
+
+    color: #5e7f05 !important;
+
+    font-weight: 700;
+    font-size: .82rem;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+
+    border-top: 1px solid rgba(255,255,255,.85);
+    border-bottom: 1px solid #9dbc28;
+    border-right: 1px solid rgba(255,255,255,.35);
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.85),
+        inset 0 -1px 0 rgba(0,0,0,.08);
+
+    transition: none !important;
+}
+
+/* Primera columna */
+.custom-header-table .p-datatable-thead > tr > th:first-child {
+    border-top-left-radius: 1px;
+}
+
+/* Última columna */
+.custom-header-table .p-datatable-thead > tr > th:last-child {
+    border-top-right-radius: 2px;
+    border-right: none;
+}
+
+/* Hover cabecera */
+.custom-header-table .p-datatable-thead > tr > th:hover {
+    background: linear-gradient(
+        to bottom,
+        #e5fa89 0%,
+        #d6ef63 60%,
+        #c7e248 100%
+    ) !important;
+}
+
+/* ==========================================================
+   FILAS
+========================================================== */
+
+/* Base fila */
+.custom-header-table .p-datatable-tbody > tr {
+    transition: none !important;
+    cursor: pointer;
+}
+
+/* Hover SOLO si NO está seleccionada */
+.custom-header-table .p-datatable-tbody > tr:not(.p-highlight):hover {
+    background: #f8fce8 !important;
+}
+
+/* Selección (estado principal) */
+.custom-header-table .p-datatable-tbody > tr.p-highlight {
+    background: #eef6c2 !important;
+    color: inherit !important;
+    outline: none !important;
+}
+
+/* IMPORTANTE: la selección SIEMPRE gana al hover */
+.custom-header-table .p-datatable-tbody > tr.p-highlight:hover {
+    background: #eef6c2 !important;
+}
+
+/* ==========================================================
+   CONTENEDOR
+========================================================== */
+
+.custom-header-table {
+    border-radius: 4px;
+    overflow: hidden;
+}
