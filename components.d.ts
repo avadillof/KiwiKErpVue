@@ -11,6 +11,10 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AttachmentsDialog: typeof import('./src/components/attachments/AttachmentsDialog.vue')['default']
+    AttachmentsPanel: typeof import('./src/components/attachments/AttachmentsPanel.vue')['default']
+    AttachmentsPreview: typeof import('./src/components/attachments/AttachmentsPreview.vue')['default']
+    AttachmentsUpload: typeof import('./src/components/attachments/AttachmentsUpload.vue')['default']
     AutoComplete: typeof import('primevue/autocomplete')['default']
     Avatar: typeof import('primevue/avatar')['default']
     Badge: typeof import('primevue/badge')['default']
@@ -31,8 +35,10 @@ declare module 'vue' {
     Dg_HitoricUserConnections: typeof import('./src/components/Frm_Ajustes/Dg_HitoricUserConnections.vue')['default']
     DgHitoricUserConnections: typeof import('./src/components/Frm_Ajustes/DgHitoricUserConnections.vue')['default']
     Dialog: typeof import('primevue/dialog')['default']
+    DialogNotes: typeof import('./src/components/dialogs/DialogNotes.vue')['default']
     Divider: typeof import('primevue/divider')['default']
     Dropdown: typeof import('primevue/dropdown')['default']
+    FileUpload: typeof import('primevue/fileupload')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     GenericDataTable: typeof import('./src/components/shared/GenericDataTable.vue')['default']
     HistoricDialog: typeof import('./src/components/Frm_Ajustes/HistoricDialog.vue')['default']
@@ -65,6 +71,7 @@ declare module 'vue' {
     TabPanels: typeof import('primevue/tabpanels')['default']
     Tabs: typeof import('primevue/tabs')['default']
     Tag: typeof import('primevue/tag')['default']
+    Textarea: typeof import('primevue/textarea')['default']
     Timeline: typeof import('primevue/timeline')['default']
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
