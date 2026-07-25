@@ -53,6 +53,7 @@ declare module 'vue' {
     ListGridUsers: typeof import('./src/components/Frm_Ajustes/ListGridUsers.vue')['default']
     Menu: typeof import('primevue/menu')['default']
     Message: typeof import('primevue/message')['default']
+    MultiSelect: typeof import('primevue/multiselect')['default']
     OverlayBadge: typeof import('primevue/overlaybadge')['default']
     OverlayPanel: typeof import('primevue/overlaypanel')['default']
     Paginator: typeof import('primevue/paginator')['default']
