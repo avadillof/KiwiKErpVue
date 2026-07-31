@@ -22,6 +22,8 @@ declare module 'vue' {
     Button: typeof import('primevue/button')['default']
     Calendar: typeof import('primevue/calendar')['default']
     Card: typeof import('primevue/card')['default']
+    CertificateInfoCard: typeof import('./src/components/CertificateInfoCard.vue')['default']
+    CertificatePasswordDialog: typeof import('./src/components/CertificatePasswordDialog.vue')['default']
     Chart: typeof import('primevue/chart')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
     CheckboxGroup: typeof import('primevue/checkboxgroup')['default']
