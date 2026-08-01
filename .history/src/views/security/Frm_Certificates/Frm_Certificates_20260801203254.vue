@@ -212,7 +212,8 @@ const deleteCertificate = () => {
         accept: async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteCertificate`, {
+                    `${import.meta.env.VITE_API_URL}/WebDeleteCertificate`,
+                    {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

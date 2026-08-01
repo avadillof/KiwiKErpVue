@@ -1,9 +1,8 @@
 <template>
 
-    <Dialog v-model:visible="visible" :header="certificate.pkid
-        ? 'Ficha del Certificado - ' + certificate.description
-        : 'Nuevo Certificado'" :modal="true" :closable="true" :draggable="false" :style="{ width: '500px' }"
-        class="kiwik-dialog" :dismissableMask="true">
+    <Dialog v-model:visible="visible" header="Nuevo Certificado Digital" :modal="true" :closable="true"
+        :draggable="false" :style="{ width: '500px' }" class="kiwik-dialog" :dismissableMask="true">
+
 
 
         <Panel style="margin-top: 5px;margin-bottom: 20px; ">
@@ -34,9 +33,6 @@
 
                     <Select v-model="certificate.typeId" :options="certificateTypes" optionLabel="description"
                         optionValue="id" placeholder="Seleccione un tipo" fluid />
-                    <InlineMessage v-if="errors.typeId" severity="error">
-                        {{ errors.typeId }}
-                    </InlineMessage>
 
                 </div>
 
@@ -48,7 +44,8 @@
                     </label>
 
                     <InputText v-model="certificate.description" class="w-full"
-                        placeholder="Descripción del certificado" maxlength="350" />
+                        placeholder="Descripción del certificado" maxlength="350" 
+                    />
                     <InlineMessage v-if="errors.description" severity="error">
                         {{ errors.description }}
                     </InlineMessage>
@@ -74,7 +71,7 @@
                         <Message v-if="certificate.file" severity="success" :closable="false" class="mt-3">
 
                             <i class="pi pi-file mr-2"></i>
-                            {{ certificate.file }}
+                            {{ certificate.file.name }}
 
                         </Message>
                     </p>
@@ -114,12 +111,13 @@
 
 
 import { ref } from 'vue';
+
 import Dialog from 'primevue/dialog';
-import Select from 'primevue/select';
+import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import FileUpload from 'primevue/fileupload';
 import Button from 'primevue/button';
-import { useFormValidator } from '../../../libs/HelperView';
+
 import { useToast } from 'primevue/usetoast';
 import { useCompanyStore } from '@/stores/companyStore';
 import CertificatePasswordDialog from '../../../components/CertificatePasswordDialog.vue';
@@ -128,7 +126,7 @@ const emit = defineEmits([
     'saved'
 ]);
 
-const { setRef, scrollToError } = useFormValidator();
+
 const toast = useToast();
 const passwordDialog = ref();
 
@@ -148,7 +146,7 @@ const certificateTypes = ref([]);
 
 type ErrorKey =
     | 'description'
-    | 'typeId'
+
     ;
 
 type FormErrors = Record<ErrorKey, string>;
@@ -156,14 +154,12 @@ type FormErrors = Record<ErrorKey, string>;
 
 const errors = ref<FormErrors>({
     description: '',
-    typeId: ''
 
 });
 
 const clearErrors = () => {
     errors.value = {
         description: '',
-        typeId: ''
 
     };
 };
@@ -412,7 +408,7 @@ const save = async () => {
 };
 
 
-const loadCertificate = async (id: number) => {
+const loadCertificate = async (id) => {
 
     const response = await fetch(
         `${import.meta.env.VITE_API_URL}/WebGetCertificateById?id=${id}`
@@ -446,13 +442,75 @@ const validate = async (): Promise<boolean> => {
         valid = false;
     };
 
-    if (!certificate.value.description?.trim()) setError('description', 'Obligatorio');
-    if (certificate.value.typeId == null) {
-        setError('typeId', 'Obligatorio');
+    if (!certificate.value.description?.trim()) setError('descript', 'Obligatorio');
+    if (!entity.value.name?.trim()) setError('name', 'Obligatorio');
+    if (!entity.value.cif?.trim()) {
+        setError('cif', 'Obligatorio');
+    } else if (!HelperString.isValidCifNif(entity.value.cif)) {
+        setError('cif', 'Inválido');
+    }
+
+    if (!entity.value.dateUp) setError('fechaalta', 'Obligatorio');
+
+    if (entity.value.web && !HelperString.isValidUrl(entity.value.web)) {
+        setError('web', 'URL inválida');
+    }
+
+    if (entity.value.email && !HelperString.isValidEmail(entity.value.email)) {
+        setError('mail', 'Email inválido');
+    }
+
+    if (entity.value.isclient) {
+
+        if (entity.value.salesAttributes.salesTermId == null) {
+            setError('terminoventas', 'Obligatorio para Clientes');
+            activeTab.value = "0";
+        }
+
+        if (entity.value.salesAttributes.salesTarifaId == null) {
+            setError('tarifasventas', 'Obligatorio para Clientes');
+            activeTab.value = "0";
+        }
+        if (!entity.value.salesAttributes.sepa?.trim()) {
+
+        } else if (!HelperString.isValidBic(entity.value.salesAttributes.sepa)) {
+            setError('sepa', 'Cuenta SEPA Principal no correcta');
+            activeTab.value = "0";
+        }
+
+        if (!entity.value.salesAttributes.sepa1?.trim()) {
+        } else if (!HelperString.isValidBic(entity.value.salesAttributes.sepa1)) {
+            setError('sepa2', 'Cuenta SEPA Secundaria no correcta');
+            activeTab.value = "0";
+        }
+
+
+
     }
 
 
+    if (entity.value.isprove && valid) {
+        if (entity.value.purchasesAttributes.purchasesTermId == null) {
+            setError('terminocompras', 'Obligatorio para Proveedores');
+            activeTab.value = "1";
+        }
 
+        if (entity.value.purchasesAttributes.purchasesTarifaId == null) {
+            setError('tarifascompras', 'Obligatorio para Proveedores');
+            activeTab.value = "1";
+        }
+        if (!entity.value.purchasesAttributes.sepa?.trim()) {
+        } else if (!HelperString.isValidBic(entity.value.purchasesAttributes.sepa)) {
+            setError('sepapurchases', 'Cuenta SEPA Principal no correcta');
+            activeTab.value = "1";
+        }
+
+        if (!entity.value.purchasesAttributes.sepa1?.trim()) {
+        } else if (!HelperString.isValidBic(entity.value.purchasesAttributes.sepa1)) {
+            setError('sepapurchases2', 'Cuenta SEPA Secundaria no correcta');
+            activeTab.value = "1";
+        }
+    }
 
     await scrollToError(firstError);
 

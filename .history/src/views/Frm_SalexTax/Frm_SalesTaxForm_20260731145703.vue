@@ -35,7 +35,7 @@
 
                     <div class="field col-12">
                         <FloatLabel variant="on">
-                            <InputText id="descriptionEn" v-model="tax.descriptionEn" class="w-full" maxlength="145"/>
+                            <InputText id="descriptionEn" v-model="tax.descriptionEn" class="w-full" maxlength="350"/>
                             <label for="descriptionEn">Descripción Inglés</label>
                         </FloatLabel>
                         <InlineMessage v-if="errors.descriptionEn" severity="error">

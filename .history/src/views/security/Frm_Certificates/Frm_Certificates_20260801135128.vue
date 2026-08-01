@@ -212,7 +212,8 @@ const deleteCertificate = () => {
         accept: async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteCertificate`, {
+                    `${import.meta.env.VITE_API_URL}/WebDeleteCertificate`,
+                    {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -241,7 +242,7 @@ const deleteCertificate = () => {
                 toast.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'No se pudo eliminar el Certifiado ',
+                    detail: 'No se pudo eliminar la  entidad',
                     life: companyStore.companyInfo.toastDuration ?? 3000
                 });
             }

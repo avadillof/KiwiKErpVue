@@ -279,7 +279,7 @@
           <div class="grid mt-1">
 
             <!-- Impuestos -->
-            <div class="col-12 md:col-3">
+            <div class="col-12 md:col-2">
 
               <div class="tax-card-wrapper" @click="openSalesTax">
 
@@ -329,7 +329,7 @@
             </div>
 
             <!-- Certificados -->
-            <div class="col-12 md:col-3">
+            <div class="col-12 md:col-2">
 
               <div class="tax-card-wrapper" @click="openCertificates">
 
@@ -391,7 +391,7 @@
 
 <style scoped>
 .tax-card {
-  height: 180px;
+  height: 280px;
   cursor: pointer;
   transition: all .25s ease;
 

@@ -148,8 +148,8 @@ const menuItems = computed(() => [
     {
         label: 'Ficha del Certificado',
         icon: 'pi pi-pencil',
-        command: () => certificateFormRef.value.open(selectedCertificate.value?.pkid)
-        
+        command: () => certificateFormRef.open(selectedCertificate.value?.pkid)
+        certificateFormRef.open(null)
     },
 
     {
@@ -195,58 +195,15 @@ const handleRowSelect = (event) => {
 
 
 const deleteCertificate = () => {
- if (!selectedCertificate.value) return;
 
-    confirm.require({
-        message: `¿Estás seguro de que quieres borrar el Certificado ${selectedCertificate.value.description}? Esta acción no se puede deshacer.`,
-        header: 'Confirmar eliminación',
-        icon: 'pi pi-exclamation-triangle',
-        rejectProps: {
-            label: 'Cancelar',
-            severity: 'secondary'
-        },
-        acceptProps: {
-            label: 'Borrar',
-            severity: 'danger'
-        },
-        accept: async () => {
-            try {
-                const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteCertificate`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            pkid: selectedCertificate.value.pkid
-                        })
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error('Error al eliminar el Certificado');
-                }
-
-                toast.add({
-                    severity: 'success',
-                    summary: 'Borrado',
-                    detail: 'Certificado eliminado correctamente',
-                    life: companyStore.companyInfo.toastDuration ?? 3000
-                });
-
-                refreshTable();
-            } catch (error) {
-                console.error(error);
-
-                toast.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'No se pudo eliminar el Certifiado ',
-                    life: companyStore.companyInfo.toastDuration ?? 3000
-                });
-            }
-        }
+    // TODO
+    toast.add({
+        severity: 'info',
+        summary: 'Pendiente',
+        detail: 'Implementar borrado de certificados.',
+        life: toastLife
     });
+
 };
 
 </script>

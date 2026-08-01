@@ -3,7 +3,7 @@
     <Dialog v-model:visible="visible" :header="certificate.pkid
         ? 'Ficha del Certificado - ' + certificate.description
         : 'Nuevo Certificado'" :modal="true" :closable="true" :draggable="false" :style="{ width: '500px' }"
-        class="kiwik-dialog" :dismissableMask="true">
+        class="kiwik-dialog" :dismissableMask="true >
 
 
         <Panel style="margin-top: 5px;margin-bottom: 20px; ">

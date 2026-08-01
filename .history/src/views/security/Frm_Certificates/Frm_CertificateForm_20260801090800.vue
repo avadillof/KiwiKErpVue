@@ -1,9 +1,8 @@
 <template>
 
-    <Dialog v-model:visible="visible" :header="certificate.pkid
-        ? 'Ficha del Certificado - ' + certificate.description
-        : 'Nuevo Certificado'" :modal="true" :closable="true" :draggable="false" :style="{ width: '500px' }"
-        class="kiwik-dialog" :dismissableMask="true">
+    <Dialog v-model:visible="visible" header="Nuevo Certificado Digital" :modal="true" :closable="true"
+        :draggable="false" :style="{ width: '500px' }" class="kiwik-dialog" :dismissableMask="true">
+
 
 
         <Panel style="margin-top: 5px;margin-bottom: 20px; ">
@@ -34,9 +33,6 @@
 
                     <Select v-model="certificate.typeId" :options="certificateTypes" optionLabel="description"
                         optionValue="id" placeholder="Seleccione un tipo" fluid />
-                    <InlineMessage v-if="errors.typeId" severity="error">
-                        {{ errors.typeId }}
-                    </InlineMessage>
 
                 </div>
 
@@ -48,11 +44,7 @@
                     </label>
 
                     <InputText v-model="certificate.description" class="w-full"
-                        placeholder="Descripción del certificado" maxlength="350" />
-                    <InlineMessage v-if="errors.description" severity="error">
-                        {{ errors.description }}
-                    </InlineMessage>
-
+                        placeholder="Descripción del certificado" maxlength="350"/>
 
                 </div>
 
@@ -74,7 +66,7 @@
                         <Message v-if="certificate.file" severity="success" :closable="false" class="mt-3">
 
                             <i class="pi pi-file mr-2"></i>
-                            {{ certificate.file }}
+                            {{ certificate.file.name }}
 
                         </Message>
                     </p>
@@ -110,16 +102,17 @@
 </template>
 
 
-<script setup lang='ts'>
+<script setup>
 
 
 import { ref } from 'vue';
+
 import Dialog from 'primevue/dialog';
-import Select from 'primevue/select';
+import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import FileUpload from 'primevue/fileupload';
 import Button from 'primevue/button';
-import { useFormValidator } from '../../../libs/HelperView';
+
 import { useToast } from 'primevue/usetoast';
 import { useCompanyStore } from '@/stores/companyStore';
 import CertificatePasswordDialog from '../../../components/CertificatePasswordDialog.vue';
@@ -128,7 +121,7 @@ const emit = defineEmits([
     'saved'
 ]);
 
-const { setRef, scrollToError } = useFormValidator();
+
 const toast = useToast();
 const passwordDialog = ref();
 
@@ -142,31 +135,6 @@ const visible = ref(false);
 
 
 const certificateTypes = ref([]);
-
-
-
-
-type ErrorKey =
-    | 'description'
-    | 'typeId'
-    ;
-
-type FormErrors = Record<ErrorKey, string>;
-
-
-const errors = ref<FormErrors>({
-    description: '',
-    typeId: ''
-
-});
-
-const clearErrors = () => {
-    errors.value = {
-        description: '',
-        typeId: ''
-
-    };
-};
 
 
 
@@ -262,7 +230,7 @@ const loadTypes = async () => {
 
 
 
-const onFileSelect = (event: any) => {
+const onFileSelect = (event) => {
 
 
     if (event.files && event.files.length > 0) {
@@ -277,64 +245,93 @@ const onFileSelect = (event: any) => {
 
 
 
+
+
 const save = async () => {
-    if (!(await validate())) return;
+
+
+
+
     if (!certificate.value.typeId) {
 
         toast.add({
+
             severity: 'warn',
+
             summary: 'Aviso',
+
             detail: 'Seleccione un tipo de certificado',
+
             life: toastLife
+
         });
 
         return;
+
     }
+
+
 
     if (!certificate.value.description) {
 
+
         toast.add({
+
             severity: 'warn',
+
             summary: 'Aviso',
+
             detail: 'Introduzca una descripción',
+
             life: toastLife
+
         });
 
+
         return;
+
     }
 
-    // Solo en ALTA es obligatorio seleccionar el fichero
-    if (certificate.value.pkid == null && !certificate.value.file) {
+
+
+    if (!certificate.value.file) {
+
 
         toast.add({
+
             severity: 'warn',
+
             summary: 'Aviso',
+
             detail: 'Seleccione el archivo del certificado',
+
             life: toastLife
+
         });
 
+
         return;
+
     }
+
+
 
     try {
 
-        let password = '';
-
-        // Solo en ALTA se solicita la contraseña
-        if (certificate.value.pkid == null) {
-
-            password = await passwordDialog.value.open();
-
-            if (!password)
-                return;
+        if( certificate.value.pkid
+        );){
 
         }
+        const password = await passwordDialog.value.open();
 
+        if (!password)
+            return;
         const formData = new FormData();
+
 
         formData.append(
             'id',
-            certificate.value.pkid ?? ''
+            certificate.value.pkid
         );
 
         formData.append(
@@ -342,77 +339,98 @@ const save = async () => {
             certificate.value.typeId
         );
 
+
         formData.append(
             'description',
             certificate.value.description
         );
 
-        // Solo enviar el fichero si existe
-        if (certificate.value.file) {
 
-            formData.append(
-                'file',
-                certificate.value.file
-            );
+        formData.append(
+            'file',
+            certificate.value.file
+        );
 
-        }
+        formData.append(
+            'password',
+            password
+        );
 
-        // Solo enviar la contraseña si existe
-        if (password) {
-
-            formData.append(
-                'password',
-                password
-            );
-
-        }
 
         const response = await fetch(
 
             `${import.meta.env.VITE_API_URL}/api/certificates/UploadCertificateWithValidaTePassword`,
 
             {
+
                 method: 'POST',
+
                 body: formData
+
             }
 
         );
 
+
+
         if (!response.ok) {
 
+
             const error = await response.text();
+
             throw new Error(error);
+
 
         }
 
+
+
         toast.add({
+
             severity: 'success',
+
             summary: 'Guardado',
+
             detail: 'Certificado guardado correctamente',
+
             life: toastLife
+
         });
+
+
 
         emit('saved');
 
+
         close();
+
+
 
     } catch (error) {
 
+
         console.error(error);
 
+
         toast.add({
+
             severity: 'error',
+
             summary: 'Error',
-            detail: 'No se pudo guardar el certificado',
+
+            detail: error.message || 'No se pudo guardar el certificado',
+
             life: toastLife
+
         });
+
 
     }
 
+
 };
 
-
-const loadCertificate = async (id: number) => {
+const loadCertificate = async (id) => {
 
     const response = await fetch(
         `${import.meta.env.VITE_API_URL}/WebGetCertificateById?id=${id}`
@@ -434,29 +452,6 @@ const close = () => {
 
 };
 
-const validate = async (): Promise<boolean> => {
-    clearErrors();
 
-    let valid = true;
-    let firstError: ErrorKey | '' = '';
-
-    const setError = (field: ErrorKey, msg: string) => {
-        errors.value[field] = msg;
-        if (!firstError) firstError = field;
-        valid = false;
-    };
-
-    if (!certificate.value.description?.trim()) setError('description', 'Obligatorio');
-    if (certificate.value.typeId == null) {
-        setError('typeId', 'Obligatorio');
-    }
-
-
-
-
-    await scrollToError(firstError);
-
-    return valid;
-};
 
 </script>

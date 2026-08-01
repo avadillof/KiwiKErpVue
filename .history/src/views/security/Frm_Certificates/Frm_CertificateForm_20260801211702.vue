@@ -1,9 +1,8 @@
 <template>
 
-    <Dialog v-model:visible="visible" :header="certificate.pkid
-        ? 'Ficha del Certificado - ' + certificate.description
-        : 'Nuevo Certificado'" :modal="true" :closable="true" :draggable="false" :style="{ width: '500px' }"
-        class="kiwik-dialog" :dismissableMask="true">
+    <Dialog v-model:visible="visible" header="Nuevo Certificado Digital" :modal="true" :closable="true"
+        :draggable="false" :style="{ width: '500px' }" class="kiwik-dialog" :dismissableMask="true">
+
 
 
         <Panel style="margin-top: 5px;margin-bottom: 20px; ">
@@ -48,7 +47,8 @@
                     </label>
 
                     <InputText v-model="certificate.description" class="w-full"
-                        placeholder="Descripción del certificado" maxlength="350" />
+                        placeholder="Descripción del certificado" maxlength="350" 
+                    />
                     <InlineMessage v-if="errors.description" severity="error">
                         {{ errors.description }}
                     </InlineMessage>
@@ -148,7 +148,7 @@ const certificateTypes = ref([]);
 
 type ErrorKey =
     | 'description'
-    | 'typeId'
+| ''
     ;
 
 type FormErrors = Record<ErrorKey, string>;
@@ -163,7 +163,6 @@ const errors = ref<FormErrors>({
 const clearErrors = () => {
     errors.value = {
         description: '',
-        typeId: ''
 
     };
 };
@@ -447,12 +446,7 @@ const validate = async (): Promise<boolean> => {
     };
 
     if (!certificate.value.description?.trim()) setError('description', 'Obligatorio');
-    if (certificate.value.typeId == null) {
-        setError('typeId', 'Obligatorio');
-    }
-
-
-
+    
 
     await scrollToError(firstError);
 

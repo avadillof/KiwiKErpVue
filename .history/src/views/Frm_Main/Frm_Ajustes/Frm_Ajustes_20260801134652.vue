@@ -391,7 +391,7 @@
 
 <style scoped>
 .tax-card {
-  height: 180px;
+  height: 180 px;
   cursor: pointer;
   transition: all .25s ease;
 

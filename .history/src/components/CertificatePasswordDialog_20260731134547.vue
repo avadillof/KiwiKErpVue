@@ -31,8 +31,8 @@
                     Contraseña
                 </label>
 
-                <Password ref="passwordRef" v-model="password" fluid toggleMask :feedback="false"
-                    placeholder="Introduzca la contraseña" @keyup.enter="accept" />
+                <Password v-model="password" fluid toggleMask :feedback="false" placeholder="Introduzca la contraseña"
+                    @keyup.enter="accept" />
 
             </div>
 
@@ -58,12 +58,11 @@
 
 <script setup>
 
-import { ref, nextTick } from 'vue';
+import { ref,nextTick ,aw } from 'vue';
 
 
 const visible = ref(false);
 const password = ref('');
-const passwordRef = ref(null);
 
 const props = defineProps({
 
@@ -76,7 +75,7 @@ const props = defineProps({
 
 let resolver = null;
 
-const open = async () => {
+const open = () => {
 
     password.value = '';
     visible.value = true;

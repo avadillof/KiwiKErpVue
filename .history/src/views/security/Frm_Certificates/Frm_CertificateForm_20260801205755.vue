@@ -1,9 +1,8 @@
 <template>
 
-    <Dialog v-model:visible="visible" :header="certificate.pkid
-        ? 'Ficha del Certificado - ' + certificate.description
-        : 'Nuevo Certificado'" :modal="true" :closable="true" :draggable="false" :style="{ width: '500px' }"
-        class="kiwik-dialog" :dismissableMask="true">
+    <Dialog v-model:visible="visible" header="Nuevo Certificado Digital" :modal="true" :closable="true"
+        :draggable="false" :style="{ width: '500px' }" class="kiwik-dialog" :dismissableMask="true">
+
 
 
         <Panel style="margin-top: 5px;margin-bottom: 20px; ">
@@ -34,9 +33,6 @@
 
                     <Select v-model="certificate.typeId" :options="certificateTypes" optionLabel="description"
                         optionValue="id" placeholder="Seleccione un tipo" fluid />
-                    <InlineMessage v-if="errors.typeId" severity="error">
-                        {{ errors.typeId }}
-                    </InlineMessage>
 
                 </div>
 
@@ -48,9 +44,10 @@
                     </label>
 
                     <InputText v-model="certificate.description" class="w-full"
-                        placeholder="Descripción del certificado" maxlength="350" />
+                        placeholder="Descripción del certificado" maxlength="350" 
+                    />
                     <InlineMessage v-if="errors.description" severity="error">
-                        {{ errors.description }}
+                        {{ errors.tarifascompras }}
                     </InlineMessage>
 
 
@@ -74,7 +71,7 @@
                         <Message v-if="certificate.file" severity="success" :closable="false" class="mt-3">
 
                             <i class="pi pi-file mr-2"></i>
-                            {{ certificate.file }}
+                            {{ certificate.file.name }}
 
                         </Message>
                     </p>
@@ -114,12 +111,13 @@
 
 
 import { ref } from 'vue';
+
 import Dialog from 'primevue/dialog';
-import Select from 'primevue/select';
+import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import FileUpload from 'primevue/fileupload';
 import Button from 'primevue/button';
-import { useFormValidator } from '../../../libs/HelperView';
+
 import { useToast } from 'primevue/usetoast';
 import { useCompanyStore } from '@/stores/companyStore';
 import CertificatePasswordDialog from '../../../components/CertificatePasswordDialog.vue';
@@ -128,7 +126,7 @@ const emit = defineEmits([
     'saved'
 ]);
 
-const { setRef, scrollToError } = useFormValidator();
+
 const toast = useToast();
 const passwordDialog = ref();
 
@@ -148,7 +146,7 @@ const certificateTypes = ref([]);
 
 type ErrorKey =
     | 'description'
-    | 'typeId'
+
     ;
 
 type FormErrors = Record<ErrorKey, string>;
@@ -156,14 +154,12 @@ type FormErrors = Record<ErrorKey, string>;
 
 const errors = ref<FormErrors>({
     description: '',
-    typeId: ''
 
 });
 
 const clearErrors = () => {
     errors.value = {
         description: '',
-        typeId: ''
 
     };
 };
@@ -278,7 +274,7 @@ const onFileSelect = (event: any) => {
 
 
 const save = async () => {
-    if (!(await validate())) return;
+
     if (!certificate.value.typeId) {
 
         toast.add({
@@ -412,7 +408,7 @@ const save = async () => {
 };
 
 
-const loadCertificate = async (id: number) => {
+const loadCertificate = async (id) => {
 
     const response = await fetch(
         `${import.meta.env.VITE_API_URL}/WebGetCertificateById?id=${id}`
@@ -434,29 +430,6 @@ const close = () => {
 
 };
 
-const validate = async (): Promise<boolean> => {
-    clearErrors();
 
-    let valid = true;
-    let firstError: ErrorKey | '' = '';
-
-    const setError = (field: ErrorKey, msg: string) => {
-        errors.value[field] = msg;
-        if (!firstError) firstError = field;
-        valid = false;
-    };
-
-    if (!certificate.value.description?.trim()) setError('description', 'Obligatorio');
-    if (certificate.value.typeId == null) {
-        setError('typeId', 'Obligatorio');
-    }
-
-
-
-
-    await scrollToError(firstError);
-
-    return valid;
-};
 
 </script>

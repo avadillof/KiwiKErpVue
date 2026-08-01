@@ -198,7 +198,7 @@ const deleteCertificate = () => {
  if (!selectedCertificate.value) return;
 
     confirm.require({
-        message: `¿Estás seguro de que quieres borrar el Certificado ${selectedCertificate.value.description}? Esta acción no se puede deshacer.`,
+        message: `¿Estás seguro de que quieres borrar el Certificado ${selectedCertificate.value.de}? Esta acción no se puede deshacer.`,
         header: 'Confirmar eliminación',
         icon: 'pi pi-exclamation-triangle',
         rejectProps: {
@@ -212,25 +212,26 @@ const deleteCertificate = () => {
         accept: async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteCertificate`, {
+                    `${import.meta.env.VITE_API_URL}/WebDeleteEntitie`,
+                    {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            pkid: selectedCertificate.value.pkid
+                            pkid: clientSelected.value!.pkid
                         })
                     }
                 );
 
                 if (!response.ok) {
-                    throw new Error('Error al eliminar el Certificado');
+                    throw new Error('Error al eliminar el usuario');
                 }
 
                 toast.add({
                     severity: 'success',
                     summary: 'Borrado',
-                    detail: 'Certificado eliminado correctamente',
+                    detail: 'Entidad eliminada correctamente',
                     life: companyStore.companyInfo.toastDuration ?? 3000
                 });
 
@@ -241,7 +242,7 @@ const deleteCertificate = () => {
                 toast.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'No se pudo eliminar el Certifiado ',
+                    detail: 'No se pudo eliminar la  entidad',
                     life: companyStore.companyInfo.toastDuration ?? 3000
                 });
             }
