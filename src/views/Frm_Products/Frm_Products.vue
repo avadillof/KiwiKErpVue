@@ -32,11 +32,11 @@
         </div>
 
         <div class="card"
-            style="height: 650px; display: flex; flex-direction: column; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+            style="height: 800px; display: flex; flex-direction: column; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
             <Toolbar class="mb-3">
                 <template #start>
                     <Button v-if="securityStore.hasPermission('ENTI_GEN_0001')" label="Nuevo Artículo" icon="pi pi-plus"
-                        size="small" variant="text" outlined />
+                        size="small" variant="text" outlined @click="newProduct"/>
                 </template>
             </Toolbar>
 
@@ -56,7 +56,9 @@
 
                 <Column field="category" sortField="category.descriptionEs" header="Categoría" sortable />
 
-                <Column field="family" sortField="categoryType.descriptionEs" header="Familia" sortable />
+                <Column field="family" sortField="categoryType.descriptionEs" header="Tipo" sortable />
+
+                <Column field="familiproduct" sortField="familia.categoriesDsDescriptionsp" header="Familia" sortable />
 
                 <Column field="uom" sortField="unitOfMeasure.description" header="U.M." sortable />
 
@@ -102,6 +104,7 @@
     <AttachmentsDialog v-model:visible="showAttachments" moduleFolder="ATTACHEMENTS_PRODUCTS_DOCUMENTS"
         :title="`Documentos indexados a ${productSelected?.description ?? ''}`" :entityId="productSelected?.pkid" />
     <ConfirmDialog />
+    <Frm_Product ref="productFormRef" @saved="refreshTable" />
 
 </template>
 
@@ -131,7 +134,9 @@ import { HelperDates } from '../../libs/HelperDates.ts';
 import { useSecurityStore } from '../../stores/securityStore.ts';
 import GenericDataTable from '@/components/shared/GenericDataTable.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
+import Frm_Product from './Frm_Product.vue';
 
+const productFormRef = ref();
 const securityStore = useSecurityStore();
 const router = useRouter();
 const tableRef = ref();
@@ -150,10 +155,41 @@ const openMenuTable = (event: Event) => menuTable.value.toggle(event);
 
 const refreshTable = () => tableRef.value?.refresh();
 
-const menuItemsTable = ref([
-    { label: 'Refrescar', icon: 'pi pi-refresh', command: () => refreshTable() },
-    { label: 'Exportar Excel', icon: 'pi pi-file-excel', command: () => tableRef.value.exportToExcel() }
-]);
+const menuItemsTable = computed(() => {
+
+    const items: any[] = [];
+
+    if (securityStore.hasPermission('PROSER_GEN_0005')) {
+
+        items.push({
+            label: 'Familias de Productos',
+            icon: 'pi pi-tags',
+            command: () => router.push({
+                name: 'FamiliasProductos',
+                query: { from: 'products' }
+            })
+        });
+
+        items.push({
+            separator: true
+        });
+    }
+
+    items.push(
+        {
+            label: 'Refrescar',
+            icon: 'pi pi-refresh',
+            command: () => refreshTable()
+        },
+        {
+            label: 'Exportar Excel',
+            icon: 'pi pi-file-excel',
+            command: () => tableRef.value.exportToExcel()
+        }
+    );
+
+    return items;
+});
 
 const noteRequest = {
     table: 'PRODUCT_PRODUCT',
@@ -169,7 +205,8 @@ const menuItems = computed(() => {
 
     items.push({
         label: 'Ficha del Producto',
-        icon: 'pi pi-pencil'
+        icon: 'pi pi-pencil',
+        command: () => editProduct(productSelected.value)
     });
 
 
@@ -231,12 +268,7 @@ const openMenu = (event: Event, product: any) => {
 
 function newProduct() {
 
-    toast.add({
-        severity: 'info',
-        summary: 'Nuevo producto',
-        detail: 'Pendiente de implementar',
-        life: 3000
-    });
+    productFormRef.value?.open(null);
 
 }
 
@@ -244,12 +276,7 @@ function newProduct() {
 
 function editProduct(product: ProductsDTO) {
 
-    toast.add({
-        severity: 'info',
-        summary: 'Editar producto',
-        detail: `Producto ${product.code}`,
-        life: 3000
-    });
+    productFormRef.value?.open(product.pkid);
 
 }
 
