@@ -8,6 +8,7 @@ import Frm_Main from './views/Frm_Main/Frm_Main.vue';
 import Pn_DashBoard from './views/Frm_Main/Dashboard/Pn_DashBoard.vue';
 import Pn_VentasHub from './views/Ventas/Pn_VentasHub.vue'
 import Frm_Clientes from './views/Ventas/Frm_Clientes/Frm_Clientes.vue';
+import Frm_Presupuestos from './views/Ventas/Frm_Presupuestos/Frm_Presupuestos.vue';
 import Frm_Products from './views/Frm_Products/Frm_Products.vue';
 import Frm_SalesTax from './views/Frm_SalexTax/Frm_SalesTax.vue';
 import Frm_Certificates from './views/security/Frm_Certificates/Frm_Certificates.vue';
@@ -50,6 +51,11 @@ const routes = [
         path: '/ventas/clientes',
         name: 'Clientes', // <--- Este nombre debe coincidir EXACTAMENTE con la 'ruta' en tu lista
         component: Frm_Clientes
+      },
+      {
+        path: '/ventas/presupuestos',
+        name: 'Presupuestos',
+        component: Frm_Presupuestos
       },
       {
         path: '/security',
