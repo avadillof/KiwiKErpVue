@@ -320,8 +320,8 @@ const save = async () => {
 
         let password = '';
 
-        // Solo en ALTA se solicita la contraseña
-        if (certificate.value.pkid == null) {
+        // En alta y cuando se sustituye el archivo se valida su contraseña.
+        if (certificate.value.pkid == null || certificate.value.file) {
 
             password = await passwordDialog.value.open();
 

@@ -1,27 +1,10 @@
 <template>
 
-    <div class="p-4" style="padding-bottom: 80px; margin-bottom: 100px;">
-
-        <h1 class="text-3xl font-extrabold text-gray-800 mb-1">
-            Getión de Familias de Productos
-        </h1>
-
-        <Message variant="simple" icon="pi pi-shield" severity="success" size="big">
-            Gestión y mantenimiento de las distintas Familias de Productos a las que perenecerán los distintos productos
-            y Servicios.
-        </Message>
-
-        <div class="mb-5">
-            <Button :label="router.currentRoute.value.query.from === 'products'
-                ? 'Volver a Productos'
-                : 'Volver a Ajustes'" icon="pi pi-arrow-left" text @click="volver" />
-        </div>
-
-        <Toolbar class="mb-3">
-            <template #start>
-                <Button v-if="securityStore.hasPermission('PROSER_GEN_0006')" label="Nueva Familia" icon="pi pi-plus"
-                    size="small" variant="text" outlined @click="openNew" />
-            </template>
+    <div class="maintenance-page">
+        <header class="page-header"><div class="page-heading"><div class="page-icon"><i class="pi pi-sitemap"></i></div><div><span class="breadcrumb">Configuración / Datos maestros</span><h1>Familias de productos</h1><p>Clasificación común para mantener organizado el catálogo de productos y servicios.</p></div></div><nav class="header-actions"><Button :label="router.currentRoute.value.query.from === 'products' ? 'Artículos' : 'Ajustes'" icon="pi pi-arrow-left" severity="secondary" text @click="volver" /><Button label="Inicio" icon="pi pi-home" severity="secondary" text @click="router.push({ name: 'Dashboard' })" /></nav></header>
+        <div class="card list-card"><Toolbar class="list-toolbar">
+            <template #start><div class="workspace-heading"><span>Catálogo de familias</span><small>Consulta y organiza las agrupaciones utilizadas por los artículos.</small></div></template>
+            <template #end><Button v-if="securityStore.hasPermission('PROSER_GEN_0006')" label="Nueva familia" icon="pi pi-plus" size="small" @click="openNew" /></template>
         </Toolbar>
 
 
@@ -29,7 +12,7 @@
 
 
 
-        <GenericDataTable style="height: 450px;" ref="tableRef" dataKey="pkid" selectionMode="single" :endpoint="apiUrl"
+        <GenericDataTable class="maintenance-table" ref="tableRef" dataKey="pkid" selectionMode="single" :endpoint="apiUrl"
             :showPaginator="true" :filterable="true" :showActions="true" @row-select="handleRowSelect">
 
 
@@ -64,7 +47,7 @@
 
             </Column>
 
-        </GenericDataTable>
+        </GenericDataTable></div>
 
     </div>
 
@@ -152,6 +135,12 @@
         :title="`Documentos indexados a ${selectedFamily?.description ?? ''}`" :entityId="selectedFamily?.pkid" />
 
 </template>
+
+<style scoped>
+.maintenance-page { --kiwi:#9cc10a; --kiwi-dark:#648506; width:100%; min-height:calc(100dvh - 66px); padding:18px 16px 72px; box-sizing:border-box; background:#f7f8fa; }
+.page-header { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:18px; padding:15px 20px; border:1px solid #e3e8d2; border-radius:15px; background:#fff; box-shadow:0 6px 18px rgba(31,41,55,.055); }.page-header::after{content:"";position:absolute;z-index:0;width:300px;height:300px;right:20px;top:50%;transform:translateY(-50%);background:url('/logos/logo512.png') center/contain no-repeat;filter:grayscale(1);opacity:.075;pointer-events:none}.page-header>*{position:relative;z-index:1}.page-heading{display:flex;align-items:center;gap:14px}.page-icon{display:grid;width:50px;height:50px;flex:0 0 auto;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(135deg,#b1d70e,#719808);box-shadow:0 7px 15px rgba(113,152,8,.22)}.page-icon i{font-size:1.3rem}.breadcrumb{color:#8791a0;font-size:.8rem;font-weight:700}.page-heading h1{margin:3px 0 2px;color:#202939;font-size:1.38rem}.page-heading p{margin:0;color:#7a8494;font-size:.92rem}.header-actions{display:flex;align-items:center;gap:3px}
+.list-card{height:clamp(520px,calc(100dvh - 270px),760px);min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0;border:1px solid #dfe4ea;border-radius:14px;background:#fff;box-shadow:0 5px 18px rgba(30,41,59,.055)}.list-toolbar{padding:13px 17px;border:0;border-bottom:1px solid #e8ecf0;border-radius:0;background:#fff}.workspace-heading{display:flex;flex-direction:column;gap:3px}.workspace-heading span{color:#344054;font-size:1rem;font-weight:800}.workspace-heading small{color:#8a93a2;font-size:.82rem}.list-toolbar :deep(.p-button){border-color:var(--kiwi-dark);background:var(--kiwi-dark)}.maintenance-table{flex:1 1 auto;min-height:0}.list-card :deep(.table-container){border:0;border-radius:0}@media(max-width:700px){.maintenance-page{padding:12px 10px 66px}.page-header{padding:12px;align-items:flex-start}.page-heading p,.workspace-heading small,.header-actions :deep(.p-button-label){display:none}.list-card{height:560px}}
+</style>
 
 
 <script setup lang="ts">
@@ -461,7 +450,7 @@ const volver = () => {
     if (router.currentRoute.value.query.from === 'products') {
         router.push({ name: 'Productos' });
     } else {
-        router.push({ name: 'Frm_Ajustes' });
+        router.push({ name: 'Frm_Ajustes', query: { tab: '3' } });
     }
 };
 

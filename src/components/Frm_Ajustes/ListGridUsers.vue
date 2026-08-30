@@ -1,5 +1,5 @@
 <template>
-  <div class="card" style="height: 500px; display: flex; flex-direction: column;">
+  <div class="card" style="height: clamp(620px, calc(100dvh - 250px), 820px); min-height: 0; display: flex; flex-direction: column;">
 
 
 
@@ -13,7 +13,7 @@
       </template>
     </Toolbar>
 
-    <GenericDataTable style="min-height: 400px;" ref="tableRef" dataKey="userKyId" :endpoint="apiUrl"
+    <GenericDataTable style="flex: 1 1 auto; min-height: 0;" ref="tableRef" dataKey="userKyId" :endpoint="apiUrl"
       :showPaginator="true" :filterable="true" selectionMode="single" v-model:selection="userSelected"
       @row-select="handleRowSelect" @data-loaded="handleDataLoaded" :showActions="true">
 

@@ -1,6 +1,6 @@
 
-import { isOnline, onReconnected } from '../composables/Sv_MonitorConnectionBack.ts';
-import { ref, onMounted, watch } from 'vue';
+import { onReconnected } from '../composables/Sv_MonitorConnectionBack.ts';
+import { ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '../../stores/authStore';
 import { useCompanyStore } from '../../stores/companyStore';
@@ -15,14 +15,15 @@ export function loginController() {
     const loginData = ref({ username: '', password: '' });
     const isLoading = ref(false);
     const errorMessage = ref('');
-    const logoEmpresaClienteUrl = ref('/logos/logo512.png');
-    const logoUrl = ref('/logos/logo512.png');
     const router = useRouter();
+    const apiBaseUrl = import.meta.env.VITE_API_URL;
+
+    const initialLogoUrl = companyStore.companyInfo.urlLogo || '';
 
     const dataEmpresa = ref({
         txtnombreEmpresa: companyStore.companyInfo.nameCompany || '',
         txtCifEmpresa: companyStore.companyInfo.cifCompany || '',
-        txtLogoEmpresa: companyStore.companyInfo.urlServer+'/base/logo.png' || ''
+        txtLogoEmpresa: initialLogoUrl
     });
 
     const handleForgotPassword = function () {
@@ -59,13 +60,17 @@ export function loginController() {
             dataEmpresa.value.txtnombreEmpresa = data.nameCompany;
             dataEmpresa.value.txtCifEmpresa = data.cifCompany;
 
-            const newLogoUrl = `${data.urlServer}/base/logo.png?t=${new Date().getTime()}`;
+            const logoSource = data.urlLogoCompany
+                || companyStore.companyInfo.urlLogo
+                || `${apiBaseUrl}/base/logo.png`;
+            const newLogoUrl = `${logoSource}${logoSource.includes('?') ? '&' : '?'}t=${Date.now()}`;
             dataEmpresa.value.txtLogoEmpresa = newLogoUrl;
             
             companyStore.setCompanyParameters({
                 nameCompany: data.nameCompany,
                 cifCompany: data.cifCompany,
                 urlServer: data.urlServer,
+                urlLogo: logoSource,
                 toastDuration: data.toastDuration,
                 sloganCompany: data.sloganCompany,
                 paginationTable: data.paginationTable
@@ -169,9 +174,7 @@ export function loginController() {
         errorMessage,
         handleLogin,
         dataEmpresa,
-        logoEmpresaClienteUrl,
         handleForgotPassword,
-        logoUrl,
         isForgotPasswordVisible,
         handleImageError
     };

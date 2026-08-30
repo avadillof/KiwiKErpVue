@@ -1,28 +1,26 @@
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useCompanyStore } from '../../stores/companyStore';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 
 // Exportamos estos valores fuera de la función para que sean GLOBALES
 // y cualquier componente/controlador pueda acceder al mismo estado.
 export const isOnline = ref(true);
 export const onReconnected = ref(0); 
 
-export function useConnectionMonitor() {
-    
-    const companyStore = useCompanyStore();
+// Disabled deliberately: do not perform an isolated startup check without recovery polling.
+export function useConnectionMonitor(enabled = false) {
+    const connectionLost = computed(() => enabled && !isOnline.value);
     const baseUrl = import.meta.env.VITE_API_URL;
     let intervalId: any = null;
 
     const checkConnection = async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 800);
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 800);
             
             const response = await fetch(`${baseUrl}/WebPing`, { 
                 method: 'GET',
                 signal: controller.signal 
             });
 
-            clearTimeout(timeoutId);
 
             // Si estábamos desconectados y ahora la respuesta es OK, disparamos la reconexión
             if (!isOnline.value && response.ok) {
@@ -32,14 +30,17 @@ export function useConnectionMonitor() {
             isOnline.value = response.ok;
         } catch (error) {
             isOnline.value = false;
+        } finally {
+            clearTimeout(timeoutId);
         }
     };
 
     onMounted(() => {
+        if (!enabled) return;
         // Ejecución inmediata al montar
         checkConnection();
         // Luego cada segundo
-        //intervalId = setInterval(checkConnection, 1000);
+        intervalId = setInterval(checkConnection, 1000);
     });
 
     onUnmounted(() => {
@@ -47,5 +48,5 @@ export function useConnectionMonitor() {
     });
 
     // Retornamos lo mismo para que tus componentes actuales no se rompan
-    return { isOnline };
+    return { isOnline, connectionLost };
 }

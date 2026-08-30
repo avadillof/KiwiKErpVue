@@ -145,7 +145,7 @@
             <div class="upload-container">
 
 
-                <FileUpload mode="basic" chooseLabel="Añadir documento" :multiple="true" customUpload
+                <FileUpload mode="basic" chooseLabel="Añadir documento" :multiple="true" customUpload :accept="accept" :maxFileSize="maxFileSize"
                     @select="upload" />
 
 
@@ -338,6 +338,8 @@ interface Props {
     moduleFolder: string;
     entityId: number;
     title: string;
+    accept?: string;
+    maxFileSize?: number;
 }
 
 

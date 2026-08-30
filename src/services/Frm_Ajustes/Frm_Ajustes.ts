@@ -37,8 +37,11 @@ export function Frm_Ajustes() {
             const data = await response.json();
 
             // Actualizamos el store
-            companyStore.setCompanyParameters(data);
-            logoUrl.value = data.urlLogoCompany;
+            // El API usa urlLogoCompany (nombre de la columna). En la aplicación
+            // mantenemos urlLogo como propiedad de presentación.
+            const resolvedLogoUrl = data.urlLogoCompany || `${baseUrl}/base/logo.png`;
+            companyStore.setCompanyParameters({ ...data, urlLogo: resolvedLogoUrl });
+            logoUrl.value = resolvedLogoUrl;
         } catch (error) {
             toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar', life: companyStore.companyInfo.toastDuration ?? 3000 });
         } finally {
@@ -100,19 +103,12 @@ export function Frm_Ajustes() {
 
             if (!response.ok) throw new Error('Error al subir la imagen');
 
-            // Generamos el timestamp para romper la caché
-            const timestamp = new Date().getTime();
-
-            // Construimos la URL completa con el timestamp
-            // Asegúrate de que esta URL sea la misma que espera el :src de tu img
-            const newLogoUrl = `${baseUrl.replace(':8080', ':8083')}/base/logo.png?t=${timestamp}`;
-
-            // ACTUALIZACIÓN REACTIVA:
-            // 1. Actualizamos formData directamente para que el componente img reaccione
-            formData.value.urlServer = `${baseUrl.replace(':8080', ':8083')}`;
+            const data = await response.json();
+            // Se añade el timestamp únicamente para refrescar la previsualización.
+            // La URL que el backend guarda para los PDF no contiene este parámetro.
+            const newLogoUrl = `${data.urlLogoCompany || `${baseUrl}/base/logo.png`}?t=${Date.now()}`;
             formData.value.urlLogo = newLogoUrl;
-            // 2. Si usas un store, actualízalo también
-            //companyStore.updateLogoUrl(newLogoUrl);
+            logoUrl.value = newLogoUrl;
 
             toast.add({
                 severity: 'success',

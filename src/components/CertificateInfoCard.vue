@@ -1,6 +1,6 @@
 <template>
 
-    <Card class="h-full">
+    <Card class="h-full certificate-info-card">
 
         <template #title>
 
@@ -267,6 +267,26 @@ const certificateStatus = computed(() => {
 </script>
 
 <style scoped>
+.certificate-info-card {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.certificate-info-card :deep(.p-card-body) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+.certificate-info-card :deep(.p-card-content) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: .35rem;
+}
+
 .field-row {
     margin: 1rem 0;
 }

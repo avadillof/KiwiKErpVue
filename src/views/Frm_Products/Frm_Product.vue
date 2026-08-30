@@ -237,7 +237,7 @@
                                         class="w-full" filter />
 
                                     <label for="productCategory">
-                                        Tipo de Producto
+                                        Tipo logístico
                                     </label>
 
                                 </FloatLabel>
@@ -260,7 +260,7 @@
                                         optionValue="pkid" class="w-full" filter />
 
                                     <label for="category">
-                                        Categoría
+                                        Tipo comercial
                                     </label>
 
                                 </FloatLabel>
@@ -473,6 +473,20 @@
 
                                 </div>
 
+                                <div class="col-12">
+                                    <div class="sales-flow-card">
+                                        <div class="sales-flow-header"><span><i class="pi pi-directions-alt"></i> Flujo de venta</span><small>Determina si el pedido requiere albarán y cuándo puede facturarse.</small></div>
+                                        <div class="grid align-items-center mt-1">
+                                            <div class="col-12 md:col-4"><Checkbox id="customSalesFlow" v-model="hasCustomSalesFlow" binary /><label for="customSalesFlow" class="ml-2">Personalizar para este producto</label></div>
+                                            <template v-if="hasCustomSalesFlow">
+                                                <div class="col-12 md:col-3"><Checkbox id="requireDelivery" v-model="product.requireDeliveryOverride" binary /><label for="requireDelivery" class="ml-2">Requiere albarán</label></div>
+                                                <div class="col-12 md:col-4"><FloatLabel variant="on"><Select id="invoicingPolicy" v-model="product.invoicingPolicyOverride" :options="invoicingPolicies" optionLabel="label" optionValue="value" :disabled="product.requireDeliveryOverride === false" class="w-full" /><label for="invoicingPolicy">Política de facturación</label></FloatLabel></div>
+                                            </template>
+                                            <div v-else class="col-12 md:col-8"><span class="sales-flow-inherited"><i class="pi pi-sitemap"></i> Heredado del tipo comercial: <b>{{ effectiveDeliveryLabel }}</b> · <b>{{ effectiveInvoicingPolicyLabel }}</b></span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
 
                         </Panel>
@@ -683,6 +697,10 @@ type Product = {
 
     productCategoryId: number | null;
 
+    requireDeliveryOverride: boolean | null;
+
+    invoicingPolicyOverride: string | null;
+
 
 
 };
@@ -728,7 +746,11 @@ const createProduct = (): Product => ({
 
     purchaseTaxId: null,
 
-    productCategoryId: null
+    productCategoryId: null,
+
+    requireDeliveryOverride: null,
+
+    invoicingPolicyOverride: null
 
 });
 
@@ -839,6 +861,12 @@ const validate = async (): Promise<boolean> => {
     if (!product.value.productCategoryId) {
 
         setError('productCategoryId', 'Obligatorio')
+
+    }
+
+    if (!product.value.categoryId) {
+
+        setError('categoryId', 'Obligatorio')
 
     }
 
@@ -1086,6 +1114,41 @@ const filteredProductCategoryTypes = computed(() => {
 
 });
 
+const invoicingPolicies = [
+    { label: 'Por cantidades pedidas', value: 'ORDERED' },
+    { label: 'Por cantidades entregadas', value: 'DELIVERED' }
+];
+
+const selectedProductCategoryType = computed(() => productCategoryTypes.value.find(type => type.pkid === product.value.categoryId) ?? null);
+const inheritedRequireDelivery = computed(() => Boolean(selectedProductCategoryType.value?.requireDelivery));
+const inheritedInvoicingPolicy = computed(() => selectedProductCategoryType.value?.invoicingPolicy ?? 'ORDERED');
+const effectiveRequireDelivery = computed(() => product.value.requireDeliveryOverride ?? inheritedRequireDelivery.value);
+const effectiveInvoicingPolicy = computed(() => product.value.invoicingPolicyOverride ?? inheritedInvoicingPolicy.value);
+const effectiveDeliveryLabel = computed(() => effectiveRequireDelivery.value ? 'Requiere albarán' : 'Facturación directa sin albarán');
+const effectiveInvoicingPolicyLabel = computed(() => effectiveInvoicingPolicy.value === 'DELIVERED' ? 'Factura por cantidades entregadas' : 'Factura al confirmar el pedido');
+const hasCustomSalesFlow = computed({
+    get: () => product.value.requireDeliveryOverride !== null || product.value.invoicingPolicyOverride !== null,
+    set: (enabled: boolean) => {
+        if (enabled) {
+            product.value.requireDeliveryOverride = inheritedRequireDelivery.value;
+            product.value.invoicingPolicyOverride = inheritedInvoicingPolicy.value;
+        } else {
+            product.value.requireDeliveryOverride = null;
+            product.value.invoicingPolicyOverride = null;
+        }
+    }
+});
+
+watch(() => product.value.productCategoryId, () => {
+    if (product.value.categoryId && !filteredProductCategoryTypes.value.some(type => type.pkid === product.value.categoryId)) {
+        product.value.categoryId = null;
+    }
+});
+
+watch(() => product.value.requireDeliveryOverride, (requiresDelivery) => {
+    if (requiresDelivery === false) product.value.invoicingPolicyOverride = 'ORDERED';
+});
+
 defineExpose({
     open
 });
@@ -1204,3 +1267,8 @@ const handleImageSelected = (event: Event) => {
 
 };
 </script>
+
+<style scoped>
+.sales-flow-card { border: 1px solid var(--primary-200); border-left: 4px solid var(--primary-color); border-radius: 10px; padding: .9rem 1rem; background: linear-gradient(135deg, var(--surface-0), var(--primary-50)); }
+.sales-flow-header { display: flex; flex-direction: column; gap: .18rem; color: var(--text-color-secondary); font-size: .82rem; }.sales-flow-header span { color: var(--primary-color); font-size: .95rem; font-weight: 700; }.sales-flow-header i { margin-right: .4rem; }.sales-flow-inherited { color: var(--text-color-secondary); font-size: .9rem; }.sales-flow-inherited i { color: var(--primary-color); margin-right: .4rem; }.sales-flow-inherited b { color: var(--text-color); }
+</style>

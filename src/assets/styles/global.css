@@ -4,7 +4,9 @@
    ===================================================== */
 
 html {
-  font-size: 12px;
+  /* Base legible para toda la aplicación. Los módulos y PrimeVue usan rem,
+     por lo que 12px reducía en exceso tablas, formularios y textos auxiliares. */
+  font-size: 14px;
 }
 
 body {

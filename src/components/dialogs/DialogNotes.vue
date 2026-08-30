@@ -2,7 +2,7 @@
     <Dialog 
         v-model:visible="dialogVisible"
         modal
-        header="Editar Nota"
+        :header="readonly ? 'Consultar observaciones' : 'Editar observaciones'"
         :style="{ width: '55rem' }"
         :closable="true"
         :draggable="false"
@@ -32,6 +32,7 @@
                 autoResize
                 fluid
                 class="note-textarea"
+                :readonly="readonly"
             />
 
         </div>
@@ -41,19 +42,20 @@
         <template #footer>
 
             <Button 
-                label="Cancelar"
-                icon="pi pi-times"
+                :label="readonly ? 'Cerrar' : 'Cancelar'"
+                :icon="readonly ? 'pi pi-check' : 'pi pi-times'"
                 severity="secondary"
                 outlined
                 @click="close"
             />
 
 
-            <Button 
+            <Button
+                v-if="!readonly"
                 label="Guardar"
                 icon="pi pi-save"
                 :loading="isSaving"
-                :disabled="isSaving || !note.trim()"
+                :disabled="isSaving"
                 @click="save"
             />
 
@@ -139,6 +141,7 @@ interface NoteRequest {
 const props = defineProps<{
     visible: boolean
     request: NoteRequest | null
+    readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -267,19 +270,6 @@ async function save() {
     }
 
 
-    if (!note.value.trim()) {
-
-        toast.add({
-            severity: 'warn',
-            summary: 'Aviso',
-            detail: 'Escribe un texto para guardar la nota.',
-            life: companyStore.companyInfo?.toastDuration ?? 3000
-        })
-
-        return
-    }
-
-
     isSaving.value = true
 
 
@@ -313,10 +303,8 @@ async function save() {
 
 
         if (!response.ok) {
-
-            throw new Error(
-                `Error al guardar la nota (${response.status})`
-            )
+            const detail = await response.text()
+            throw new Error(detail || `Error al guardar la nota (${response.status})`)
 
         }
 
@@ -342,7 +330,7 @@ async function save() {
         toast.add({
             severity: 'error',
             summary: 'Error',
-            detail: 'No se pudo guardar la nota.',
+            detail: error instanceof Error ? error.message : 'No se pudo guardar la nota.',
             life: companyStore.companyInfo?.toastDuration ?? 3000
         })
 

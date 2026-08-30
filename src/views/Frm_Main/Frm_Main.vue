@@ -21,6 +21,16 @@
       </div>
 
       <div style="display: flex; align-items: center; gap: 25px;">
+        <!-- Manual de usuario -->
+        <div
+          role="button"
+          title="Abrir el manual de usuario"
+          style="cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 5px; color: #6b7280; font-size: 0.9rem;"
+          @click="$router.push({ name: 'ManualUsuario' })">
+          <i class="pi pi-question-circle" style="font-size: 1.35rem; color: #648506;"></i>
+          <span>Manual</span>
+        </div>
+
         <!-- Notificaciones -->
         <div style="cursor: pointer; display: flex; align-items: center; padding: 5px;" @click="verMensajes">
           <OverlayBadge v-if="mensajesNuevos > 0" :value="mensajesNuevos" severity="danger">

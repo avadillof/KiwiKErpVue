@@ -2,13 +2,30 @@
 
 export const HelperString = {
     /**
-     * Valida el formato de un CIF/NIF español básico (8 números + 1 letra/dígito)
+     * Valida identificadores fiscales españoles y NIF-IVA franceses.
      */
     isValidCifNif(value: string): boolean {
 
         if (!value) return false;
 
-        const nif = value.toUpperCase().trim();
+        const nif = value.toUpperCase().replace(/[\s.-]/g, '');
+
+        // NIF-IVA francés: FR + clave de 2 caracteres + SIREN de 9 dígitos.
+        const frenchVatMatch = nif.match(/^FR([A-HJ-NP-Z0-9]{2})(\d{9})$/);
+
+        if (frenchVatMatch) {
+            const [, key, siren] = frenchVatMatch;
+
+            // La clave numérica francesa se calcula a partir del SIREN.
+            // Para claves alfanuméricas se valida su estructura oficial;
+            // su existencia debe contrastarse externamente mediante VIES.
+            if (/^\d{2}$/.test(key)) {
+                const expectedKey = (12 + 3 * (Number(siren) % 97)) % 97;
+                return Number(key) === expectedKey;
+            }
+
+            return true;
+        }
 
         // DNI/NIF persona física
         const dniRegex = /^[0-9]{8}[A-Z]$/;

@@ -1,27 +1,13 @@
 <template>
 
-    <div class="p-4" style="padding-bottom: 80px; margin-bottom: 100px;">
-
-        <h1 class="text-3xl font-extrabold text-gray-800 mb-1">
-            Certificados Digitales
-        </h1>
-
-        <Message variant="simple" icon="pi pi-shield" severity="success" size="big">
-            Gestión y mantenimiento de los certificados digitales utilizados por KiwiKERP.
-        </Message>
-
-        <div class="mb-5">
-            <Button label="Volver a Ajustes" icon="pi pi-arrow-left" text @click="volver" />
-        </div>
-
-        <Toolbar class="mb-3">
-            <template #start>
-                <Button label="Nuevo Certificado" icon="pi pi-plus" size="small" variant="text" outlined
-                    @click="certificateFormRef.open(null)" />
-            </template>
+    <div class="certificate-page">
+        <header class="page-header"><div class="page-heading"><div class="page-icon"><i class="pi pi-shield"></i></div><div><span class="breadcrumb">Configuración / Datos maestros</span><h1>Certificados digitales</h1><p>Firma electrónica, integraciones tributarias y usuarios autorizados.</p></div></div><nav class="header-actions"><Button label="Ajustes" icon="pi pi-arrow-left" severity="secondary" text @click="volver" /><Button label="Inicio" icon="pi pi-home" severity="secondary" text @click="router.push({ name: 'Dashboard' })" /></nav></header>
+        <div class="card certificate-card"><Toolbar class="list-toolbar">
+            <template #start><div class="workspace-heading"><span>Certificados registrados</span><small>Selecciona un certificado para consultar sus datos y autorizaciones.</small></div></template>
+            <template #end><Button label="Nuevo certificado" icon="pi pi-plus" size="small" @click="certificateFormRef.open(null)" /></template>
         </Toolbar>
 
-        <Splitter style="height: calc(100vh - 20px);">
+        <Splitter class="certificate-splitter">
 
             <!-- Tabla -->
             <SplitterPanel :size="75"    
@@ -66,7 +52,7 @@
             <!-- Panel derecho -->
             <SplitterPanel :size="25">
 
-                <div class="certificate-panel">
+                <div class="certificate-panel certificate-detail-panel">
 
                     <CertificateInfoCard :certificate="certificateInfo" />
 
@@ -74,7 +60,7 @@
 
             </SplitterPanel>
 
-        </Splitter>
+        </Splitter></div>
 
         <Menu ref="menuOptionRegistro" :model="menuItems" :popup="true" v-if="menuItems.length > 0" />
 
@@ -89,11 +75,9 @@
 
 
 <style scoped>
-.certificate-panel {
-    padding: 1rem;
-    height: 100%;
-    box-sizing: border-box;
-}
+.certificate-page { --kiwi:#9cc10a; --kiwi-dark:#648506; width:100%; min-height:calc(100dvh - 66px); padding:18px 16px 72px; box-sizing:border-box; background:#f7f8fa; }
+.page-header{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:18px;padding:15px 20px;border:1px solid #e3e8d2;border-radius:15px;background:#fff;box-shadow:0 6px 18px rgba(31,41,55,.055)}.page-header::after{content:"";position:absolute;z-index:0;width:300px;height:300px;right:20px;top:50%;transform:translateY(-50%);background:url('/logos/logo512.png') center/contain no-repeat;filter:grayscale(1);opacity:.075;pointer-events:none}.page-header>*{position:relative;z-index:1}.page-heading{display:flex;align-items:center;gap:14px}.page-icon{display:grid;width:50px;height:50px;flex:0 0 auto;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(135deg,#38a4d8,#2875b6);box-shadow:0 7px 15px rgba(40,117,182,.22)}.page-icon i{font-size:1.3rem}.breadcrumb{color:#8791a0;font-size:.8rem;font-weight:700}.page-heading h1{margin:3px 0 2px;color:#202939;font-size:1.38rem}.page-heading p{margin:0;color:#7a8494;font-size:.92rem}.header-actions{display:flex;align-items:center;gap:3px}
+.certificate-card{height:clamp(560px,calc(100dvh - 270px),800px);min-height:0;padding:0;border:1px solid #dfe4ea;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 5px 18px rgba(30,41,59,.055);display:flex;flex-direction:column}.list-toolbar{padding:13px 17px;border:0;border-bottom:1px solid #e8ecf0;border-radius:0;background:#fff}.workspace-heading{display:flex;flex-direction:column;gap:3px}.workspace-heading span{color:#344054;font-size:1rem;font-weight:800}.workspace-heading small{color:#8a93a2;font-size:.82rem}.list-toolbar :deep(.p-button){border-color:var(--kiwi-dark);background:var(--kiwi-dark)}.certificate-splitter{flex:1 1 auto;min-height:0;border:0}.certificate-panel{padding:1rem;height:100%;min-height:0;box-sizing:border-box}.certificate-detail-panel{overflow:hidden}.certificate-panel :deep(.p-datatable){height:100%}@media(max-width:700px){.certificate-page{padding:12px 10px 66px}.page-header{padding:12px;align-items:flex-start}.page-heading p,.workspace-heading small,.header-actions :deep(.p-button-label){display:none}.certificate-card{height:600px}}
 </style>
 
 <script setup>
@@ -210,7 +194,7 @@ const refreshTable = async () => {
 };
 
 function volver() {
-    router.push({ name: 'Frm_Ajustes' });
+    router.push({ name: 'Frm_Ajustes', query: { tab: '3' } });
 }
 
 

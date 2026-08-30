@@ -106,7 +106,7 @@ const fechaFiltros = ref<[Date | null, Date | null] | null>(null);
 const booleanHashFiltros = ref<boolean | null>(null);
 const booleanHashFiltrosFields = ref<boolean | null>(false);
 
-const emit = defineEmits(['update:selection', 'row-select', 'row-unselect', 'data-loaded', 'sort', 'search', 'filterdate']);
+const emit = defineEmits(['update:selection', 'row-select', 'row-unselect', 'data-loaded', 'load-error', 'sort', 'search', 'filterdate']);
 
 
 const onRowSelect = (event: any) => emit('row-select', event);
@@ -175,13 +175,16 @@ async function fetchData(page: number, size: number) {
 
 
     const baseUrl = import.meta.env.VITE_API_URL;
-    const response = await axios.get(baseUrl + '/' + props.endpoint, { params });
+    const response = await axios.get(baseUrl + '/' + props.endpoint, { params, timeout: 15000 });
 
     tableData.value = response.data.content;
     totalRecords.value = response.data.totalElements;
     emit('data-loaded', tableData.value, totalRecords.value);
   } catch (error) {
     console.error('Error cargando datos:', error);
+    tableData.value = [];
+    totalRecords.value = 0;
+    emit('load-error', error);
   } finally {
     loading.value = false;
   }
@@ -217,6 +220,10 @@ async function fetchDataWithQuery(
             ...props.params,
             ...extraParams
         };
+
+        if (sortField.value && sortOrder.value !== null) {
+            params.sort = `${sortField.value},${sortOrder.value === 1 ? 'asc' : 'desc'}`;
+        }
 
 
         const baseUrl = import.meta.env.VITE_API_URL;
@@ -306,13 +313,16 @@ defineExpose({
 
   refreshWithQuery: (
     query: string,
-    extraParams: any = {}
+    extraParams: any = {},
+    resetPage = false
   ) => {
+
+    if (resetPage) first.value = 0;
 
     const currentPageIndex =
       Math.floor(first.value / rows.value);
 
-    fetchDataWithQuery(
+    return fetchDataWithQuery(
       currentPageIndex,
       rows.value,
       query,
@@ -378,6 +388,8 @@ onMounted(() => {
 
 <style scoped>
 .table-container {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -388,10 +400,20 @@ onMounted(() => {
 }
 
 .datatable-wrapper {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.datatable-wrapper :deep(.p-datatable-mask),
+.datatable-wrapper :deep(.p-datatable-loading-overlay) {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 5 !important;
 }
 
 :deep(.p-datatable) {

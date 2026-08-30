@@ -9,6 +9,8 @@ import Pn_DashBoard from './views/Frm_Main/Dashboard/Pn_DashBoard.vue';
 import Pn_VentasHub from './views/Ventas/Pn_VentasHub.vue'
 import Frm_Clientes from './views/Ventas/Frm_Clientes/Frm_Clientes.vue';
 import Frm_Presupuestos from './views/Ventas/Frm_Presupuestos/Frm_Presupuestos.vue';
+import Frm_Pedidos from './views/Ventas/Frm_Pedidos/Frm_Pedidos.vue';
+import Frm_Albaranes from './views/Ventas/Frm_Albaranes/Frm_Albaranes.vue';
 import Frm_Products from './views/Frm_Products/Frm_Products.vue';
 import Frm_SalesTax from './views/Frm_SalexTax/Frm_SalesTax.vue';
 import Frm_Certificates from './views/security/Frm_Certificates/Frm_Certificates.vue';
@@ -43,6 +45,11 @@ const routes = [
         component: () => import('./views/Frm_Main/Frm_Ajustes/Frm_Ajustes.vue')
       },
       {
+        path: '/manual',
+        name: 'ManualUsuario',
+        component: () => import('./views/Help/Frm_UserManual.vue')
+      },
+      {
         path: '/ventas',
         name: 'Ventas', // Este nombre debe coincidir con el 'ruta' en tu lista
         component: Pn_VentasHub
@@ -56,6 +63,26 @@ const routes = [
         path: '/ventas/presupuestos',
         name: 'Presupuestos',
         component: Frm_Presupuestos
+      },
+      {
+        path: '/ventas/pedidos',
+        name: 'Pedidos',
+        component: Frm_Pedidos
+      },
+      {
+        path: '/ventas/albaranes',
+        name: 'Albaranes',
+        component: Frm_Albaranes
+      },
+      {
+        path: '/ventas/facturas',
+        name: 'Facturas',
+        component: () => import('./views/Ventas/Frm_Facturas/Frm_Facturas.vue')
+      },
+      {
+        path: '/ventas/ajustes',
+        name: 'AjustesVentas',
+        component: () => import('./views/Ventas/Frm_AjustesVentas/Frm_AjustesVentas.vue')
       },
       {
         path: '/security',

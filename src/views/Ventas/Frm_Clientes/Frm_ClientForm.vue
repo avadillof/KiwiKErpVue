@@ -143,8 +143,7 @@
                         <div class="col-12 md:col-3 mb-2">
                             <FloatLabel variant="in">
                                 <Select v-model="entity.province" id="province" :options="provincias" maxlength="200"
-                                    optionLabel="nombre" optionValue="nombre" class="w-full" size="small" filter
-                                    :pt="{ root: { style: 'padding-top: 1.25rem' } }" />
+                                    optionLabel="nombre" optionValue="nombre" class="w-full" size="small" filter />
                                 <label for="province">Provincia</label>
                             </FloatLabel>
                         </div>
@@ -165,8 +164,7 @@
                         <div class="col-12 md:col-2 mb-2">
                             <FloatLabel variant="in">
                                 <Select v-model="entity.country" id="country" :options="countries" maxlength="120"
-                                    optionLabel="nombre" optionValue="nombre" class="w-full" size="small" filter
-                                    :pt="{ root: { style: 'padding-top: 1.25rem' } }" />
+                                    optionLabel="nombre" optionValue="nombre" class="w-full" size="small" filter />
                                 <label for="country">Pais</label>
                             </FloatLabel>
                         </div>
@@ -376,6 +374,15 @@
                                 </div>
 
 
+                            </div>
+                            <div class="grid mt-4 mt-2">
+                                <div class="col-12">
+                                    <FloatLabel variant="on">
+                                        <Textarea id="customer-sales-terms" v-model="entity.salesAttributes.customerTerms" rows="4" autoResize class="w-full" />
+                                        <label for="customer-sales-terms">Condiciones particulares de venta del cliente</label>
+                                    </FloatLabel>
+                                    <small class="text-500">Se copiarán a los nuevos documentos comerciales y podrán ajustarse en cada borrador sin modificar la ficha.</small>
+                                </div>
                             </div>
                             <div class="grid mt-4 mt-2">
                                 <!-- SEPA -->
@@ -728,6 +735,7 @@ type Entity = {
         bankId: number | null;
         sepa: string;
         sepa1: string;
+        customerTerms: string;
         dayPago1: number;
         dayPago2: number;
         dayPago3: number;
@@ -779,6 +787,7 @@ const createEntity = (): Entity => ({
         bankId: null,
         sepa: '',
         sepa1: '',
+        customerTerms: '',
         dayPago1: 0,
         dayPago2: 0,
         dayPago3: 0
@@ -994,6 +1003,7 @@ const loadEntity = async (pkid: number) => {
             bankId: data.salesAttributes?.bankId ?? null,
             sepa: data.salesAttributes?.sepa ?? '',
             sepa1: data.salesAttributes?.sepa1 ?? '',
+            customerTerms: data.salesAttributes?.customerTerms ?? '',
             dayPago1: data.salesAttributes?.dayPago1 ?? 0,
             dayPago2: data.salesAttributes?.dayPago2 ?? 0,
             dayPago3: data.salesAttributes?.dayPago3 ?? 0
