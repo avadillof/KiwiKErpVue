@@ -2,7 +2,7 @@
   <main class="settings-page">
     <header class="page-header">
       <div class="title-wrap"><span class="icon"><i class="pi pi-sliders-h" /></span><div><small>KiwiKERP / Ventas</small><h1>Ajustes de Ventas</h1></div></div>
-      <div class="actions"><Button label="Volver" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({name:'Ventas'})"/><Button label="Guardar cambios" icon="pi pi-save" :loading="saving" @click="save"/></div>
+      <div class="actions"><Button label="Volver" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({name:'Ventas'})"/><Button label="Guardar cambios" icon="pi pi-save" :loading="saving" :disabled="loading || !loaded || !!deliveryError || !!reminderBusy" @click="save"/></div>
     </header>
 
     <div v-if="loading" class="loading"><i class="pi pi-spin pi-spinner"/> Cargando ajustes…</div>
@@ -27,6 +27,45 @@
           <section class="settings-card">
             <div class="section-heading"><span><i class="pi pi-envelope"/></span><div><h2>Comunicación de presupuestos</h2><p>Contenido predeterminado utilizado al enviar un presupuesto por correo.</p></div></div>
             <label class="field"><span>Cuerpo del correo de presupuestos</span><Textarea v-model="form.offersMailBody" rows="5" maxlength="500" autoResize fluid placeholder="Si se deja vacío se utilizará el texto estándar del sistema."/><small class="field-help">{{ (form.offersMailBody || '').length }}/500 caracteres</small></label>
+          </section>
+
+          <section class="settings-card">
+            <div class="section-heading"><span><i class="pi pi-bell"/></span><div><h2>Recordatorio diario de entregas</h2><p>Un único correo por día y dirección de responsable, agrupando los pedidos que creó.</p></div></div>
+            <div class="form-grid form-grid--three">
+              <label class="switch-field"><ToggleSwitch v-model="form.deliveryReminderEnabled" aria-label="Activar recordatorio de entregas"/><span><strong>Recordatorio activado</strong><small>Puede pausarse sin cambiar el filtro de pedidos.</small></span></label>
+              <label class="field"><span>Hora de envío (Europe/Madrid)</span><InputText aria-label="Hora de envío" type="time" v-model="form.deliveryReminderTime" :disabled="!form.deliveryReminderEnabled" fluid/><small class="field-help">Hora peninsular, con cambio de horario automático.</small></label>
+              <label class="field"><span>Días de antelación</span><InputNumber aria-label="Días de antelación" v-model="form.deliveryReminderDays" :min="0" :max="365" :maxFractionDigits="0" :disabled="!form.deliveryReminderEnabled" fluid/><small class="field-help">0 incluye solo vencidos y los que vencen hoy.</small></label>
+            </div>
+            <Message severity="info" :closable="false" class="series-warning"><template v-if="form.deliveryReminderEnabled">A las <b>{{form.deliveryReminderTime}}</b>, cada responsable recibe sus pedidos vencidos, los de hoy y los previstos hasta dentro de <b>{{form.deliveryReminderDays}} días</b>.</template><template v-else>Recordatorio automático pausado. El envío manual sigue disponible.</template></Message>
+            <p class="delivery-help">Solo pedidos confirmados con productos físicos pendientes. Se excluyen borradores, cancelados, completados y pedidos sin fecha prevista. El usuario creador debe estar activo y tener correo. El aviso no genera albaranes ni modifica pedidos.</p>
+            <p class="delivery-help">Los cambios se aplican después de guardar, sin reiniciar. Si la hora ya pasó, el próximo aviso será al día siguiente. El servidor debe estar en marcha a la hora de envío. No se repite el envío del mismo día al cambiar la hora o reiniciar el servidor. Ante un fallo o resultado incierto del correo no se reintenta ese día para evitar duplicados; la incidencia queda en el registro del servidor.</p>
+            <div class="reminder-actions">
+              <Button label="Probar" icon="pi pi-eye" severity="secondary" :loading="reminderBusy==='preview'" :disabled="reminderBlocked" @click="openReminder(true)"/>
+              <Button label="Enviar ahora" icon="pi pi-send" :loading="reminderBusy==='send'" :disabled="reminderBlocked" @click="openReminder(false)"/>
+            </div>
+            <p class="delivery-help">Probar muestra destinatarios y pedidos sin enviar correos ni comprobar SMTP. Enviar ahora utiliza la configuración guardada, incluso con el automático pausado, y respeta los envíos ya intentados hoy.</p>
+            <Message v-if="reminderDirty" severity="warn" :closable="false">Guarda los cambios del recordatorio antes de probar o enviar.</Message>
+            <Message v-if="reminderError" severity="error" :closable="false">{{reminderError}}</Message>
+            <div v-if="reminderResult" class="reminder-results" aria-live="polite">
+              <h3>{{reminderResult.preview?'Prueba sin envío':'Resultado del envío manual'}} · {{reminderResult.date}}</h3>
+              <p>Antelación guardada: {{reminderResult.days}} días · {{reminderResult.recipients.length}} destinatarios.</p>
+              <p v-if="!reminderResult.preview">Enviados: {{reminderResult.sent}} · Omitidos: {{reminderResult.skipped}} · Fallos: {{reminderResult.failed}}</p>
+              <p v-if="!reminderResult.recipients.length">No hay pedidos pendientes con destinatario válido para este intervalo.</p>
+              <details v-for="recipient in reminderResult.recipients" :key="recipient.email">
+                <summary>{{recipient.name}} · {{recipient.email}} · {{recipient.orders.length}} pedidos · {{reminderStatus(recipient.status)}}</summary>
+                <p v-if="recipient.warning">{{recipient.warning}}</p>
+                <ul><li v-for="(order,index) in recipient.orders" :key="index">{{order.code}} · {{order.client}} · {{order.deliveryDate}} · {{order.status}} · Pendiente: {{order.pendingQuantity}}</li></ul>
+              </details>
+            </div>
+          </section>
+          <section class="settings-card">
+            <div class="section-heading"><span><i class="pi pi-calendar"/></span><div><h2>Filtro «Plazo entrega» de pedidos</h2><p>Configura los dos intervalos de planificación. No cambian las fechas de los pedidos.</p></div></div>
+            <div class="form-grid">
+              <label class="field"><span>Primer plazo</span><InputNumber aria-label="Primer plazo" v-model="form.deliveryDeadlineShortDays" suffix=" días" :min="1" :max="364" :maxFractionDigits="0" fluid/><small class="field-help">También determina cuántos días se resaltan en ámbar.</small></label>
+              <label class="field"><span>Segundo plazo</span><InputNumber aria-label="Segundo plazo" v-model="form.deliveryDeadlineLongDays" suffix=" días" :min="2" :max="365" :maxFractionDigits="0" fluid/><small class="field-help">Debe ser mayor que el primer plazo.</small></label>
+            </div>
+            <p class="delivery-help">El filtro ofrece: Vencidos · Vencen hoy · Próximos {{form.deliveryDeadlineShortDays}} días · Próximos {{form.deliveryDeadlineLongDays}} días · Sin fecha prevista. Los intervalos incluyen hoy y el último día completo.</p>
+            <Message v-if="deliveryError" severity="error" :closable="false">{{deliveryError}}</Message>
           </section>
 
           <Message severity="secondary" :closable="false" class="customer-note"><strong>Condiciones particulares:</strong> se configuran individualmente en la ficha de cada cliente, dentro de su pestaña de Ventas. No son un parámetro general.</Message>
@@ -70,15 +109,29 @@
         </TabPanel>
       </TabPanels>
     </Tabs>
+    <Dialog v-model:visible="confirmReminder" modal :header="reminderPreview ? 'Probar recordatorios sin enviar' : 'Enviar recordatorios ahora'" @hide="reminderPassword=''" class="kiwik-dialog" :style="{width:'min(620px, 95vw)'}">
+      <p v-if="!reminderPreview">Se enviarán correos reales a los responsables con pedidos pendientes, usando la configuración guardada. El envío manual funciona aunque el automático esté pausado.</p>
+      <p v-if="!reminderPreview">No se repetirán los envíos ya intentados hoy. Los destinatarios se recalculan al confirmar; puedes revisarlos antes con Probar.</p>
+      <p v-if="reminderPreview">Esta prueba consulta destinatarios, pedidos y envíos de hoy. No envía correos ni comprueba la conexión SMTP.</p>
+      <p>Identifícate para autorizar esta acción. La contraseña se elimina al cerrar y no se guarda.</p>
+      <div class="form-grid">
+        <label class="field"><span>Código de usuario</span><InputText v-model="reminderUser" autocomplete="username" fluid/></label>
+        <label class="field"><span>Contraseña</span><InputText v-model="reminderPassword" type="password" autocomplete="current-password" fluid/></label>
+      </div>
+      <div class="kiwik-separator"/>
+      <template #footer><Button label="Cancelar" text severity="secondary" @click="confirmReminder=false"/><Button :label="reminderPreview ? 'Ejecutar prueba' : 'Confirmar envío'" :icon="reminderPreview ? 'pi pi-eye' : 'pi pi-send'" :disabled="reminderBlocked || !reminderUser.trim() || !reminderPassword" @click="runReminder(reminderPreview)"/></template>
+    </Dialog>
   </main>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../../stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
 import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import ToggleSwitch from 'primevue/toggleswitch';
@@ -91,16 +144,42 @@ import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 
-const router=useRouter(),toast=useToast(),loading=ref(true),saving=ref(false),activeTab=ref('general');
+const router=useRouter(),toast=useToast(),loading=ref(true),loaded=ref(false),saving=ref(false),activeTab=ref('general');
 const environments=[{label:'Pruebas · AEAT preproducción',value:'PRUEBAS'}];
 const currentYear=new Date().getFullYear();
-const form=reactive<any>({invoiceSeriesPrefix:'KW',defaultTerms:'',offersMailBody:'',veriFactuEnabled:true,veriFactuEnvironment:'PRUEBAS',veriFactuAutoSend:true,veriFactuSystemId:77,veriFactuSystemEntity:'',veriFactuSystemNif:'',veriFactuSystemName:'KiwiKERP',veriFactuSystemVersion:'',veriFactuInstallationNumber:300,veriFactuAddQr:true,veriFactuQrSize:95,veriFactuQrX:350,veriFactuQrY:740,veriFactuRetries:3,veriFactuRetryMinutes:10,veriFactuAcceptedVisible:20});
+const form=reactive<any>({deliveryReminderEnabled:true,deliveryReminderTime:'08:15',deliveryReminderDays:7,deliveryDeadlineShortDays:7,deliveryDeadlineLongDays:30,invoiceSeriesPrefix:'KW',defaultTerms:'',offersMailBody:'',veriFactuEnabled:true,veriFactuEnvironment:'PRUEBAS',veriFactuAutoSend:true,veriFactuSystemId:77,veriFactuSystemEntity:'',veriFactuSystemNif:'',veriFactuSystemName:'KiwiKERP',veriFactuSystemVersion:'',veriFactuInstallationNumber:300,veriFactuAddQr:true,veriFactuQrSize:95,veriFactuQrX:350,veriFactuQrY:740,veriFactuRetries:3,veriFactuRetryMinutes:10,veriFactuAcceptedVisible:20});
+const authStore=useAuthStore();
+const reminderUser=ref(''),reminderPassword=ref(''),reminderPreview=ref(true);
+const openReminder=(preview:boolean)=>{reminderPreview.value=preview;reminderUser.value=authStore.user?.userDsCode||'';reminderPassword.value='';confirmReminder.value=true;};
+const reminderBusy=ref(''),confirmReminder=ref(false),reminderError=ref(''),reminderResult=ref<any>(null),savedReminder=ref('');
+const reminderSnapshot=()=>JSON.stringify([form.deliveryReminderEnabled,form.deliveryReminderTime,form.deliveryReminderDays,form.deliveryDeadlineShortDays,form.deliveryDeadlineLongDays]);
+const reminderDirty=computed(()=>loaded.value && savedReminder.value!==reminderSnapshot());
+const reminderBlocked=computed(()=>!loaded.value || loading.value || saving.value || !!reminderBusy.value || reminderDirty.value || !!deliveryError.value);
+const reminderStatus=(status:string)=>({READY:'Disponible para enviar',SENT:'Enviado',CLAIMED:'Reservado o en curso; no se repetirá hoy',FAILED:'Resultado incierto o fallido; no se repetirá hoy',SKIPPED:'Omitido: ya intentado hoy',ERROR:'No se pudo reservar el envío'}[status]||status);
+const runReminder=async(preview:boolean)=>{
+  if(reminderBlocked.value||!reminderUser.value.trim()||!reminderPassword.value)return;
+  const request={auth:{username:reminderUser.value.trim(),password:reminderPassword.value}};
+  confirmReminder.value=false;reminderPassword.value='';
+  reminderBusy.value=preview?'preview':'send';reminderError.value='';reminderResult.value=null;
+  try {
+    const url=`${import.meta.env.VITE_API_URL}/${preview?'WebPreviewSalesDeliveryReminders':'WebSendSalesDeliveryReminders'}`;
+    reminderResult.value=(preview?await axios.get(url,request):await axios.post(url,{confirmed:true},request)).data;
+  } catch(e:any) {
+    reminderError.value=e.response?.status===401?'Código de usuario o contraseña incorrectos; no se ejecutó la acción.':preview?'No se pudo obtener la prueba. Comprueba el servidor y la sesión.':'No se pudo confirmar el resultado. Puede haber correos enviados: utiliza Probar para consultar el registro antes de volver a enviar. No se repetirán los ya reservados hoy.';
+  } finally {reminderBusy.value='';}
+};
+const deliveryError=computed(()=>{
+  if(!/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(form.deliveryReminderTime||''))return 'Indica una hora válida (HH:mm).';
+  if(!Number.isInteger(form.deliveryReminderDays)||form.deliveryReminderDays<0||form.deliveryReminderDays>365)return 'La antelación debe estar entre 0 y 365 días.';
+  if(!Number.isInteger(form.deliveryDeadlineShortDays)||!Number.isInteger(form.deliveryDeadlineLongDays)||form.deliveryDeadlineShortDays<1||form.deliveryDeadlineLongDays>365||form.deliveryDeadlineLongDays<=form.deliveryDeadlineShortDays)return 'El segundo plazo debe ser mayor que el primero; ambos entre 1 y 365 días.';
+  return '';
+});
 const normalizeInvoiceSeries=(value:string|undefined)=>{form.invoiceSeriesPrefix=String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10)};
-const load=async()=>{loading.value=true;try{Object.assign(form,(await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesSettings`)).data)}catch(e:any){toast.add({severity:'error',summary:'No se pudieron cargar los ajustes',detail:e.response?.data||'Comprueba que la migración de base de datos está aplicada.',life:5000})}finally{loading.value=false}};
-const save=async()=>{saving.value=true;try{Object.assign(form,(await axios.post(`${import.meta.env.VITE_API_URL}/WebSaveSalesSettings`,form)).data);toast.add({severity:'success',summary:'Ajustes guardados',detail:'La configuración de Ventas y VeriFactu ya está actualizada.',life:3500})}catch(e:any){toast.add({severity:'error',summary:'No se pudieron guardar',detail:e.response?.data||'Revisa los valores introducidos.',life:5000})}finally{saving.value=false}};
+const load=async()=>{loading.value=true;loaded.value=false;try{Object.assign(form,(await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesSettings`)).data);savedReminder.value=reminderSnapshot();loaded.value=true}catch(e:any){toast.add({severity:'error',summary:'No se pudieron cargar los ajustes',detail:e.response?.data||'Comprueba que la migración de base de datos está aplicada.',life:5000})}finally{loading.value=false}};
+const save=async()=>{if(saving.value||loading.value||!loaded.value||deliveryError.value||reminderBusy.value)return;saving.value=true;try{Object.assign(form,(await axios.post(`${import.meta.env.VITE_API_URL}/WebSaveSalesSettings`,form)).data);savedReminder.value=reminderSnapshot();reminderResult.value=null;toast.add({severity:'success',summary:'Ajustes guardados',detail:'La configuración de Ventas y VeriFactu ya está actualizada.',life:3500})}catch(e:any){toast.add({severity:'error',summary:'No se pudieron guardar',detail:e.response?.data||'Revisa los valores introducidos.',life:5000})}finally{saving.value=false}};
 onMounted(load);
 </script>
 
 <style scoped>
 .settings-page{width:100%;padding:18px 16px 90px;color:#273244}.page-header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:14px;padding:15px 18px;border:1px solid #e1e7d4;border-radius:14px;background:#fff;box-shadow:0 5px 16px rgba(31,41,55,.05)}.title-wrap,.actions,.section-heading,.switch-field{display:flex;align-items:center}.title-wrap{gap:12px}.title-wrap .icon{display:grid;width:45px;height:45px;place-items:center;border-radius:11px;color:#fff;background:linear-gradient(135deg,#b1d70e,#719808)}.title-wrap small{color:#8b95a4}.title-wrap h1{margin:2px 0 0;font-size:1.35rem}.actions{gap:6px}.sales-tabs{overflow:hidden;border:1px solid #e1e6eb;border-radius:13px;background:#fff;box-shadow:0 3px 11px rgba(30,41,59,.04)}.sales-tabs :deep(.p-tabpanels){padding:14px;background:#f7f9f5}.sales-tabs :deep(.p-tab){gap:7px}.settings-card{margin-top:14px;padding:20px;border:1px solid #e1e6eb;border-radius:13px;background:#fff;box-shadow:0 3px 11px rgba(30,41,59,.04)}.settings-card--first{margin-top:0}.section-heading{gap:11px;margin-bottom:20px}.section-heading>span{display:grid;width:37px;height:37px;place-items:center;border-radius:9px;color:#66810a;background:#eef5dc}.section-heading h2{margin:0;font-size:1rem}.section-heading p{margin:3px 0 0;color:#7c8796;font-size:.82rem}.series-row{display:grid;grid-template-columns:minmax(220px,.55fr) 1fr;gap:24px;align-items:end}.series-preview{display:flex;min-height:67px;flex-direction:column;justify-content:center;padding:10px 14px;border:1px solid #dfe8c8;border-radius:9px;background:#f8fbeF}.series-preview small{color:#7a8594}.series-preview strong{margin-top:4px;color:#607d09;font-size:1.08rem}.series-warning{margin-top:14px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 22px}.form-grid--three{grid-template-columns:repeat(3,minmax(0,1fr))}.form-grid--four{grid-template-columns:1.3fr repeat(3,minmax(0,1fr))}.field{display:flex;min-width:0;flex-direction:column;gap:7px}.field>span{color:#596577;font-size:.78rem;font-weight:750}.field--wide{grid-column:span 2}.field-help{color:#89929f;font-size:.72rem}.switch-field{gap:11px;min-height:55px;padding:10px 12px;border:1px solid #e7ebef;border-radius:9px;background:#fafbf9}.switch-field span{display:flex;flex-direction:column;gap:2px}.switch-field strong{font-size:.84rem}.switch-field small{color:#7c8795;font-size:.72rem}.customer-note{margin-top:14px}.loading{display:flex;justify-content:center;gap:9px;padding:60px;color:#758092}@media(max-width:900px){.form-grid,.form-grid--three,.form-grid--four{grid-template-columns:repeat(2,minmax(0,1fr))}.field--wide{grid-column:auto}}@media(max-width:620px){.page-header{align-items:flex-start;flex-direction:column}.actions{width:100%;justify-content:flex-end}.form-grid,.form-grid--three,.form-grid--four,.series-row{grid-template-columns:1fr}}
-</style>
+.delivery-help{margin:.9rem 0 0;color:#657084;font-size:.85rem;line-height:1.6}.reminder-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.reminder-results{margin-top:18px;padding:16px;background:#f8faf5;border:1px solid #dfe8d0;border-radius:10px;overflow-wrap:anywhere}.reminder-results details{padding:10px 0;border-top:1px solid #e0e5da}.reminder-results summary{cursor:pointer}.reminder-results li{margin:6px 0}</style>

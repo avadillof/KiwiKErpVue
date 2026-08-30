@@ -8,7 +8,8 @@ export const HelperString = {
 
         if (!value) return false;
 
-        const nif = value.toUpperCase().replace(/[\s.-]/g, '');
+        const normalized = value.toUpperCase().replace(/[\s.-]/g, '');
+        const nif = normalized.startsWith('ES') ? normalized.slice(2) : normalized;
 
         // NIF-IVA francés: FR + clave de 2 caracteres + SIREN de 9 dígitos.
         const frenchVatMatch = nif.match(/^FR([A-HJ-NP-Z0-9]{2})(\d{9})$/);
@@ -42,6 +43,14 @@ export const HelperString = {
         }
 
 
+        // NIE: X/Y/Z sustituyen al primer dígito del número.
+        if (/^[XYZ][0-9]{7}[A-Z]$/.test(nif)) {
+            const number = Number('XYZ'.indexOf(nif.charAt(0)) + nif.substring(1, 8));
+            return nif.charAt(8) === 'TRWAGMYFPDXBNJZSQVHLCKE'.charAt(number % 23);
+        }
+        // NIF especiales asignados por AEAT: validación estructural, no censal.
+        if (/^[KLM][A-Z0-9]{7}[A-Z]$/.test(nif)) return true;
+
         // CIF empresas
         const cifRegex = /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/;
 
@@ -71,11 +80,9 @@ export const HelperString = {
             const ultimo = nif.charAt(8);
 
             // Algunos CIF usan número, otros letra
-            if (/[ABCDEFGHJNPQRSUVW]/.test(letraInicial)) {
-                return ultimo === control.toString() || ultimo === letraControl;
-            }
-
-            return false;
+            if ('ABEH'.includes(letraInicial)) return ultimo === control.toString();
+            if ('NPQRSW'.includes(letraInicial)) return ultimo === letraControl;
+            return ultimo === control.toString() || ultimo === letraControl;
         }
 
 

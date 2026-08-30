@@ -20,7 +20,7 @@
                         <template #value="{ value, placeholder }"><Tag v-if="value" :value="pendingFlowOptions.find(item => item.value === value)?.label ?? value" :severity="pendingFlowSeverity(value)" rounded /><span v-else>{{ placeholder }}</span></template>
                         <template #option="{ option }"><Tag :value="option.label" :severity="pendingFlowSeverity(option.value)" rounded /></template>
                     </Select>
-                    <Select v-model="selectedDeliveryDeadline" :options="deliveryDeadlineOptions" optionLabel="label" optionValue="value" showClear placeholder="Plazo entrega: Todos" class="deadline-quick-filter">
+                    <Select :disabled="deliverySettingsLoading || deliverySettingsError" aria-label="Plazo entrega" v-model="selectedDeliveryDeadline" :options="deliveryDeadlineOptions" optionLabel="label" optionValue="value" showClear placeholder="Plazo entrega: Todos" class="deadline-quick-filter">
                         <template #value="{ value, placeholder }"><Tag v-if="value" :value="deliveryDeadlineOptions.find(item => item.value === value)?.label ?? value" :severity="deliveryDeadlineSeverity(value)" rounded /><span v-else>{{ placeholder }}</span></template>
                         <template #option="{ option }"><Tag :value="option.label" :severity="deliveryDeadlineSeverity(option.value)" rounded /></template>
                     </Select>
@@ -120,7 +120,10 @@ const orderStates = [
     { label: 'Cancelados', value: 'Cancelado / Canceled' }
 ];
 const pendingFlowOptions = [{ label: 'Generar albarán', value: 'delivery' }, { label: 'Facturación', value: 'invoice' }];
-const deliveryDeadlineOptions = [{ label: 'Vencidos', value: 'OVERDUE' }, { label: 'Vencen hoy', value: 'TODAY' }, { label: 'Próximos 7 días', value: 'NEXT_7' }, { label: 'Próximos 30 días', value: 'NEXT_30' }, { label: 'Sin fecha prevista', value: 'NO_DATE' }];
+const deliverySettings=ref({deliveryDeadlineShortDays:7,deliveryDeadlineLongDays:30});
+const deliverySettingsLoading=ref(true),deliverySettingsError=ref(false);
+const loadDeliverySettings=async()=>{deliverySettingsLoading.value=true;try{const{data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesDeliverySettings`);deliverySettings.value=data;deliverySettingsError.value=false}catch{deliverySettingsError.value=true;toast.add({severity:'error',summary:'No se pudieron cargar los plazos de entrega',detail:'Actualiza el backend y vuelve a refrescar el listado.',life:5000})}finally{deliverySettingsLoading.value=false}};
+const deliveryDeadlineOptions = computed(()=>[{ label: 'Vencidos', value: 'OVERDUE' }, { label: 'Vencen hoy', value: 'TODAY' }, { label: `Próximos ${deliverySettings.value.deliveryDeadlineShortDays} días`, value: 'NEXT_7' }, { label: `Próximos ${deliverySettings.value.deliveryDeadlineLongDays} días`, value: 'NEXT_30' }, { label: 'Sin fecha prevista', value: 'NO_DATE' }]);
 const isDraft = (state?: string) => state === 'Para Aprobar / To Approved Sale';
 const stateLabel = (state = '') => ({ 'Para Aprobar / To Approved Sale': 'Borrador', 'Confirmado / In Progress': 'En curso', 'Para Generar Albarán / To Make Delivery Note': 'En curso', 'Parcialmente completado / Partially completed': 'Parcial', 'Entregado / Delivered': 'Entregado', 'Completado / Completed': 'Completado', 'Cancelado / Canceled': 'Cancelado' }[state] ?? state);
 const getCreatorPhotoUrl = (userId: number) => `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${userId}/photoPerfil.jpg`;
@@ -180,7 +183,7 @@ const openProformas = async () => { if (!selectedOrder.value?.pkid) return; show
 const downloadProforma = (proforma: any) => window.open(`${import.meta.env.VITE_API_URL}/WebGetSalesProformaPdf/${proforma.pkid}`, '_blank', 'noopener');
 const onDeliveryGenerated = () => { selectedOrder.value = null; tableRef.value?.refresh(); loadOrderStatistics(); };
 const loadOrderStatistics = async () => { loadingStatistics.value = true; try { const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesOrderStatistics`, { params: { year: selectedStatisticsYear.value } }); statistics.value = { ...statistics.value, ...data }; } catch { toast.add({ severity: 'error', summary: 'No se pudieron cargar las estadísticas', life: 3000 }); } finally { loadingStatistics.value = false; } };
-const refreshTable = async () => { await tableRef.value?.refresh(); await loadOrderStatistics(); };
+const refreshTable = async () => { await loadDeliverySettings();await tableRef.value?.refresh(); await loadOrderStatistics(); };
 const onOrderSaved = () => { tableRef.value?.refresh(); loadOrderStatistics(); };
 const clearDateFilters = () => { creationDateRange.value = null; };
 const applyFilters = () => {
@@ -190,7 +193,7 @@ const applyFilters = () => {
 };
 watch([selectedState, selectedPendingFlow, selectedDeliveryDeadline, creationDateRange], applyFilters);
 watch(selectedStatisticsYear, loadOrderStatistics);
-onMounted(loadOrderStatistics);
+onMounted(()=>{void loadOrderStatistics();void loadDeliverySettings()});
 const pad = (value: number) => String(value).padStart(2, '0');
 const formatDateParts = (date: Date) => `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 const parseServerDate = (value: string): Date | null => {
@@ -215,7 +218,7 @@ const deliveryDateSeverity = (value?: string | null) => {
     const date = parseServerDate(value); if (!date) return 'secondary';
     const today = new Date(); today.setHours(0, 0, 0, 0); date.setHours(0, 0, 0, 0);
     const days = Math.round((date.getTime() - today.getTime()) / 86400000);
-    return days < 0 ? 'danger' : days <= 7 ? 'warn' : 'success';
+    return days < 0 ? 'danger' : days <= deliverySettings.value.deliveryDeadlineShortDays ? 'warn' : 'success';
 };
 const formatCurrency = (value?: number | null) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value ?? 0);
 const formatQuantity = (value?: number | null) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 3 }).format(value ?? 0);

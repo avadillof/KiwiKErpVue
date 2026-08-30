@@ -384,11 +384,11 @@ El filtro adicional **Pendiente de** permite localizar directamente:
 
 Este filtro puede combinarse con el estado, el intervalo de fechas y la búsqueda general.
 
-El filtro **Plazo entrega** ayuda a planificar la preparación de albaranes y solo incluye pedidos confirmados que todavía tienen productos físicos pendientes. Los pedidos en **Borrador** no se tienen en cuenta, porque aún no representan un compromiso logístico. Permite consultar los pedidos **Vencidos**, los que **Vencen hoy**, los de los **Próximos 7 días**, los de los **Próximos 30 días** y los que están **Sin fecha prevista**. En la columna de entrega prevista, el rojo identifica retrasos, el ámbar fechas de los próximos siete días y el verde fechas posteriores.
+El filtro **Plazo entrega** ayuda a planificar la preparación de albaranes y solo incluye pedidos confirmados que todavía tienen productos físicos pendientes. Los pedidos en **Borrador** no se tienen en cuenta, porque aún no representan un compromiso logístico. Permite consultar los pedidos **Vencidos**, los que **Vencen hoy**, los de los dos plazos configurados (por defecto, **Próximos 7 días** y **Próximos 30 días**) y los que están **Sin fecha prevista**. En la columna de entrega prevista, el rojo identifica retrasos, el ámbar fechas dentro del primer plazo configurado y el verde fechas posteriores.
 
 ### 7.5 Planificación de entregas y avisos
 
-Cada mañana, a las **08:15**, el sistema envía a cada responsable un único correo con sus pedidos vencidos o próximos a vencer durante los siguientes siete días. Se considera responsable al usuario creador del pedido.
+Por defecto, cada mañana a las **08:15** (hora de Madrid), el sistema envía a cada responsable un único correo con sus pedidos vencidos, los de hoy y los previstos hasta dentro de **7 días**. La activación, la hora y los días de antelación se configuran en **Ventas → Ajustes de Ventas → Parámetros generales → Recordatorio diario de entregas**. Se considera responsable al usuario creador del pedido.
 
 El aviso muestra:
 
@@ -400,6 +400,19 @@ El aviso muestra:
 No se incluyen pedidos ya entregados, completados o cancelados, ni pedidos sin cantidades físicas pendientes. Los pedidos sin fecha prevista pueden localizarse mediante el filtro del listado, pero no se incluyen en el correo porque no existe una fecha con la que calcular el aviso.
 
 Para recibir el recordatorio, el responsable debe estar activo y tener una dirección de correo configurada. El correo es informativo: no genera automáticamente el albarán ni modifica el pedido.
+
+En **Parámetros generales → Filtro «Plazo entrega» de pedidos** se configuran el primer y el segundo intervalo, inicialmente **7 y 30 días**. Admiten de 1 a 365 días y el segundo debe ser mayor que el primero. Ambos incluyen hoy y el último día completo. Los cambios no alteran las fechas de los pedidos. Refresque el listado de Pedidos para cargar los nuevos plazos y colores.
+
+Para cambiar el recordatorio:
+
+1. Active o pause el interruptor **Recordatorio activado**.
+2. Indique la hora peninsular en formato **HH:mm** y la antelación entre **0 y 365 días**; cero incluye vencidos y los de hoy.
+3. Pulse **Guardar cambios**. Los parámetros se aplican sin reiniciar el backend una vez instalada esta versión. Si la hora ya pasó, el próximo aviso será al día siguiente. El servidor debe estar encendido a la hora de envío; no se recuperan automáticamente avisos de horarios anteriores.
+4. No se repite el correo de un mismo día y dirección al cambiar la hora, reiniciar o tener más de un servidor. Se reserva el envío antes de contactar con el correo; si falla o su resultado es incierto, no se reintenta ese día para evitar duplicados. La incidencia se registra en el servidor. Un apagado después de reservar el envío puede impedir ese aviso; el siguiente día se procesa normalmente.
+
+**Probar y enviar manualmente:** guarde primero los cambios del recordatorio. Pulse **Probar** para consultar los destinatarios, desplegar sus pedidos y ver si ya hay un envío reservado, enviado o fallido hoy. La prueba no envía correos, no comprueba la conexión SMTP ni consume el envío diario. Pulse **Enviar ahora** y **Confirmar envío** para enviar correos reales con la configuración guardada, incluso si el automático está pausado. Los pedidos y destinatarios se recalculan al confirmar. El resultado muestra enviados, omitidos y fallos; los envíos manuales y automáticos comparten la protección diaria contra duplicados. Ante una respuesta perdida, consulte **Probar** antes de repetir. Ambas acciones solicitan el código de usuario y la contraseña para autenticar la petición; la contraseña no se guarda.
+
+**Instalación:** antes de arrancar el backend actualizado, aplicar `BackUpBBDD/sql/V18_20260830_sales_delivery_settings.sql` si Hibernate no actualiza el esquema. Añade los parámetros y el registro diario de envíos; no envía correos ni cambia pedidos. Los datos anteriores usan los valores predeterminados hasta guardar la configuración.
 
 ### 7.6 Bloquear un pedido
 
@@ -632,6 +645,22 @@ La fecha de vencimiento se calcula desde la fecha de factura utilizando la condi
 
 ### 9.6 Emisión de la factura definitiva
 
+#### Revisión fiscal antes de emitir
+
+1. Pulse **Emitir factura**. El sistema guarda el borrador y comprueba los datos actuales antes de habilitar la emisión.
+2. Si encuentra errores, muestra todos los datos fiscales que debe corregir y dónde hacerlo: **Configuración → Datos de empresa** para el emisor, o **Ventas → Entidades → ficha del cliente** para el destinatario.
+3. Revise NIF, nombre o razón social, domicilio, municipio, código postal y país del cliente. Para domicilios españoles se comprueba también la provincia y el formato del código postal. La configuración actual del emisor corresponde a España.
+4. Corrija la ficha correspondiente y vuelva a abrir la emisión o pulse **Volver a comprobar** si ha corregido los datos en otra ventana.
+5. Solo cuando los datos estén preparados se muestra el campo de contraseña del certificado. Pulse **Emitir y enviar** para confirmar. El servidor repite las validaciones antes de reservar número: una revisión anterior correcta no permite emitir si los datos han cambiado.
+
+Un error de validación fiscal conserva la factura en borrador: **no asigna número fiscal, no genera el PDF definitivo ni incorpora el envío a la cola**. Se comprueban asimismo cantidades, descripciones, descuentos, impuestos y coherencia de los totales.
+
+Se admiten NIF españoles de personas físicas y jurídicas, NIE y NIF especiales K/L/M. DNI/NIE y NIF de entidades se comprueban con su control; K/L/M se comprueban estructuralmente. Para Francia se admite NIF-IVA francés, con comprobación de clave cuando es numérica y de estructura cuando es alfanumérica. Otros identificadores extranjeros aún no modelados se advierten antes de emitir; no se convierten automáticamente en NIF españoles. El país del domicilio no se deduce del identificador.
+
+El domicilio del cliente aparece en el PDF y el documento XML conserva el país real, en lugar de asignar España a todos los clientes. Estas comprobaciones son locales: **no acreditan la existencia del NIF en el censo ni su alta en VIES**, ni determinan por sí solas el tratamiento de IVA de una operación internacional.
+
+Referencia de alcance: [AEAT — Contenido de las facturas](https://sede.agenciatributaria.gob.es/Sede/iva/facturacion-registro/facturacion-iva/contenido-facturas.html). Esta versión aplica su circuito de factura ordinaria con destinatario identificado; no incorpora modalidades simplificadas nuevas.
+
 La acción **Emitir factura** realiza una última validación y convierte el borrador en una factura definitiva. En ese momento el sistema:
 
 1. Comprueba cliente, fecha, vencimiento, líneas, cantidades, precios, descuentos, impuestos y totales.
@@ -644,6 +673,10 @@ La emisión es una operación irreversible dentro del circuito ordinario. El nú
 La emisión definitiva no equivale al cobro ni a la aceptación por VeriFactu. El envío se inicia automáticamente, pero mantiene un estado independiente para distinguir claramente factura emitida, pendiente de envío, aceptada fiscalmente, pendiente de cobro y cobrada.
 
 ### 9.7 Envío automático a VeriFactu
+
+Al pulsar **Emitir y enviar**, la confirmación queda desactivada mientras el servidor guarda y prepara la emisión. Una vez confirmada la emisión y su incorporación a la cola, se cierran los diálogos y puede seguir trabajando. **No hay bloqueo general de pantalla ni espera a la respuesta de VeriFactu.** El listado y la Cola VeriFactu actualizan su estado periódicamente.
+
+La factura emitida es de solo lectura y no se puede emitir de nuevo. Mientras el envío esté pendiente o en procesamiento, tampoco se permite reintentarlo ni modificar notas o documentos desde Facturas. Si se pierde la respuesta de emisión, la factura queda protegida aunque salga y vuelva al módulo. Abra el detalle y pulse **Comprobar estado**. Si el resultado sigue sin confirmarse, contacte con el administrador; no cree otra factura para sustituirla.
 
 Al emitir se solicita la contraseña del certificado VeriFactu asignado al usuario. Tras comprobar el certificado, el sistema genera el PDF definitivo con la plantilla corporativa del circuito de ventas, lo archiva en el repositorio documental de la factura, construye la representación Facturae utilizada por la integración y crea un único registro de cola por factura. La cola no duplica el PDF: lo recupera del repositorio cuando debe enviarlo. La credencial se almacena cifrada mientras el trabajo esté encolado.
 
@@ -716,12 +749,16 @@ El albarán de una línea ya facturable desde pedido controla la entrega y no vu
 ### 9.11 Nueva factura manual
 
 1. Entre en **Ventas → Facturas → Nueva factura manual**. Utilice esta opción únicamente si la venta no debe facturarse desde un pedido o albarán existente.
-2. Seleccione un cliente activo con tarifa de venta configurada. Revise los datos propuestos antes de añadir líneas.
+2. Seleccione un cliente activo con tarifa de venta configurada. Puede cambiar la **tarifa** y la **forma de pago** propuestas; se guardan en la factura sin modificar la ficha del cliente.
 3. Indique fecha, referencia opcional y **motivo obligatorio**. El motivo explica por qué se crea una factura sin documentos de origen.
 4. Añada artículos o servicios existentes y revise cantidades, precios y descuentos. El precio propuesto del artículo no garantiza que se haya aplicado una tarifa negociada.
 5. Compruebe impuestos, posición fiscal, retención si corresponde, condiciones y total.
 6. Guarde: se abre un **borrador Manual** en el detalle habitual. Guardar no asigna el número fiscal definitivo ni envía a VeriFactu.
 7. Revise el vencimiento propuesto por la condición de cobro. Si necesita ajustarlo manualmente, indique el motivo desde el borrador. Después continúe con la emisión habitual.
+
+El formulario tiene desplazamiento vertical y conserva los botones de guardar/cancelar al pie. Al pulsar **Añadir línea**, se desplaza hasta la nueva fila y enfoca la selección de artículo. El cierre está en el extremo derecho de la cabecera. Al seleccionar cliente se propone también su forma de pago; si no tiene ninguna o está inactiva, el formulario lo indica para que seleccione una válida. Las condiciones generales y particulares ocupan la mitad del ancho cada una (una debajo de otra en pantallas pequeñas), con seis filas y altura ampliable. Se ha retirado Observaciones del alta; el motivo obligatorio sigue formando parte del historial. Los importes usan punto para miles y coma decimal, por ejemplo **1.234,56**.
+
+Al reabrir un **borrador**, puede ajustar fecha, condiciones, tarifa, forma de pago y datos económicos de las líneas. Las descripciones y motivos de los conceptos manuales también son editables. Pulse **Guardar borrador** para conservar los cambios. La forma de pago recalcula el vencimiento, salvo que haya fijado uno manual con su motivo. En un borrador existente, las tarifas disponibles conservan la moneda del documento: cambiar tarifa no convierte monedas ni recalcula los precios ya escritos; revíselos antes de guardar. Una factura emitida, pendiente de VeriFactu o cuya emisión aún no se ha podido confirmar permanece protegida.
 
 La factura manual no registra entregas ni altera cantidades de pedidos o albaranes. Si la venta ya tiene origen, vuelva a su documento para facturar desde él y conservar el seguimiento.
 
@@ -755,7 +792,7 @@ La proforma no sustituye a la factura definitiva. Su generación no debe interpr
 
 1. Un administrador debe revisar los datos de empresa y usuarios en **Configuración / Ajustes**.
 2. En **Datos maestros**, compruebe impuestos, familias de productos y certificados digitales. Al volver desde estas pantallas se mantiene la pestaña Datos maestros.
-3. En **Ventas → Ajustes de Ventas → Parámetros generales**, revise condiciones de venta, correo de presupuestos y prefijo de numeración de facturas.
+3. En **Ventas → Ajustes de Ventas → Parámetros generales**, revise condiciones de venta, correo de presupuestos, prefijo de numeración, recordatorio diario y plazos de entrega.
 4. En **Parámetros VeriFactu**, revise activación, envío automático y reintentos. El entorno documentado permanece limitado a pruebas. Los certificados y contraseñas no se guardan en este formulario.
 5. Si falta una opción recién incorporada o aparece un error de instalación, solicite al administrador que compruebe las versiones y actualizaciones de base de datos. No intente resolverlo duplicando documentos.
 

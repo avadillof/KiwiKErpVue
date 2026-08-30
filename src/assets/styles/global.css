@@ -75,7 +75,7 @@ body {
 }
 
 /* 4. Badge circular para la X (Alineado a la derecha) */
-.kiwik-dialog .p-dialog-header-close {
+.kiwik-dialog :is(.p-dialog-header-close, .p-dialog-close-button) {
   position: absolute !important;
   right: 1.25rem !important;
   top: 50% !important;
@@ -83,7 +83,6 @@ body {
   
   width: 36px !important;
   height: 36px !important;
-  background-color: #f9fbe7 !important;
   border-radius: 50% !important;
   display: flex !important;
   align-items: center !important;
@@ -92,6 +91,12 @@ body {
   border: none !important;
   padding: 0 !important;
   transition: all 0.2s ease;
+}
+
+/* Los botones actuales conservan los colores del tema, como los demás diálogos.
+   Se mantiene el color anterior sólo para la clase antigua. */
+.kiwik-dialog .p-dialog-header-close {
+  background-color: #f9fbe7 !important;
 }
 
 /* Efecto hover profesional */
@@ -397,4 +402,22 @@ body {
 .custom-header-table {
     border-radius: 1px;
     overflow: hidden;
+}
+
+/* PrimeVue 4: la cabecera mantiene sus acciones en el extremo derecho,
+   también cuando el título se proporciona mediante un slot personalizado. */
+.kiwik-dialog .p-dialog-header { padding-right: 7rem !important; }
+.kiwik-dialog .p-dialog-header-actions {
+  position: absolute;
+  right: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.kiwik-dialog .p-dialog-header-actions .p-dialog-close-button {
+  position: static !important;
+  transform: none !important;
+  flex-shrink: 0;
 }
