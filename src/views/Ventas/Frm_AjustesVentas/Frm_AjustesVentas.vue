@@ -2,7 +2,7 @@
   <main class="settings-page">
     <header class="page-header">
       <div class="title-wrap"><span class="icon"><i class="pi pi-sliders-h" /></span><div><small>KiwiKERP / Ventas</small><h1>Ajustes de Ventas</h1></div></div>
-      <div class="actions"><Button label="Volver" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({name:'Ventas'})"/><Button label="Guardar cambios" icon="pi pi-save" :loading="saving" :disabled="loading || !loaded || !!deliveryError || !!reminderBusy" @click="save"/></div>
+      <div class="actions"><Button label="Volver" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({name:'Ventas'})"/><Button label="Guardar cambios" icon="pi pi-save" :loading="saving" :disabled="loading || !loaded || !!deliveryError || !!reminderBusy || quoteBusy || !!quoteError" @click="save"/></div>
     </header>
 
     <div v-if="loading" class="loading"><i class="pi pi-spin pi-spinner"/> Cargando ajustes…</div>
@@ -47,14 +47,14 @@
             <Message v-if="reminderDirty" severity="warn" :closable="false">Guarda los cambios del recordatorio antes de probar o enviar.</Message>
             <Message v-if="reminderError" severity="error" :closable="false">{{reminderError}}</Message>
             <div v-if="reminderResult" class="reminder-results" aria-live="polite">
-              <h3>{{reminderResult.preview?'Prueba sin envío':'Resultado del envío manual'}} · {{reminderResult.date}}</h3>
+              <h3>{{reminderResult.preview?'Prueba sin envío':'Resultado del envío manual'}} · {{formatCalendarDate(reminderResult.date)}}</h3>
               <p>Antelación guardada: {{reminderResult.days}} días · {{reminderResult.recipients.length}} destinatarios.</p>
               <p v-if="!reminderResult.preview">Enviados: {{reminderResult.sent}} · Omitidos: {{reminderResult.skipped}} · Fallos: {{reminderResult.failed}}</p>
               <p v-if="!reminderResult.recipients.length">No hay pedidos pendientes con destinatario válido para este intervalo.</p>
               <details v-for="recipient in reminderResult.recipients" :key="recipient.email">
                 <summary>{{recipient.name}} · {{recipient.email}} · {{recipient.orders.length}} pedidos · {{reminderStatus(recipient.status)}}</summary>
                 <p v-if="recipient.warning">{{recipient.warning}}</p>
-                <ul><li v-for="(order,index) in recipient.orders" :key="index">{{order.code}} · {{order.client}} · {{order.deliveryDate}} · {{order.status}} · Pendiente: {{order.pendingQuantity}}</li></ul>
+                <ul><li v-for="(order,index) in recipient.orders" :key="index">{{order.code}} · {{order.client}} · {{formatCalendarDate(order.deliveryDate)}} · {{order.status}} · Pendiente: {{order.pendingQuantity}}</li></ul>
               </details>
             </div>
           </section>
@@ -68,7 +68,14 @@
             <Message v-if="deliveryError" severity="error" :closable="false">{{deliveryError}}</Message>
           </section>
 
+          <QuoteAutomationSettings :form="form" :saved="savedQuotes" :disabled="loading || !loaded || saving || !!reminderBusy" :error="quoteError" @busy="quoteBusy=$event"/>
           <Message severity="secondary" :closable="false" class="customer-note"><strong>Condiciones particulares:</strong> se configuran individualmente en la ficha de cada cliente, dentro de su pestaña de Ventas. No son un parámetro general.</Message>
+          <InvoiceReminderSettings/>
+          <PaymentTermsSettings/>
+          <section class="settings-card">
+            <div class="section-heading"><span><i class="pi pi-tags"/></span><div><h2>Tarifas de venta</h2><p>Configura la moneda base, la tarifa predeterminada y las reglas de precios desde Lista de precios.</p></div></div>
+            <div class="reminder-actions"><Button label="Abrir Lista de precios" icon="pi pi-tags" @click="router.push({name:'ListaPrecios'})"/></div>
+          </section>
         </TabPanel>
 
         <TabPanel value="verifactu">
@@ -109,27 +116,27 @@
         </TabPanel>
       </TabPanels>
     </Tabs>
-    <Dialog v-model:visible="confirmReminder" modal :header="reminderPreview ? 'Probar recordatorios sin enviar' : 'Enviar recordatorios ahora'" @hide="reminderPassword=''" class="kiwik-dialog" :style="{width:'min(620px, 95vw)'}">
+    <Dialog v-model:visible="confirmReminder" modal :header="reminderPreview ? 'Probar recordatorios sin enviar' : 'Enviar recordatorios ahora'" class="kiwik-dialog" :style="{width:'min(620px, 95vw)'}">
       <p v-if="!reminderPreview">Se enviarán correos reales a los responsables con pedidos pendientes, usando la configuración guardada. El envío manual funciona aunque el automático esté pausado.</p>
       <p v-if="!reminderPreview">No se repetirán los envíos ya intentados hoy. Los destinatarios se recalculan al confirmar; puedes revisarlos antes con Probar.</p>
       <p v-if="reminderPreview">Esta prueba consulta destinatarios, pedidos y envíos de hoy. No envía correos ni comprueba la conexión SMTP.</p>
-      <p>Identifícate para autorizar esta acción. La contraseña se elimina al cerrar y no se guarda.</p>
-      <div class="form-grid">
-        <label class="field"><span>Código de usuario</span><InputText v-model="reminderUser" autocomplete="username" fluid/></label>
-        <label class="field"><span>Contraseña</span><InputText v-model="reminderPassword" type="password" autocomplete="current-password" fluid/></label>
-      </div>
+      <p>Se utiliza la sesión iniciada en el portal. No es necesario volver a introducir la contraseña.</p>
       <div class="kiwik-separator"/>
-      <template #footer><Button label="Cancelar" text severity="secondary" @click="confirmReminder=false"/><Button :label="reminderPreview ? 'Ejecutar prueba' : 'Confirmar envío'" :icon="reminderPreview ? 'pi pi-eye' : 'pi pi-send'" :disabled="reminderBlocked || !reminderUser.trim() || !reminderPassword" @click="runReminder(reminderPreview)"/></template>
+      <template #footer><Button label="Cancelar" text severity="secondary" @click="confirmReminder=false"/><Button :label="reminderPreview ? 'Ejecutar prueba' : 'Confirmar envío'" :icon="reminderPreview ? 'pi pi-eye' : 'pi pi-send'" :disabled="reminderBlocked" @click="runReminder(reminderPreview)"/></template>
     </Dialog>
   </main>
 </template>
 
 <script setup lang="ts">
+import PaymentTermsSettings from "./PaymentTermsSettings.vue";
+import InvoiceReminderSettings from "./InvoiceReminderSettings.vue";
+import { formatCalendarDate } from '@/libs/HelperDates';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
+import QuoteAutomationSettings from './QuoteAutomationSettings.vue';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -147,25 +154,32 @@ import TabPanel from 'primevue/tabpanel';
 const router=useRouter(),toast=useToast(),loading=ref(true),loaded=ref(false),saving=ref(false),activeTab=ref('general');
 const environments=[{label:'Pruebas · AEAT preproducción',value:'PRUEBAS'}];
 const currentYear=new Date().getFullYear();
-const form=reactive<any>({deliveryReminderEnabled:true,deliveryReminderTime:'08:15',deliveryReminderDays:7,deliveryDeadlineShortDays:7,deliveryDeadlineLongDays:30,invoiceSeriesPrefix:'KW',defaultTerms:'',offersMailBody:'',veriFactuEnabled:true,veriFactuEnvironment:'PRUEBAS',veriFactuAutoSend:true,veriFactuSystemId:77,veriFactuSystemEntity:'',veriFactuSystemNif:'',veriFactuSystemName:'KiwiKERP',veriFactuSystemVersion:'',veriFactuInstallationNumber:300,veriFactuAddQr:true,veriFactuQrSize:95,veriFactuQrX:350,veriFactuQrY:740,veriFactuRetries:3,veriFactuRetryMinutes:10,veriFactuAcceptedVisible:20});
+const form=reactive<any>({quoteReminderEnabled:true,quoteReminderTime:'08:00',quoteReminderDays:7,quoteReminderIncludeDrafts:true,quoteCancellationEnabled:true,quoteCancellationTime:'00:10',quoteCancellationIncludeDrafts:true,quoteCancellationNotifyOwner:true,quoteCancellationNotifyCustomer:true,deliveryReminderEnabled:true,deliveryReminderTime:'08:15',deliveryReminderDays:7,deliveryDeadlineShortDays:7,deliveryDeadlineLongDays:30,invoiceSeriesPrefix:'KW',defaultTerms:'',offersMailBody:'',veriFactuEnabled:true,veriFactuEnvironment:'PRUEBAS',veriFactuAutoSend:true,veriFactuSystemId:77,veriFactuSystemEntity:'',veriFactuSystemNif:'',veriFactuSystemName:'KiwiKERP',veriFactuSystemVersion:'',veriFactuInstallationNumber:300,veriFactuAddQr:true,veriFactuQrSize:95,veriFactuQrX:350,veriFactuQrY:740,veriFactuRetries:3,veriFactuRetryMinutes:10,veriFactuAcceptedVisible:20});
+const quoteBusy=ref(false),savedQuotes=ref('');
+const quoteSnapshot=()=>JSON.stringify(Object.keys(form).filter(k=>k.startsWith('quote')).sort().map(k=>[k,form[k]]));
+const quoteError=computed(()=>{
+  if(!/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(form.quoteReminderTime||'')||!/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(form.quoteCancellationTime||''))return 'Indica horas válidas de presupuestos (HH:mm).';
+  if(!Number.isInteger(form.quoteReminderDays)||form.quoteReminderDays<0||form.quoteReminderDays>365)return 'La antelación de presupuestos debe estar entre 0 y 365 días.';
+  return '';
+});
 const authStore=useAuthStore();
-const reminderUser=ref(''),reminderPassword=ref(''),reminderPreview=ref(true);
-const openReminder=(preview:boolean)=>{reminderPreview.value=preview;reminderUser.value=authStore.user?.userDsCode||'';reminderPassword.value='';confirmReminder.value=true;};
+const reminderPreview=ref(true);
+const openReminder=(preview:boolean)=>{if(preview){void runReminder(true);return;}reminderPreview.value=false;confirmReminder.value=true;};
 const reminderBusy=ref(''),confirmReminder=ref(false),reminderError=ref(''),reminderResult=ref<any>(null),savedReminder=ref('');
 const reminderSnapshot=()=>JSON.stringify([form.deliveryReminderEnabled,form.deliveryReminderTime,form.deliveryReminderDays,form.deliveryDeadlineShortDays,form.deliveryDeadlineLongDays]);
 const reminderDirty=computed(()=>loaded.value && savedReminder.value!==reminderSnapshot());
-const reminderBlocked=computed(()=>!loaded.value || loading.value || saving.value || !!reminderBusy.value || reminderDirty.value || !!deliveryError.value);
+const reminderBlocked=computed(()=>!loaded.value || loading.value || saving.value || !!reminderBusy.value || reminderDirty.value || !!deliveryError.value || quoteBusy.value);
 const reminderStatus=(status:string)=>({READY:'Disponible para enviar',SENT:'Enviado',CLAIMED:'Reservado o en curso; no se repetirá hoy',FAILED:'Resultado incierto o fallido; no se repetirá hoy',SKIPPED:'Omitido: ya intentado hoy',ERROR:'No se pudo reservar el envío'}[status]||status);
 const runReminder=async(preview:boolean)=>{
-  if(reminderBlocked.value||!reminderUser.value.trim()||!reminderPassword.value)return;
-  const request={auth:{username:reminderUser.value.trim(),password:reminderPassword.value}};
-  confirmReminder.value=false;reminderPassword.value='';
+  if(reminderBlocked.value)return;
+  confirmReminder.value=false;
   reminderBusy.value=preview?'preview':'send';reminderError.value='';reminderResult.value=null;
   try {
+    const request=authStore.portalRequestConfig();
     const url=`${import.meta.env.VITE_API_URL}/${preview?'WebPreviewSalesDeliveryReminders':'WebSendSalesDeliveryReminders'}`;
     reminderResult.value=(preview?await axios.get(url,request):await axios.post(url,{confirmed:true},request)).data;
   } catch(e:any) {
-    reminderError.value=e.response?.status===401?'Código de usuario o contraseña incorrectos; no se ejecutó la acción.':preview?'No se pudo obtener la prueba. Comprueba el servidor y la sesión.':'No se pudo confirmar el resultado. Puede haber correos enviados: utiliza Probar para consultar el registro antes de volver a enviar. No se repetirán los ya reservados hoy.';
+    reminderError.value=e.response?.status===401||!authStore.portalSession?'La sesión ha caducado o es anterior a esta actualización. Vuelve a iniciar sesión en el portal.':preview?'No se pudo obtener la prueba. Comprueba el servidor y la sesión.':'No se pudo confirmar el resultado. Puede haber correos enviados: utiliza Probar para consultar el registro antes de volver a enviar. No se repetirán los ya reservados hoy.';
   } finally {reminderBusy.value='';}
 };
 const deliveryError=computed(()=>{
@@ -175,8 +189,8 @@ const deliveryError=computed(()=>{
   return '';
 });
 const normalizeInvoiceSeries=(value:string|undefined)=>{form.invoiceSeriesPrefix=String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10)};
-const load=async()=>{loading.value=true;loaded.value=false;try{Object.assign(form,(await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesSettings`)).data);savedReminder.value=reminderSnapshot();loaded.value=true}catch(e:any){toast.add({severity:'error',summary:'No se pudieron cargar los ajustes',detail:e.response?.data||'Comprueba que la migración de base de datos está aplicada.',life:5000})}finally{loading.value=false}};
-const save=async()=>{if(saving.value||loading.value||!loaded.value||deliveryError.value||reminderBusy.value)return;saving.value=true;try{Object.assign(form,(await axios.post(`${import.meta.env.VITE_API_URL}/WebSaveSalesSettings`,form)).data);savedReminder.value=reminderSnapshot();reminderResult.value=null;toast.add({severity:'success',summary:'Ajustes guardados',detail:'La configuración de Ventas y VeriFactu ya está actualizada.',life:3500})}catch(e:any){toast.add({severity:'error',summary:'No se pudieron guardar',detail:e.response?.data||'Revisa los valores introducidos.',life:5000})}finally{saving.value=false}};
+const load=async()=>{loading.value=true;loaded.value=false;try{Object.assign(form,(await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesSettings`)).data);savedReminder.value=reminderSnapshot();savedQuotes.value=quoteSnapshot();loaded.value=true}catch(e:any){toast.add({severity:'error',summary:'No se pudieron cargar los ajustes',detail:e.response?.data||'Comprueba que la migración de base de datos está aplicada.',life:5000})}finally{loading.value=false}};
+const save=async()=>{if(saving.value||loading.value||!loaded.value||deliveryError.value||reminderBusy.value||quoteBusy.value||quoteError.value)return;saving.value=true;try{Object.assign(form,(await axios.post(`${import.meta.env.VITE_API_URL}/WebSaveSalesSettings`,form)).data);savedReminder.value=reminderSnapshot();savedQuotes.value=quoteSnapshot();reminderResult.value=null;toast.add({severity:'success',summary:'Ajustes guardados',detail:'La configuración de Ventas y VeriFactu ya está actualizada.',life:3500})}catch(e:any){toast.add({severity:'error',summary:'No se pudieron guardar',detail:e.response?.data||'Revisa los valores introducidos.',life:5000})}finally{saving.value=false}};
 onMounted(load);
 </script>
 

@@ -48,7 +48,7 @@
 
     <section class="quick-view quick-view--available" role="button" tabindex="0" @click="navegarA('Ventas')" @keydown.enter="navegarA('Ventas')">
       <div class="quick-icon"><i class="pi pi-chart-bar"></i></div>
-      <div><h2>Indicadores comerciales</h2><p>Consulta los widgets actualizados de entidades, artículos, presupuestos, pedidos, albaranes y facturas desde el módulo de Ventas. La entrega y la facturación se siguen por separado.</p></div>
+      <div><h2>Indicadores comerciales</h2><p>Consulta los widgets actualizados de entidades, artículos, presupuestos, pedidos, albaranes y facturas desde el módulo de Ventas. Lista de precios muestra las tarifas y reglas guardadas. La entrega, la facturación y el cobro se siguen por separado; las facturas permiten consultar sus vencimientos.</p></div>
       <span class="available-link">Abrir Ventas <i class="pi pi-arrow-right"></i></span>
     </section>
   </main>

@@ -1,7 +1,7 @@
 # Manual de usuario de KiwiK ERP
 
-**Versión:** 2.1  
-**Última actualización:** 30 de agosto de 2026
+**Versión:** 2.5
+**Última actualización:** 31 de agosto de 2026
 
 Este manual explica el funcionamiento de KiwiK ERP desde el punto de vista del usuario. Se actualizará conforme se incorporen nuevas funciones o cambien los procesos existentes.
 
@@ -20,7 +20,7 @@ Su finalidad es evitar volver a introducir los mismos datos en cada documento y 
 
 ### Qué incluye y cuáles son sus límites
 
-El manual describe las funciones implementadas en el proyecto a 30 de agosto de 2026. La instalación debe tener frontend, backend y actualizaciones de base de datos compatibles para utilizarlas. Compras e Informes siguen identificados como áreas en preparación; no debe interpretarse su tarjeta como una función disponible.
+El manual describe las funciones implementadas en el proyecto a 31 de agosto de 2026. La instalación debe tener frontend, backend y actualizaciones de base de datos compatibles para utilizarlas. Compras e Informes siguen identificados como áreas en preparación; no debe interpretarse su tarjeta como una función disponible.
 
 El circuito fiscal descrito está configurado para **PRUEBAS**. Esta guía explica botones y resultados de la aplicación; no acredita una puesta en producción ni sustituye la revisión de los requisitos de la empresa. Las rectificativas, remesas, conciliación y gestión de impagados no forman parte del flujo básico actualmente documentado.
 
@@ -28,7 +28,17 @@ El circuito fiscal descrito está configurado para **PRUEBAS**. Esta guía expli
 
 Empiece por acceso, clientes y artículos si es la primera vez que utiliza el sistema. Para una operación diaria, vaya directamente al apartado del documento que está gestionando. Antes de confirmar una entrega o emitir una factura, revise su efecto: **guardar un borrador no equivale a confirmar, emitir ni cobrar**. Las capturas son referencias visuales y pueden mostrar otra marca o configuración de empresa.
 
+Las capturas nuevas proceden de los formularios reales con datos ficticios en un entorno aislado, sin emitir facturas ni enviar correos. Pulse las imágenes del portal para ampliarlas. En la copia Markdown conserve la carpeta imagenes junto al documento: las imágenes no dependen de archivos temporales.
+
 ## Índice
+
+Guía específica: [Lista de precios y tarifas de venta](lista-precios.md).
+
+Estado de cierre: [Auditoría de Ventas del 31/08/2026](../auditoria-cierre-ventas-2026-08-31.md).
+
+Novedades: [Tarifas y mejoras de uso](#novedades-del-31-de-agosto-de-2026).
+
+Mapa visual: [Diagrama de los flujos de ventas](#diagrama-de-los-flujos-de-ventas).
 
 Guía específica: [Requerimientos y documentación AEAT](requerimientos-aeat.md).
 
@@ -52,6 +62,54 @@ Guía específica: [Crear una factura manual](factura-manual.md).
 12. [Glosario de estados](#12-glosario-de-estados)
 
 ---
+
+## Diagrama de los flujos de ventas
+
+[![Flujos de ventas de KiwiKERP: pizarra negra con tiza de colores, sin marco de madera](diagramas/flujo-ventas-pizarra-tiza-2026-08-31.png)](diagramas/flujo-ventas-pizarra-tiza-2026-08-31.png)
+
+[Abrir el diagrama PNG para ampliar o descargar](diagramas/flujo-ventas-pizarra-tiza-2026-08-31.png).
+
+El mapa comienza con precio base, tarifa del cliente, descuentos y tramos por cantidad. Distingue servicios sin albarán, productos facturados por pedido o por entrega y facturas manuales. Incluye emisión, VeriFactu, correo, vencimientos, recordatorios, cobros parciales y reversión. Las rectificativas aparecen como pendientes, fuera del flujo actual.
+
+Mapa revisado el **31/08/2026**, con circuito fiscal documentado en **PRUEBAS**. La nueva pizarra negra de tiza, sin marco, es una imagen de 1492 × 1054 píxeles para pantalla. Se conserva el [PDF A1 del diseño anterior](../../output/pdf/kiwikerp-ventas-pizarra-a1-2026-08-31.pdf), de 841 × 594 mm, con texto y trazos vectoriales, reducible a A2. Ese PDF no tiene el nuevo acabado visual. La nueva imagen necesita una adaptación de resolución/arte final antes de imprimirse como póster A1; no basta con ampliar el PNG. Conserve `diagramas` y el PDF al distribuir este manual.
+
+**Mantenimiento:** al actualizar la documentación, revisar también este diagrama. Si cambian pasos, estados, reglas o conexiones del circuito, actualizar la imagen y sus referencias tanto aquí como en el manual del portal. Véase [la guía de mantenimiento del diagrama](diagramas/README.md).
+
+## Novedades del 31 de agosto de 2026
+
+### Tarifas de venta: del precio base al precio acordado
+
+**Ventas → Lista de precios** centraliza las tarifas. **Ajustes de ventas → Tarifas de venta** abre esa misma pantalla; no mantiene una configuración duplicada. En el panel inferior se eligen la moneda base del Precio de venta de los artículos y la tarifa predeterminada. Solo se puede elegir como predeterminada una tarifa de la moneda base. La tarifa asignada al cliente permite pactar otras condiciones sin cambiar el producto para todos.
+
+| Elemento | Función |
+| --- | --- |
+| Precio de venta del artículo | Precio base en la moneda configurada. |
+| Tarifa predeterminada | Referencia general cuando no existe otra tarifa aplicable. |
+| Tarifa del cliente | Condiciones propuestas en sus nuevas ventas; varios clientes pueden compartirla. |
+| Regla por producto, familia o todos | Precio fijo o descuento sobre el precio base; una única regla, sin acumulación. |
+| Cantidad mínima | Selecciona el mayor tramo alcanzado dentro del ámbito aplicable, por línea. |
+| Precio del documento | Importe acordado que se guarda; reabrir no lo recalcula. |
+
+Se prioriza **producto → familia exacta → todos → precio base**. Sin una regla aplicable, el precio base solo se utiliza en su propia moneda. Una tarifa USD no convierte el precio EUR: requiere un precio fijo aplicable en USD. No se puede cambiar la moneda de una tarifa existente; cree otra para evitar reinterpretar importes.
+
+**Ejemplo:** el producto tiene un precio base de 5,00 EUR. El cliente utiliza una tarifa USD con 100,00 USD desde 0 unidades y 80,00 USD desde 101. Una línea de 120 unidades propone **80,00 USD por unidad**, con base neta de **9.600,00 USD**, antes de impuestos y de descuentos adicionales. No son 80,00 USD por toda la línea ni una conversión de los 5,00 EUR.
+
+**Simular precio con las reglas del formulario** utiliza incluso cambios sin guardar. No modifica la tarifa; al editar las reglas se descarta el resultado anterior. Desde el artículo, **Consultar tarifas** usa las reglas guardadas.
+
+**Aplicar tarifa** requiere confirmación, recalcula todas las líneas y pone a cero sus descuentos adicionales. Cambiar cantidades recalcula solo las líneas gestionadas por tarifa durante esa edición. Los precios guardados o manuales no se actualizan automáticamente. Conservar importes al cambiar tarifa solo es posible si la moneda coincide.
+
+### Origen del precio y presentación
+
+La columna **Precio** del presupuesto es más amplia y muestra el origen. La corrección para conservarlo tras guardar/reabrir presupuestos y pedidos requiere **V28 y backend actualizado**. V28 se aplicó y verificó el 31/08/2026; queda comprobar el backend actualizado y guardar/reabrir en el portal. Con esa versión, una edición real indica **Precio manual**, y las líneas antiguas sin evidencia muestran **Precio guardado**. El simple enfoque del campo no debe cambiar su origen.
+
+- Lista de precios utiliza el menú de acciones **…**, tabla corporativa, tipografía ampliada y editor con cabecera común.
+- Los importes y cantidades de tarifas usan **punto de miles y coma decimal**: 1.200,00 y 80,00; no confundir 1.200 con 1,2.
+- Nueva tarifa, Nueva entidad, Nuevo artículo, Nuevo presupuesto y Nuevo pedido comparten verde corporativo claro. En Presupuestos y Pedidos, Nuevo queda al final de la barra. Albaranes conserva su estilo.
+- El panel Tarifas de venta de Ajustes comparte icono, cabecera, tipografía y alineación de acciones con los demás paneles.
+
+### Qué falta para cerrar Ventas
+
+Las **rectificativas y abonos** son la siguiente ampliación funcional del portal. No basta con cambiar el estado de la factura ni con revertir un cobro. Además, antes de producción, deben cerrarse la autenticación/permisos de cobros, la validación del backend tras V28 (ya aplicada) y una prueba integral con persistencia, concurrencia y fiscalidad en pruebas. El [informe de auditoría](../auditoria-cierre-ventas-2026-08-31.md) distingue estos bloqueos de ampliaciones futuras como remesas o conciliación.
 
 ## 1. Acceso al sistema
 
@@ -188,6 +246,29 @@ Este campo es independiente de la **Condición de cobro** y de los días fijos d
 
 Las condiciones particulares son texto comercial; no sustituyen la condición de cobro. Los documentos conservan una copia de las condiciones: cambiar después la ficha del cliente no actualiza automáticamente las operaciones anteriores. Revise el contenido del borrador si debe aplicar un acuerdo nuevo.
 
+### 4.3 Crear una condición de pago desde el cliente
+
+En los atributos de venta, pulse **+ (Nueva condición de pago)** junto a **Condición de cobro**. Este acceso requiere permiso para guardar entidades y abre el mismo editor de reglas y vista previa que Ajustes de ventas.
+
+1. Indique la descripción y configure los plazos.
+2. Compruebe el resultado mediante la vista previa.
+3. Pulse **Guardar y seleccionar**: la condición se crea activa en el catálogo compartido y queda seleccionada en la ficha.
+4. Guarde la entidad para confirmar su asignación al cliente.
+
+Cancelar el diálogo no cambia la selección anterior. La condición creada está disponible para otros clientes: no es exclusiva de esta ficha y permanece en el catálogo aunque después cierre la entidad sin guardar. La gestión del catálogo continúa disponible en Ajustes de ventas.
+
+### Recordatorio diario interno de vencimientos de facturas
+
+Configure **Ajustes de ventas → Parámetros generales → Recordatorio diario de vencimientos**: activación, hora de Madrid, antelación de 0 a 365 días y usuarios internos destinatarios. Se guarda con **Guardar recordatorio**, independiente del guardado general. Inicialmente está desactivado; propone 08:30 y 7 días. Solo permite seleccionar usuarios activos con correo válido.
+
+Incluye todos los vencidos, los de hoy y los próximos hasta el límite indicado. Solo facturas aceptadas por VeriFactu, no anuladas, con saldos pendientes. Usa los mismos vencimientos y cobros parciales/revertidos que el diálogo de cobros; excluye cobrados y fechas desconocidas. Cada fila identifica factura, cliente, plazo, fecha, moneda e importe pendiente. No suma monedas distintas y **nunca envía a contactos de clientes**.
+
+Desde Facturas, junto a **Nueva factura manual**, o desde Ajustes, pulse **Enviar recordatorio de vencimientos**. La consulta previa no envía nada; revise destinatarios y plazos y confirme. Aplica los ajustes guardados, no los filtros del listado, y recalcula los saldos al confirmar. El envío manual puede ejecutarse con la programación pausada.
+
+Un correo por día y dirección entre envío manual y automático. Los usuarios desactivados o sin correo válido se omiten con aviso. El historial de Ajustes muestra los últimos 100 registros: fecha/hora de Madrid, destinatario, usuario (SYSTEM en automático), origen, número de plazos y resultado. Se conserva una copia de los plazos del envío en el registro técnico. Enviado significa aceptación por SMTP, no lectura ni entrega confirmada. Reservas y resultados inciertos no se reintentan ese día.
+
+El backend lee la configuración cada minuto y debe estar activo a la hora guardada; cambiar la hora no exige reiniciarlo. Antes del despliegue, aplicar con copia de seguridad y backend detenido **V23_20260831_invoice_due_reminders.sql** y después **V24_20260831_invoice_reminder_relations.sql**, partiendo de V22. Si V23 ya existe, no repetirla: aplicar sólo V24 (primero el script de renombrado si conserva campos sin prefijo). Esta migración no envía correos ni modifica cobros.
+
 ## 5. Artículos
 
 El módulo Artículos contiene el catálogo de productos y servicios utilizados en los documentos comerciales.
@@ -299,6 +380,8 @@ Cambiar un artículo no debe reinterpretar una operación anterior: cada línea 
 
 ## 6. Presupuestos
 
+El botón **Consultar presupuestos** abre un asistente de solo lectura. **Consulta guiada** funciona sin saldo de OpenAI; **Pregunta con IA** solamente traduce la frase a filtros y nunca recibe resultados del ERP. KiwiKERP calcula importes por periodo, pendientes, validez, estados, conversión y el detalle de un presupuesto. Los resultados indican moneda, envío, validez y pedido asociado, y se detienen si la selección mezcla divisas. **Descargar respuesta en PDF** crea un informe con los criterios, totales y documentos justificativos. El asistente no envía, aprueba, cancela ni convierte documentos en pedidos. Consulte el [alcance completo](../quote-assistant-pilot.md).
+
 ### 6.1 Crear o editar un presupuesto
 
 En el formulario se indican los datos generales —fecha, cliente, tarifa y validez— y las líneas de productos o servicios.
@@ -339,6 +422,60 @@ Al aceptar un presupuesto, este queda aprobado y se crea un **pedido de venta en
 6. Cuando exista aceptación, utilice la acción de aceptar: el presupuesto queda aprobado y se genera un **pedido en borrador**. Abra ese pedido para revisar fecha prevista y cantidades antes de confirmarlo.
 
 Si la propuesta no continúa, utilice la cancelación disponible según su estado. No cree una segunda operación sin comprobar antes si el presupuesto ya generó un pedido. Las notas y documentos adjuntos permiten conservar el contexto de la negociación.
+
+### 6.5 Recordatorios y cancelación por vencimiento
+
+En **Ventas → Ajustes de Ventas → Parámetros generales** hay dos bloques independientes. El recordatorio informa al responsable antes del vencimiento; la cancelación cambia el estado después de terminar la validez. No son la misma operación.
+
+| Parámetro | Recordatorio interno | Cancelación por vencimiento |
+| --- | --- | --- |
+| Activación | Permite pausar el aviso automático. | Permite pausar la cancelación automática. |
+| Hora de Madrid | Inicialmente **08:00**. | Inicialmente **00:10**. |
+| Antelación | Inicialmente **7 días**, configurable de 0 a 365. Cero incluye solo hoy. | No hay antelación: solo fechas anteriores a hoy. |
+| Incluir borradores DRAFT | Decide si entran los presupuestos pendientes de aprobar. | Decide si los borradores vencidos también se cancelan. |
+| Destinatarios | Usuario creador activo con correo; un correo agrupado por dirección y día. | Avisos independientes al responsable y al contacto predeterminado activo del cliente. |
+
+Se conservan los valores anteriores por defecto: ambos procesos activos, borradores incluidos y avisos de cancelación al responsable y al cliente. Si había horarios numéricos configurados en el servidor se toman como valores iniciales. Revise y guarde los parámetros antes de utilizarlos. Cambiar parámetros no modifica las fechas de validez de los documentos.
+
+#### Recordatorio de vencimiento
+
+1. Configure activación, hora, antelación e inclusión de borradores. Pulse **Guardar cambios**.
+2. Pulse **Probar**: utiliza directamente la sesión iniciada en el portal. No se envía correo ni se comprueba SMTP.
+3. Despliegue cada destinatario y revise código, cliente, vencimiento, días e importe con su moneda. Incluye pendientes que vencen hoy y hasta el último día completo del intervalo; excluye aprobados, cancelados, vencidos anteriores, usuarios inactivos o sin correo y documentos sin fecha.
+4. Para adelantar el aviso pulse **Enviar ahora** y **Confirmar envío**. Usa los ajustes guardados aunque el automático esté pausado y recalcula los documentos al confirmar.
+5. Consulte enviados, omitidos y fallos. El automático y el manual comparten el límite diario; una respuesta incierta no permite reenviar al mismo responsable ese día. Probar muestra elegibles actuales y su reserva diaria, no un historial completo.
+
+Los códigos **DRAFT_PRC-…** de un aviso no representan presupuestos aceptados: indican borradores incluidos por configuración. Desactive **Incluir borradores DRAFT** si solo quiere dar seguimiento a los enviados.
+
+#### Cancelación y aviso al cliente
+
+1. Configure activación, hora, inclusión de borradores y los dos interruptores de aviso. Guarde antes de ejecutar.
+2. Pulse **Probar** en este bloque. Revise cada presupuesto vencido y los destinatarios previstos. No cambia estados, no numera documentos, no genera PDF ni envía correo.
+3. Si procede ejecutar ahora, pulse **Cancelar vencidos ahora**, lea la advertencia antes de **Confirmar cancelación**. Afecta a **todos** los vencidos que cumplan los ajustes guardados, no solo al ejemplo desplegado. Volver o cerrar el diálogo no ejecutan nada.
+4. El servidor vuelve a comprobar cada presupuesto: debe seguir vencido y no estar aprobado ni cancelado. Se cancela, se bloquea y se archiva su PDF. Si era borrador se formaliza el código; si ya tenía código oficial se conserva.
+5. Tras guardar la cancelación se envían los avisos habilitados. Si el correo falla, la cancelación no se deshace. Revise por separado cancelados, omitidos, fallos de cancelación y resultados de correo.
+
+![Confirmación de cancelación de presupuestos](imagenes/presupuestos-confirmar-cancelacion.jpg)
+
+*Confirmación de la ejecución manual. Captura con datos ficticios, sin cambios ni correos reales.*
+
+**Ejemplo:** un presupuesto válido hasta el **27/07/2026** conserva su validez todo ese día y puede cancelarse desde el **28/07/2026**, a la hora configurada. El correo de cancelación comunica un cambio ya guardado; no solicita la aprobación del cliente.
+
+Sin destinatario válido o con ambos avisos desactivados, el presupuesto se cancela igualmente sin correo. Si responsable y cliente tienen la misma dirección solo se envía una vez. Las plantillas existentes se mantienen; estos parámetros no editan el texto del mensaje.
+
+Los ya cancelados no vuelven a procesarse ni se reenvían sus avisos desde esta acción. Ante una respuesta perdida, revise el estado en Presupuestos antes de repetir. Una interrupción después de guardar puede dejar un aviso sin enviar; consulte al administrador. No interprete la ausencia en Probar como acreditación de entrega del correo.
+
+#### Horarios, credenciales e instalación
+
+La autorización de estas acciones dura hasta ocho horas y se mantiene en memoria, no como contraseña guardada. Al salir del portal se solicita su revocación. Tras actualizar o reiniciar el backend, o si caduca, vuelva a iniciar sesión desde la pantalla de acceso; no hay una contraseña adicional en los diálogos. Una instalación con varios backends debe mantener afinidad de sesión mientras este registro sea local al proceso.
+
+Las tres tareas (entregas, recordatorio de presupuestos y cancelación) leen los ajustes guardados cada minuto. Cambiar una hora futura se detecta sin reiniciar. Si la tarea automática ya se ejecutó hoy, cambiar su hora no la vuelve a ejecutar ese día; el registro de envíos también evita repetir destinatarios. Cambiar la hora no interrumpe una ejecución ya empezada. Guardar es imprescindible: los valores sin guardar no afectan al servidor.
+
+
+
+Los cambios guardados se aplican sin reiniciar una vez instalada la versión. Si la hora ya pasó, la ejecución automática espera al día siguiente; no recupera horarios perdidos. El servidor debe estar en marcha a la hora indicada. Las ejecuciones manuales no necesitan activar el automático. Las acciones utilizan la sesión del portal; no conservan ni reutilizan la contraseña. Utilice la conexión HTTPS de la instalación.
+
+Antes de arrancar el backend actualizado, aplique **`BackUpBBDD/sql/V19_20260830_sales_quote_automation.sql`** si Hibernate no actualiza el esquema. Añade parámetros y el registro diario de avisos de presupuestos, independiente de los pedidos. La migración no cancela documentos ni envía correos. Valide la instalación con Probar antes de utilizar las acciones reales.
 
 ## 7. Pedidos de venta
 
@@ -403,6 +540,11 @@ Para recibir el recordatorio, el responsable debe estar activo y tener una direc
 
 En **Parámetros generales → Filtro «Plazo entrega» de pedidos** se configuran el primer y el segundo intervalo, inicialmente **7 y 30 días**. Admiten de 1 a 365 días y el segundo debe ser mayor que el primero. Ambos incluyen hoy y el último día completo. Los cambios no alteran las fechas de los pedidos. Refresque el listado de Pedidos para cargar los nuevos plazos y colores.
 
+
+![Parámetros del recordatorio diario y acciones Probar y Enviar ahora.](imagenes/recordatorio-configuracion.jpg)
+
+*Parámetros del recordatorio diario y acciones Probar y Enviar ahora. Datos ficticios.*
+
 Para cambiar el recordatorio:
 
 1. Active o pause el interruptor **Recordatorio activado**.
@@ -410,9 +552,46 @@ Para cambiar el recordatorio:
 3. Pulse **Guardar cambios**. Los parámetros se aplican sin reiniciar el backend una vez instalada esta versión. Si la hora ya pasó, el próximo aviso será al día siguiente. El servidor debe estar encendido a la hora de envío; no se recuperan automáticamente avisos de horarios anteriores.
 4. No se repite el correo de un mismo día y dirección al cambiar la hora, reiniciar o tener más de un servidor. Se reserva el envío antes de contactar con el correo; si falla o su resultado es incierto, no se reintenta ese día para evitar duplicados. La incidencia se registra en el servidor. Un apagado después de reservar el envío puede impedir ese aviso; el siguiente día se procesa normalmente.
 
-**Probar y enviar manualmente:** guarde primero los cambios del recordatorio. Pulse **Probar** para consultar los destinatarios, desplegar sus pedidos y ver si ya hay un envío reservado, enviado o fallido hoy. La prueba no envía correos, no comprueba la conexión SMTP ni consume el envío diario. Pulse **Enviar ahora** y **Confirmar envío** para enviar correos reales con la configuración guardada, incluso si el automático está pausado. Los pedidos y destinatarios se recalculan al confirmar. El resultado muestra enviados, omitidos y fallos; los envíos manuales y automáticos comparten la protección diaria contra duplicados. Ante una respuesta perdida, consulte **Probar** antes de repetir. Ambas acciones solicitan el código de usuario y la contraseña para autenticar la petición; la contraseña no se guarda.
+**Probar y enviar manualmente:** guarde primero los cambios del recordatorio. Pulse **Probar** para consultar los destinatarios, desplegar sus pedidos y ver si ya hay un envío reservado, enviado o fallido hoy. La prueba no envía correos, no comprueba la conexión SMTP ni consume el envío diario. Pulse **Enviar ahora** y **Confirmar envío** para enviar correos reales con la configuración guardada, incluso si el automático está pausado. Los pedidos y destinatarios se recalculan al confirmar. El resultado muestra enviados, omitidos y fallos; los envíos manuales y automáticos comparten la protección diaria contra duplicados. Ante una respuesta perdida, consulte **Probar** antes de repetir. Ambas acciones utilizan la sesión del portal, sin solicitar otra vez la contraseña.
 
 **Instalación:** antes de arrancar el backend actualizado, aplicar `BackUpBBDD/sql/V18_20260830_sales_delivery_settings.sql` si Hibernate no actualiza el esquema. Añade los parámetros y el registro diario de envíos; no envía correos ni cambia pedidos. Los datos anteriores usan los valores predeterminados hasta guardar la configuración.
+
+
+### 7.5.1 Probar sin enviar correos
+
+1. Abra **Ventas → Ajustes de Ventas → Parámetros generales → Recordatorio diario de entregas**.
+2. Revise activación, hora y antelación. Si los modifica, pulse **Guardar cambios**. Las acciones permanecen deshabilitadas mientras haya cambios del recordatorio sin guardar.
+3. Pulse **Probar**: utiliza directamente la sesión iniciada, sin volver a pedir contraseña.
+4. Revise fecha, antelación guardada y destinatarios. Pulse cada responsable para desplegar código de pedido, cliente, fecha prevista, situación y cantidad pendiente.
+5. La prueba no envía correos, no comprueba la conexión SMTP ni consume el envío diario. No se pide ni se guarda de nuevo la contraseña.
+
+
+![Prueba sin envío, pedidos por destinatario e intervalos del filtro Plazo entrega.](imagenes/recordatorio-prueba.jpg)
+
+*Prueba sin envío, pedidos por destinatario e intervalos del filtro Plazo entrega. Datos ficticios.*
+
+### 7.5.2 Enviar ahora e interpretar el resultado
+
+También puede ejecutar **Enviar recordatorio de entregas** junto a **Nuevo pedido**, en el listado de Pedidos. En Presupuestos, junto a **Nuevo presupuesto**, dispone de **Enviar recordatorio interno** y **Cancelar vencidos ahora**. Estos accesos consultan primero documentos y destinatarios; requieren confirmación para ejecutar y muestran el resultado. Utilizan los parámetros guardados, no los filtros ni la selección del listado, y los mismos servicios y protecciones de Ajustes. La cancelación refresca el listado y sus indicadores. Si el resultado es incierto, actualice la consulta antes de repetir.
+
+1. Revise antes los destinatarios mediante **Probar**.
+2. Pulse **Enviar ahora**. Funciona a cualquier hora y aunque el automático esté pausado, con la configuración guardada.
+3. Lea la advertencia, pulse **Confirmar envío**. **Cancelar** o cerrar el diálogo no envían nada.
+4. Se recalculan pedidos y destinatarios: pueden cambiar respecto a la prueba anterior. Se envía un correo agrupado por dirección de responsable, no al cliente ni uno por pedido.
+5. Compruebe **Enviados**, **Omitidos** y **Fallos**. Durante la petición se deshabilitan las dos acciones.
+
+| Estado | Significado y siguiente paso |
+| --- | --- |
+| Disponible para enviar | No hay una reserva registrada para hoy. |
+| Enviado | El servicio de correo terminó sin error; no acredita lectura ni entrega en la bandeja. |
+| Reservado o en curso | En ejecución o sin resultado confirmado. No se repetirá hoy. |
+| Resultado incierto o fallido | Puede haberse enviado aunque fallara la respuesta. No se reintenta ese día para evitar duplicados. |
+| Omitido: ya intentado hoy | Un envío manual o automático ya reservó esa dirección. |
+| No se pudo reservar el envío | No se inició el correo en ese intento. Consulte la incidencia con el administrador. |
+
+El envío manual y el automático comparten el registro diario. Enviar ahora antes de la hora programada no provoca otro correo a la misma dirección cuando llegue esa hora. Una nueva pulsación tampoco permite reenviar a destinatarios ya reservados hoy.
+
+Si pierde la respuesta, consulte **Probar** antes de repetir. Esta prueba muestra destinatarios con pedidos elegibles en ese momento, no un historial completo de correos. Los pedidos que se completan o dejan de cumplir los criterios pueden desaparecer. Si no hay resultados, revise fecha prevista, unidades físicas pendientes y que el creador esté activo y tenga correo.
 
 ### 7.6 Bloquear un pedido
 
@@ -588,6 +767,22 @@ Si no puede generar otra entrega, revise las cantidades pendientes y los borrado
 
 ## 9. Facturas de venta
 
+### Asistente de consulta (piloto de solo lectura)
+
+**Configuración:** un administrador puede abrir **Ajustes → Inteligencia artificial**. El modelo viene propuesto por defecto (`gpt-4.1-mini`). Copie y pegue la clave API en el campo de contraseña, active la IA y guarde: se almacena cifrada en la base de datos, sin selector de origen. El campo vacío conserva una clave existente; pegar otra la sustituye. **Eliminar clave** pide confirmación, borra la copia y desactiva la IA, sin revocarla en OpenAI. **Probar conexión** solicita confirmación porque consume API; envía una pregunta técnica sin facturas. La API se paga aparte de ChatGPT/Codex. Se necesita HTTPS (o conexión local de desarrollo). La clave se protege con el mismo servicio de cifrado que los certificados, sin configurar variables ni credenciales adicionales en Jenkins. Los ajustes guardados se aplican sin reiniciar. Consulte la [guía de instalación IA](../invoice-assistant-pilot.md).
+
+En la cabecera de Facturas, **Asistente de Facturas** abre consultas de facturación por periodo y cliente, pendientes, vencidos y explicación de una factura con sus cobros. No crea ni cambia documentos, registra cobros ni envía correos.
+
+Puedes usar los filtros guiados sin IA. Si el servidor tiene la integración activada, escribe una pregunta, pulsa **Interpretar pregunta**, revisa los criterios propuestos y pulsa **Consultar datos**. Después, **Descargar respuesta en PDF** conserva criterios, totales, facturas justificativas y, al explicar una factura, sus cobros y vencimientos. Cada pregunta es independiente. Sólo se envía a OpenAI la pregunta y si hay una factura seleccionada, no el resultado de la consulta. Evita incluir datos sensibles innecesarios.
+
+Las fechas filtran la fecha de factura, con extremos incluidos y zona Europe/Madrid. Los saldos pendientes y vencidos son **actuales**, no históricos al cierre del periodo. Un plazo que vence hoy no está vencido. La facturación excluye borradores y anuladas y no incorpora la tabla independiente de rectificativas. El resumen separa base, impuestos, retención y total registrados.
+
+El cliente se identifica por código o nombre completo exacto. Los filtros del listado principal no se heredan. En pendientes y vencidos puedes dejar ambas fechas vacías. Máximo 366 días por periodo y 500 documentos seleccionados: si se supera el límite, acota la consulta; no se muestran totales parciales. Un descuadre entre cobros y vencimientos requiere revisión antes de obtener totales.
+
+Cada resultado conserva sus criterios y hora de consulta, muestra el resumen por cliente y las facturas que lo justifican. Pulsa un código para abrir la ficha normal. Para explicar una factura, selecciónala antes de abrir el asistente y pulsa **Usar factura seleccionada**, o indica su código exacto. Los cobros revertidos no suman; un saldo previo sin movimientos no acredita fecha ni medio de pago.
+
+La consulta requiere sesión del portal y permiso de Ventas/Facturas, o administrador. Configuración y pruebas de despliegue: [Piloto IA de Facturas](../invoice-assistant-pilot.md).
+
 ### 9.1 Creación desde albaranes
 
 Un albarán confirmado puede incorporarse a una factura cuando contiene cantidades pendientes de facturar. También pueden agruparse albaranes compatibles del mismo cliente y tarifa.
@@ -612,6 +807,12 @@ Después de guardar la primera factura con 5 unidades, el albarán queda **Parci
 Las cantidades incluidas en facturas borrador también se consideran reservadas para evitar que dos borradores facturen simultáneamente las mismas unidades. Si una factura queda cancelada, sus cantidades dejan de computar y vuelven a estar disponibles.
 
 ### 9.3 Modificación del borrador
+
+![Borrador editable: tarifa, forma de pago y acciones de guardar y emitir.](imagenes/factura-borrador.jpg)
+
+*Borrador editable: tarifa, forma de pago y acciones de guardar y emitir. Datos ficticios.*
+
+
 
 Mientras la factura continúe en borrador pueden modificarse cantidades, precios, descuentos, impuestos, condiciones y observaciones. Para las líneas procedentes de albaranes se aplican estas reglas:
 
@@ -641,9 +842,31 @@ El listado de albaranes muestra la factura relacionada. Si un albarán participa
 
 ### 9.5 Fecha de factura y vencimiento
 
-La fecha de vencimiento se calcula desde la fecha de factura utilizando la condición de cobro y los días de pago configurados en la ficha del cliente. Puede establecerse manualmente una fecha distinta en el borrador, indicando obligatoriamente el motivo para conservar la auditoría.
+La **fecha de factura** identifica cuándo se factura; cada **vencimiento** indica cuándo debe pagarse una parte del importe. Una factura puede tener uno o varios plazos.
+
+En **Ventas → Ajustes de Ventas → Parámetros generales → Condiciones de pago y vencimientos**, seleccione una condición o cree una nueva. Configure porcentajes o importes fijos y termine siempre con **Saldo restante**: este último absorbe los redondeos. Cada plazo tiene sus propios días desde la fecha de factura y una opción de fin de mes. Los importes fijos se expresan en la moneda de la factura. Use **Probar reparto** y **Guardar condición**; este bloque no utiliza el botón general Guardar cambios.
+
+Ejemplo: factura del 30/08/2026 por 1.000 €, con 50 % a 30 días y saldo a 60 días: 500 € el 29/09/2026 y 500 € el 29/10/2026, antes de aplicar los días de pago del cliente. Los días fijos de pago del cliente ajustan cada fecha al siguiente día permitido; un día 31 se adapta al último día del mes cuando corresponde.
+
+En un borrador, seleccione la forma de pago y pulse **Vencimientos** para previsualizar el reparto con los datos aún no guardados. El calendario se recalcula al guardar y queda fijado al emitir. Cambiar después la condición de pago no modifica facturas ya emitidas. La edición manual de la fecha con motivo obligatorio establece **un único vencimiento por el total**, sustituyendo el reparto automático.
+
+La acción **Vencimientos** del listado muestra fecha, importe, cobrado, pendiente y situación de cada plazo, también cuando no se permite registrar cobros. **Vencido** significa fecha anterior a hoy y saldo pendiente; **Vence hoy** no cuenta como vencido; **Próximo** comprende los siete días siguientes. Los plazos posteriores siguen pendientes. Borradores y anuladas no cuentan como deuda vencida. Las fechas históricas desconocidas se muestran como **Sin fecha**, sin inventarlas.
+
+La columna **Próx. vencimiento** muestra el primer plazo pendiente de una factura emitida y cuántos quedan. En borradores muestra la fecha final prevista. Las completamente cobradas no tienen próximo vencimiento. El indicador de facturas vencidas cuenta facturas con al menos un plazo vencido pendiente, no todos sus plazos por separado.
+
+El selector **Vencimientos** filtra el listado completo y se combina con Situación, VeriFactu, Correo y la búsqueda. Ofrece **Todas** (gris), **Vencidas** (rojo), **Vencen hoy** (ámbar), **Próximas 7 días** (ámbar: desde mañana hasta el séptimo día incluido), **Posteriores a 7 días** (azul) y **Sin fecha de vencimiento** (gris). Se utilizan días completos de Europe/Madrid. Cada opción busca algún plazo con saldo pendiente: una factura con varios plazos puede aparecer en más de un intervalo. No incluye borradores, anuladas ni plazos totalmente cobrados. Todas elimina únicamente este filtro.
+
+Las facturas anteriores conservan un vencimiento histórico único y sus cobros existentes. Los PDF ya archivados no se regeneran; los nuevos PDF definitivos incluyen el calendario.
+
+**Instalación:** aplicar una sola vez, con copia de seguridad y backend detenido, `BackUpBBDD/sql/V22_20260830_sales_invoice_dues.sql`, después de la migración V13 de cobros. Reiniciar el backend actualizado. No arrancar esta versión sin las nuevas columnas y tablas. La migración no emite facturas, no envía correos y no realiza cobros.
 
 ### 9.6 Emisión de la factura definitiva
+
+![Validación fiscal: errores y ubicación donde corregirlos antes de emitir.](imagenes/validacion-fiscal.jpg)
+
+*Validación fiscal: errores y ubicación donde corregirlos antes de emitir. Datos ficticios.*
+
+
 
 #### Revisión fiscal antes de emitir
 
@@ -672,6 +895,43 @@ La emisión es una operación irreversible dentro del circuito ordinario. El nú
 
 La emisión definitiva no equivale al cobro ni a la aceptación por VeriFactu. El envío se inicia automáticamente, pero mantiene un estado independiente para distinguir claramente factura emitida, pendiente de envío, aceptada fiscalmente, pendiente de cobro y cobrada.
 
+#### Auditoría de emisión
+
+**Cómo consultarla:** abra **Ventas → Facturas**, despliegue el menú de la factura y seleccione **Auditoría de emisión**. Compruebe primero el bloque de estado actual; después lea las filas como una secuencia de hechos. Por ejemplo, «Emisión confirmada · envío encolado» a las 19:10 puede ir seguida de «Aceptada por VeriFactu» a las 19:11, sin que la primera fila cambie. Pulse **Actualizar** para volver a consultar el estado. En facturas aceptadas antes de incorporar el registro automático puede verse la aceptación actual sin una fila histórica de aceptación.
+
+En el menú de cada factura, abra **Auditoría de emisión**. Muestra las emisiones, reintentos manuales y subsanaciones registrados desde la instalación de esta funcionalidad, con fecha y hora, usuario autenticado que ejecutó la operación, usuario del certificado, código de factura, operación y resultado. Las fechas se guardan en UTC y se muestran en hora de Madrid. El historial se consulta en páginas de 50 registros, empezando por los más recientes.
+
+- **Emisión confirmada · envío encolado:** la emisión local y su auditoría se confirmaron juntas. Describe ese momento, no que la factura siga pendiente. Los reintentos y subsanaciones muestran «Reintento preparado» o «Subsanación preparada».
+- **Rechazada:** no se aceptó la operación, por ejemplo por datos inválidos, certificado incorrecto o estado incompatible.
+- **Fallida / revisar estado:** hubo un error técnico. Consulte el estado actual y el histórico VeriFactu antes de repetir.
+
+El bloque **Estado actual de VeriFactu** muestra el estado consultado al servidor, independiente de las filas históricas, con fecha y hora de consulta. Pulse **Actualizar** para comprobarlo de nuevo. Puede mostrar **Aceptada por VeriFactu** aunque la fila de emisión siga indicando que el envío se encoló en su momento.
+
+Desde esta actualización, cada ejecución del procesador añade una fila **Resultado VeriFactu**, con actor **Sistema · VeriFactu**, fecha y resultado: aceptada, aceptada con errores, requiere corrección, envío detenido o reintento automático programado. No modifica la fila de emisión. Las facturas aceptadas antes de instalar esta ampliación muestran su estado actual, pero no reciben una fila de aceptación reconstruida. El HTTP de emisión es del ERP; el de procesamiento corresponde a la integración. «—» significa que no se obtuvo respuesta HTTP (internamente, 0); un HTTP 200 por sí solo no acredita aceptación fiscal.
+
+La sesión del portal identifica al operador; la contraseña del certificado sigue teniendo su función independiente. No se guardan contraseñas, tokens, XML ni respuestas completas en esta auditoría. Los registros anteriores no se editan ni borran desde la aplicación. El usuario y código se conservan como datos del momento, sin reconstruir autores de facturas antiguas. Esta auditoría no sustituye al histórico técnico de VeriFactu ni incluye cobros, edición de borradores o anulaciones. La ampliación reutiliza la tabla V20; no requiere otra migración.
+
+**Despliegue:** aplicar `V20_20260830_sales_invoice_audit.sql` antes de arrancar esta versión del backend (`ddl-auto=none`), y después desplegar el frontend. Sin la tabla, no se puede confirmar una emisión auditada. Los intentos sin sesión válida se rechazan antes de esta auditoría; tampoco se crean registros asociados a facturas inexistentes. Si la base de datos no está disponible, no se puede garantizar el registro del fallo.
+
+#### Correo al cliente: envío y reenvío
+
+El filtro **Correo al cliente** permite seleccionar **Todas**, **Enviadas** o **No enviadas** y combinarlo con Situación, VeriFactu y la búsqueda. Se aplica al listado completo, antes de paginar. **Enviadas** significa que existe una fecha de envío por correo registrada; **No enviadas**, que no consta esa fecha (puede incluir borradores o intentos inciertos, no garantiza que nunca llegara un correo). Es independiente de la aceptación fiscal por VeriFactu y no acredita entrega ni lectura del mensaje.
+
+En el listado, el código de factura ocupa una columna compacta y los indicadores de documentos, observaciones y factura manual aparecen debajo, sólo cuando existen. **Enviado el** muestra la fecha y hora del último correo confirmado. **Guardar borrador** cierra el formulario tras guardar correctamente; si hay un error permanece abierto. Crear una factura manual tampoco vuelve a abrir automáticamente su detalle.
+
+El envío fiscal a VeriFactu y el correo al cliente son operaciones distintas. Para enviar el correo, abra **Ventas → Facturas → menú de la factura → Enviar por correo** (o **Reenviar por correo** si ya consta un envío): se abre sólo el formulario. **Historial de correo** abre directamente la tabla de registros, con altura fija y scroll interno, sin mostrar el formulario, incluso si la factura ya no se puede enviar. **Reenviar** en una fila abre el formulario con los datos de ese registro para revisarlos y confirmarlos. Desde el formulario puede pulsar **Ver historial** y volver sin perder lo escrito.
+
+1. La factura debe estar emitida, no anulada y aceptada por VeriFactu, con su PDF fiscal archivado disponible.
+2. Seleccione entre uno y diez **contactos activos del cliente con correo válido**. Se propone el principal si cumple estos requisitos; si no existe, seleccione uno expresamente. No se utilizan contactos internos ni direcciones introducidas libremente.
+3. Revise el **asunto y mensaje**, que puede modificar. Se adjunta automáticamente el PDF fiscal archivado, sin regenerarlo. Puede abrirlo con **Ver PDF fiscal**.
+4. Pulse **Preparar envío** y revise la confirmación con destinatarios, asunto, mensaje y adjunto. Sólo **Confirmar envío** inicia el correo real. Las direcciones seleccionadas son visibles entre sí y las repetidas se incluyen una sola vez.
+5. Consulte el historial: fecha de solicitud y resultado en hora de Madrid, usuario conectado que envió, destinatarios conservados tal como eran entonces, asunto, operación y resultado. **Enviado** significa aceptación por el servidor de correo, no confirmación de entrega ni de lectura. Sólo esta aceptación actualiza la fecha del último envío de la factura.
+6. Para repetir un correo, pulse **Reenviar** en su registro. Se proponen los contactos que siguen activos y sus direcciones actuales; revise los datos y confirme. Se crea un registro nuevo vinculado al anterior, sin modificarlo.
+
+**Resultados pendientes o inciertos:** no hay reintentos automáticos. Si se pierde la respuesta, actualice el historial. **Reintentar la misma solicitud** conserva su identificador y contenido: si ya está registrada no repite el correo; si no llegó al servidor puede iniciar el envío ya confirmado. **En curso / sin confirmación** bloquea nuevos envíos hasta aclarar su resultado; si persiste, requiere revisión técnica. **Incierto / puede haberse enviado** advierte que un reenvío explícito podría duplicar un correo que sí llegó. No reenvíe a ciegas.
+
+**Despliegue:** aplicar `V21_20260830_sales_invoice_emails.sql` antes de usar esta función y desplegar backend y frontend. Requiere sesión válida del portal y remitente/SMTP configurados. Los registros antiguos no se reconstruyen a partir de una fecha de envío. Las pruebas aisladas no sustituyen la comprobación con base de datos y una cuenta de correo de prueba.
+
 ### 9.7 Envío automático a VeriFactu
 
 Al pulsar **Emitir y enviar**, la confirmación queda desactivada mientras el servidor guarda y prepara la emisión. Una vez confirmada la emisión y su incorporación a la cola, se cierran los diálogos y puede seguir trabajando. **No hay bloqueo general de pantalla ni espera a la respuesta de VeriFactu.** El listado y la Cola VeriFactu actualizan su estado periódicamente.
@@ -698,9 +958,13 @@ Si se desactiva el envío automático, las facturas emitidas permanecen en **Pen
 
 ### 9.9 Cobros de la factura
 
+La opción **Cobros de la factura** sólo aparece para facturas emitidas, no anuladas y con VeriFactu en **Aceptada**. Se oculta en borradores, anuladas, no enviadas, pendientes, rechazadas o con errores pendientes de subsanar. El backend vuelve a comprobar esta condición antes de registrar un cobro nuevo. Las facturas completamente cobradas que cumplen la condición conservan el acceso al historial; no se borran movimientos ni se cambian saldos al ocultar la opción.
+
 Al abrir **Cobros de la factura**, se utiliza automáticamente el código del usuario conectado para identificar al autor de los cobros y reversiones, sin volver a pedir credenciales. El backend comprueba que el usuario existe y está habilitado; los permisos específicos de cobro quedan pendientes para una fase posterior. El diálogo muestra total, cobrado, pendiente e historial. Registre fecha, importe, medio de cobro, referencia y observaciones. Se admiten cobros totales o parciales en facturas emitidas no anuladas, con importe positivo de hasta dos decimales y fecha no futura. El importe no puede superar el saldo.
 
 Ejemplo: factura de 1.000 €, cobro de 400 € → **Parcialmente cobrada**, pendiente 600 €. El filtro **Pendientes de cobro** incluye los parciales; **Parcialmente cobradas** permite consultarlos por separado.
+
+El diálogo incluye el calendario de vencimientos. Por defecto propone el importe del primer plazo pendiente y distribuye el cobro desde el más antiguo. **Cobrar saldo completo** cubre todos los pendientes. Active **Elegir plazos e importes** para asignar cantidades a uno o varios plazos concretos; la suma debe coincidir con el cobro y no superar ningún saldo. El historial muestra los plazos liquidados por cada movimiento. Al revertir, se restablecen los saldos de esos mismos plazos, conservando las asignaciones originales para auditoría.
 
 Después de guardar, el clip del movimiento permite añadir justificantes opcionales. **Revertir cobro** exige un motivo y conserva importe, fecha y autor del movimiento original, además de autor y fecha de reversión. No se eliminan movimientos. Si la respuesta de guardado se pierde, pulse **Comprobar / reintentar**, que reutiliza la misma operación.
 
@@ -708,7 +972,7 @@ Las facturas antiguas marcadas como cobradas sin movimientos muestran **Saldo pr
 
 Los indicadores se calculan sobre las facturas del año seleccionado: **Importe cobrado** incluye parciales y saldos previos, y **Pendientes de cobro** suma sólo el saldo restante. No representan movimientos bancarios por fecha del cobro. El cobro no altera líneas, cantidades, número, PDF, pedidos, albaranes ni VeriFactu.
 
-El flujo básico finaliza en el cobro. Siguen pendientes rectificativas/abonos, envío de facturas por correo, remesas, conciliación y gestión de impagados.
+El flujo básico finaliza en el cobro. El envío de facturas por correo dispone de su propio historial. Siguen pendientes rectificativas/abonos, remesas, conciliación y gestión de impagados.
 
 **Instalación:** antes de iniciar el backend actualizado, ejecutar `BackUpBBDD/sql/V13_20260830_invoice_payments.sql` en la base de datos correspondiente; después reiniciar Spring. La configuración actual no crea tablas automáticamente.
 
@@ -748,10 +1012,16 @@ El albarán de una línea ya facturable desde pedido controla la entrega y no vu
 
 ### 9.11 Nueva factura manual
 
+![Nueva factura manual: cliente, tarifa, forma de pago y líneas.](imagenes/factura-manual.jpg)
+
+*Nueva factura manual: cliente, tarifa, forma de pago y líneas. Datos ficticios.*
+
+
+
 1. Entre en **Ventas → Facturas → Nueva factura manual**. Utilice esta opción únicamente si la venta no debe facturarse desde un pedido o albarán existente.
 2. Seleccione un cliente activo con tarifa de venta configurada. Puede cambiar la **tarifa** y la **forma de pago** propuestas; se guardan en la factura sin modificar la ficha del cliente.
 3. Indique fecha, referencia opcional y **motivo obligatorio**. El motivo explica por qué se crea una factura sin documentos de origen.
-4. Añada artículos o servicios existentes y revise cantidades, precios y descuentos. El precio propuesto del artículo no garantiza que se haya aplicado una tarifa negociada.
+4. Añada artículos o servicios existentes y revise cantidades, precios y descuentos. El precio propuesto aplica las reglas de la tarifa; el descuento de línea es adicional. Si el cálculo falla, resuelva el aviso antes de guardar.
 5. Compruebe impuestos, posición fiscal, retención si corresponde, condiciones y total.
 6. Guarde: se abre un **borrador Manual** en el detalle habitual. Guardar no asigna el número fiscal definitivo ni envía a VeriFactu.
 7. Revise el vencimiento propuesto por la condición de cobro. Si necesita ajustarlo manualmente, indique el motivo desde el borrador. Después continúe con la emisión habitual.
@@ -763,6 +1033,26 @@ Al reabrir un **borrador**, puede ajustar fecha, condiciones, tarifa, forma de p
 La factura manual no registra entregas ni altera cantidades de pedidos o albaranes. Si la venta ya tiene origen, vuelva a su documento para facturar desde él y conservar el seguimiento.
 
 Si se pierde la respuesta al guardar, conserve el formulario y pulse **Reintentar misma operación**. Los campos quedan bloqueados para repetir exactamente la solicitud y recuperar la misma factura si ya se creó. No abra otra factura para resolver una respuesta incierta.
+
+
+#### Qué revisar en cada campo de la factura manual
+
+| Campo | Uso y comprobación |
+| --- | --- |
+| Cliente | Compruebe que es el destinatario correcto. Se proponen moneda, tarifa, forma de pago y condiciones; revise los avisos si la forma de pago falta o está inactiva. |
+| Fecha y referencia | La fecha identifica el documento. La referencia es opcional y ayuda a localizar la operación. |
+| Motivo | Obligatorio: explica por qué se factura sin documentos de origen. No sustituye la descripción de las líneas. |
+| Tarifa y forma de pago | Son selecciones propias de la factura y no modifican la ficha del cliente. Revise los precios: cambiar tarifa no garantiza recalcularlos. |
+| Artículo y descripción | Elija un artículo o servicio existente y complete una descripción clara. La descripción dispone de más espacio que las columnas numéricas. |
+| Cantidad, precio, descuento e IVA | Revise cada valor y los totales. Los importes se presentan como 1.234,56. La posición fiscal puede fijar el impuesto. |
+| Condiciones | Generales y particulares son textos independientes, al 50 % del ancho en pantallas amplias. Desplácese hacia abajo para editarlos; en pantallas pequeñas se colocan uno bajo otro. |
+
+
+![Condiciones generales y particulares, con importes y botones al pie.](imagenes/factura-condiciones.jpg)
+
+*Condiciones generales y particulares, con importes y botones al pie. Datos ficticios.*
+
+**Añadir línea** desplaza el formulario hasta la fila nueva y enfoca el artículo. El diálogo tiene scroll y puede maximizarse; el cierre gris está en el extremo derecho de la cabecera. Cerrar no sustituye a **Guardar borrador**. Si hay una respuesta de guardado incierta, conserve la misma operación y utilice el reintento ofrecido.
 
 ## 10. Facturas proforma
 
@@ -825,6 +1115,26 @@ Si hay un error de comunicación durante la emisión, consulte la factura y su c
 ---
 
 ## Historial del manual
+
+### Versión 2.4 — 31 de agosto de 2026
+
+- Diagrama completo del circuito de ventas con logo de FreeLandSite, ampliable y descargable en ambas versiones del manual.
+- Regla de mantenimiento conjunto de texto e imagen cuando cambie el circuito.
+
+### Versión 2.3 — 30 de agosto de 2026
+
+- Parámetros independientes para recordatorio y cancelación por vencimiento de presupuestos.
+- Horarios, antelación, inclusión de borradores y destinatarios de cancelación configurables.
+- Pruebas sin cambios y ejecuciones manuales autenticadas; resultados de cancelación separados de los correos.
+- Captura de confirmación y explicación de la validez completa del día y de los casos sin aviso.
+
+### Versión 2.2 — 30 de agosto de 2026
+
+- Seis capturas nuevas de formularios reales con datos ficticios, en el documento y en el portal.
+- Factura manual: campos, forma de pago, tarifa, importes, condiciones y desplazamiento a la línea nueva.
+- Edición del borrador, validación fiscal y emisión sin esperar la respuesta de VeriFactu, manteniendo protegida la factura.
+- Recordatorio configurable, prueba sin envío y envío manual autenticado con protección diaria contra duplicados.
+- Pasos para interpretar resultados y respuestas inciertas, sin confundir las pruebas con un despliegue en producción.
 
 ### Versión 2.1 — 30 de agosto de 2026
 
@@ -925,3 +1235,8 @@ Si hay un error de comunicación durante la emisión, consulte la factura y su c
 - Explicación de estados, bloqueo y cancelación de pendientes.
 - Documentación de generación y validación de albaranes.
 - Incorporación del funcionamiento de facturas proforma.
+
+
+### Primera fase del asistente de Facturas: monedas
+
+El piloto consulta y explica datos sin escribir documentos ni cobros. Los importes indican la moneda; si una consulta incluye distintas divisas, se rechaza sin totales parciales ni conversión. Acote por cliente/periodo o consulte una factura concreta. No se presupone EUR cuando falta moneda. Véase [configuración y validación del piloto](../invoice-assistant-pilot.md).

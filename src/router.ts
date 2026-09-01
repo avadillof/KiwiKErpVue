@@ -80,6 +80,11 @@ const routes = [
         component: () => import('./views/Ventas/Frm_Facturas/Frm_Facturas.vue')
       },
       {
+        path: '/ventas/lista-precios',
+        name: 'ListaPrecios',
+        component: () => import('./views/Ventas/Frm_ListaPrecios.vue')
+      },
+      {
         path: '/ventas/ajustes',
         name: 'AjustesVentas',
         component: () => import('./views/Ventas/Frm_AjustesVentas/Frm_AjustesVentas.vue')

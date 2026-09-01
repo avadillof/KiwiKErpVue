@@ -433,6 +433,7 @@
                                 </div>
 
 
+                                <div class="col-12"><ProductPricePreview :productId="product.pkid"/></div>
                                 <!-- PRECIO DE VENTA -->
                                 <div class="col-12 md:col-3">
 
@@ -607,6 +608,7 @@
 
 
 <script setup lang="ts">
+import ProductPricePreview from '@/components/shared/ProductPricePreview.vue';
 
 import { ref, watch, computed } from 'vue';
 import axios from 'axios';

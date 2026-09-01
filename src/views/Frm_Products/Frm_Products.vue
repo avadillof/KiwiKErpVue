@@ -26,7 +26,7 @@
                     </div>
                 </template>
                 <template #end>
-                    <Button v-if="securityStore.hasPermission('PROSER_GEN_0001')" label="Nuevo artículo" icon="pi pi-plus"
+                    <Button v-if="securityStore.hasPermission('PROSER_GEN_0001')" class="new-document" label="Nuevo artículo" icon="pi pi-plus"
                         size="small" @click="newProduct"/>
                 </template>
             </Toolbar>
@@ -148,8 +148,8 @@
 .workspace-heading small { color: #8a93a2; font-size: .82rem; }
 .code-with-attachments { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem .45rem; min-width:0; }.product-code { font-size:.96rem; line-height:1.25; overflow-wrap:anywhere; }.code-with-attachments :deep(.p-tag) { flex:0 0 auto; font-size:.72rem; padding:.15rem .4rem; }
 .notes-indicator { flex:0 0 auto; color:#7b8f22; font-size:.95rem; }
-.products-toolbar :deep(.p-button) { border-color: var(--kiwi-dark); background: var(--kiwi-dark); }
-.products-toolbar :deep(.p-button:hover) { border-color: #526f04; background: #526f04; }
+.products-toolbar :deep(.new-document) { border-color: var(--kiwi); background: var(--kiwi); color: #253000; }
+.products-toolbar :deep(.new-document:hover) { border-color: #8bad09; background: #8bad09; color: #253000; }
 .products-workspace :deep(.table-container) { min-height: 0; flex: 1; border: 0; border-radius: 0; }
 .products-workspace :deep(.p-datatable-header) { border-color: #e8ecf0; background: #fafbfc; }
 .products-workspace :deep(.p-datatable-thead > tr > th) { padding-block: .78rem; color: #596579; background: #f5f7f9; font-size: .875rem; }

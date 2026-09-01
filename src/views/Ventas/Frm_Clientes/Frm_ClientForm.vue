@@ -261,6 +261,7 @@
 
                                     <FloatLabel>
 
+                                        <div class="payment-term-selector">
                                         <KiwiLookup id="terminoventas" v-model="entity.salesAttributes.salesTermId"
                                             title="Seleccionar la Condición de Cobro"
                                             placeholder="Condición de Cobro..." dataKey="id" :items="terms"
@@ -268,10 +269,14 @@
                                             :ref="(el) => setRef('terminoventas', el)">
                                             <template #secondary="{ item }">
                                                 <div v-if="item" class="text-500 text-sm">
-                                                    Vencimiento a {{ item.value }} días
+                                                    {{ paymentTermSummary(item) }}
                                                 </div>
                                             </template>
                                         </KiwiLookup>
+                                        <Button v-if="securityStore.hasPermission('ENTI_GEN_0002')" icon="pi pi-plus" severity="secondary"
+                                            title="Nueva condición de pago" aria-label="Nueva condición de pago"
+                                            :disabled="!entityReady" @click="openPaymentTerm"/>
+                                        </div>
                                         <InlineMessage v-if="errors.terminoventas" severity="error">
                                             {{ errors.terminoventas }}
                                         </InlineMessage>
@@ -279,6 +284,7 @@
                                     </FloatLabel>
                                 </div>
 
+                                <div class="col-12"><small>Las tarifas se mantienen en Ventas → Lista de precios. Varios clientes pueden compartir la misma tarifa.</small></div>
                                 <!-- TARIFA -->
                                 <div class="col-12 md:col-4">
                                     <FloatLabel>
@@ -581,6 +587,7 @@
 
         <div class="kiwik-separator"></div>
     </Dialog>
+    <PaymentTermCreateDialog v-if="visible" ref="paymentTermDialog" @created="paymentTermCreated"/>
 
 
 
@@ -601,6 +608,7 @@ import { countries } from '@/data/paises';
 import type { KiwiLookupColumn } from '../../../components/shared/KiwiLookup/KiwiLookupColumn';
 import { useSecurityStore } from '../../../stores/securityStore.ts';
 import { useCompanyStore } from '../../../stores/companyStore';
+import PaymentTermCreateDialog from '../Frm_AjustesVentas/PaymentTermCreateDialog.vue';
 /* =========================
    HELPERS
 ========================= */
@@ -612,6 +620,8 @@ const securityStore = useSecurityStore();
    UI STATE
 ========================= */
 const visible = ref(false);
+const entityReady = ref(false);
+const paymentTermDialog = ref<InstanceType<typeof PaymentTermCreateDialog>>();
 const activeTab = ref('0');
 
 
@@ -620,7 +630,30 @@ const activeTab = ref('0');
    FOREING DATA
 ========================= */
 
-const terms = ref([]);
+type PaymentTerm = {id:number;descriptionEs:string;active?:boolean;value?:number;dueRules?:string|null};
+const terms = ref<PaymentTerm[]>([]);
+function openPaymentTerm() {
+    if (!entityReady.value || !entity.value.isclient || !securityStore.hasPermission('ENTI_GEN_0002')) return;
+    paymentTermDialog.value?.open(entity.value.name);
+}
+function paymentTermCreated(term:PaymentTerm) {
+    if (!term || !Number.isInteger(term.id) || term.active === false) return;
+    terms.value = terms.value.filter(item=>item.id!==term.id).concat(term)
+        .sort((a,b)=>a.descriptionEs.localeCompare(b.descriptionEs,'es'));
+    if (!visible.value || !entityReady.value || !entity.value.isclient) return;
+    entity.value.salesAttributes.salesTermId = term.id;
+    errors.value.terminoventas = '';
+    toast.add({severity:'success',summary:'Condición creada y seleccionada',
+        detail:'Se ha añadido al catálogo compartido. Guarda la entidad para confirmar su asignación.',
+        life:companyStore.companyInfo.toastDuration ?? 5000});
+}
+function paymentTermSummary(term:PaymentTerm) {
+    try {
+        const rules=term.dueRules?JSON.parse(term.dueRules):[];
+        if(Array.isArray(rules)&&rules.length>1)return rules.length+' plazos · último a '+(term.value||0)+' días';
+    } catch { /* A legacy condition may only provide the day offset. */ }
+    return 'Vencimiento a '+(term.value||0)+' días';
+}
 const banks = ref([]);
 const retentions = ref([]);
 
@@ -967,16 +1000,19 @@ const validate = async (): Promise<boolean> => {
 ========================= */
 const open = async (pkid?: number) => {
     clearErrors();
+    entityReady.value = false;
     visible.value = true;
 
     await loadSalesCatalogs();
 
     if (!pkid) {
         entity.value = createEntity();
+        entityReady.value = true;
         return;
     }
 
     await loadEntity(pkid);
+    entityReady.value = true;
 };
 
 /* =========================
@@ -1128,3 +1164,8 @@ watch(
 ========================= */
 defineExpose({ open });
 </script>
+<style scoped>
+.payment-term-selector{display:flex;align-items:flex-start;gap:.4rem;width:100%}
+.payment-term-selector>:first-child{flex:1;min-width:0}
+.payment-term-selector>:last-child:not(:first-child){flex:0 0 auto}
+</style>

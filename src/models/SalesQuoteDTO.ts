@@ -1,4 +1,7 @@
 export interface SalesQuoteLineDTO {
+    pricingSource?: string;
+    pricingError?: string;
+    pricingPending?: boolean;
     pkid: number | null;
     productId: number | null;
     productCode?: string;

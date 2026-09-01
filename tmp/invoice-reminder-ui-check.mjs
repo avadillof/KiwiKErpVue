@@ -1,0 +1,24 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';import ts from 'typescript';import {parse,compileScript,compileTemplate} from '@vue/compiler-sfc';
+const settings=fs.readFileSync('src/views/Ventas/Frm_AjustesVentas/InvoiceReminderSettings.vue','utf8');
+const actions=fs.readFileSync('src/views/Ventas/SalesAutomationActions.vue','utf8');
+for(const [id,source] of [['settings',settings],['actions',actions]]){const {descriptor,errors}=parse(source);assert.equal(errors.length,0);compileScript(descriptor,{id});assert.equal(compileTemplate({source:descriptor.template.content,filename:id+'.vue',id}).errors.length,0);}
+const ast=ts.createSourceFile('check.ts',parse(settings).descriptor.scriptSetup.content,ts.ScriptTarget.Latest,true);
+const fn=ast.statements.find(s=>ts.isFunctionDeclaration(s)&&s.name?.text==='formatDate');
+const code=ts.transpileModule(fn.getText(ast),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+const formatDate=new Function(code+';return formatDate;')();
+assert.equal(formatDate([2026,8,31,8,30,4]),'31/08/2026 08:30:04');
+assert.equal(formatDate('2026-08-31T08:30:04'),'31/08/2026 08:30:04');
+assert.equal(formatDate(null),'—');
+assert.ok(settings.includes('enabled:false'));
+assert.ok(settings.includes('max-height:300px;overflow:auto'));
+assert.ok(settings.includes('optionValue="id"'));
+assert.ok(settings.includes('WebSaveInvoiceReminderSettings'));
+assert.ok(actions.includes("'WebPreviewSalesInvoiceReminders' : 'WebSendSalesInvoiceReminders'"));
+assert.ok(actions.includes('{ confirmed: true }'));
+assert.ok(actions.includes('auth.portalRequestConfig()'));
+assert.ok(actions.includes('!readyCount'));
+assert.ok(actions.includes('document.pendingAmount'));
+assert.ok(actions.includes('overflow:auto!important'));
+assert.ok(fs.readFileSync('src/views/Ventas/Frm_Facturas/Frm_Facturas.vue','utf8').includes('<SalesAutomationActions module="invoices"/>'));
+const parent=fs.readFileSync('src/views/Ventas/Frm_AjustesVentas/Frm_AjustesVentas.vue','utf8');assert.ok(parent.includes('<InvoiceReminderSettings/>'));assert.ok(parent.indexOf('<InvoiceReminderSettings/>')<parent.indexOf('<PaymentTermsSettings/>'));
+console.log('PASS: invoice reminder SFC compilation, dates, internal selection, confirmation, session and layout contracts (isolated).');

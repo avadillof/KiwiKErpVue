@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 import DataTable from 'primevue/datatable';
 import Paginator from 'primevue/paginator';
 import Select from 'primevue/select'; // Importación correcta v4
@@ -95,6 +95,7 @@ const props = defineProps<
     filterable?: boolean;
     showActions?: boolean;
     params?: Record<string, any>;
+    requestConfig?: () => AxiosRequestConfig;
   }>();
 
 
@@ -175,7 +176,7 @@ async function fetchData(page: number, size: number) {
 
 
     const baseUrl = import.meta.env.VITE_API_URL;
-    const response = await axios.get(baseUrl + '/' + props.endpoint, { params, timeout: 15000 });
+    const response = await axios.get(baseUrl + '/' + props.endpoint, { ...props.requestConfig?.(), params, timeout: 15000 });
 
     tableData.value = response.data.content;
     totalRecords.value = response.data.totalElements;
@@ -230,7 +231,7 @@ async function fetchDataWithQuery(
 
         const response = await axios.get(
             `${baseUrl}/${props.endpoint}`,
-            { params }
+            { ...props.requestConfig?.(), params, timeout: 15000 }
         );
 
 

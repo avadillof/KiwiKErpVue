@@ -6,7 +6,7 @@
         <div>
           <span class="breadcrumb">KiwiKERP / Administración</span>
           <h1>Configuración del sistema</h1>
-          <p>Empresa, preferencias, usuarios y datos maestros de la plataforma.</p>
+          <p>Empresa, preferencias, usuarios, inteligencia artificial y datos maestros de la plataforma.</p>
         </div>
       </div>
       <Button label="Inicio" icon="pi pi-home" text severity="secondary" @click="volverAlDashboard" />
@@ -18,6 +18,7 @@
         <Tab value="1"><i class="pi pi-sliders-h"></i><span>Preferencias</span></Tab>
         <Tab value="2"><i class="pi pi-users"></i><span>Usuarios</span></Tab>
         <Tab value="3"><i class="pi pi-database"></i><span>Datos maestros</span></Tab>
+        <Tab v-if="aiAuth.user?.admin" value="4"><i class="pi pi-sparkles"></i><span>Inteligencia artificial</span></Tab>
       </TabList>
 
       <TabPanels>
@@ -312,6 +313,7 @@
 
         </TabPanel>
 
+        <TabPanel v-if="aiAuth.user?.admin" value="4"><AiSettingsPanel v-if="activeTab === '4'"/></TabPanel>
       </TabPanels>
     </Tabs>
   </main>
@@ -471,6 +473,9 @@
 </style>
 
 <script setup lang="ts">
+import AiSettingsPanel from './AiSettingsPanel.vue';
+import { useAuthStore } from '@/stores/authStore';
+const aiAuth=useAuthStore();
 import { onMounted, ref, watch } from 'vue';
 import Password from 'primevue/password';
 import { useRouter } from 'vue-router';
@@ -507,7 +512,8 @@ onMounted(() => {
 
 const updateActiveTab = function (queryTab: any): void {
   if (queryTab) {
-    activeTab.value = String(queryTab);
+    const requested=String(queryTab);
+    activeTab.value=requested==='4'&&!aiAuth.user?.admin?'0':requested;
   }
 };
 
@@ -522,6 +528,7 @@ watch(
   },
   { immediate: true }
 );
+watch(() => aiAuth.user?.admin, isAdmin => { if(!isAdmin&&activeTab.value==='4')activeTab.value='0'; });
 
 
 function openSalesTax() {

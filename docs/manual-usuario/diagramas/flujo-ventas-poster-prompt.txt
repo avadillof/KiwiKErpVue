@@ -1,0 +1,71 @@
+Use case: infographic-diagram.
+Create ONE exceptionally clear, detailed Spanish-language ERP workflow poster, a flat finished graphic, NOT a photograph/mockup of a poster. Intended for wall printing and studying at a desk. Landscape ISO A-series aspect ratio approximately 1.414:1, highest available native resolution, ideally 3360 x 2384 or greater if supported. Pure white background, dark slate text, generous whitespace, green KiwiKERP brand accents, blue logistics, purple invoicing, teal collections, amber cautions, gray dashed pending area. Crisp vector-like boxes, rounded corners, clean orthogonal arrows with arrowheads, subtle line icons. No ornamental illustrations or textures. Beautiful professional technical diagram, not marketing. Large readable sans-serif text and precise Spanish accents. Every connector must express the specified relationship; do not add connections. Render all provided copy faithfully; don't invent functionality or legal claims.
+
+HEADER
+Title "KiwiKERP · FLUJOS DE VENTAS"
+Subtitle "Del presupuesto al cobro de la factura"
+Legend compact: "Flecha continua: avance · Rama paralela: proceso independiente · Recuadro discontinuo: pendiente"
+
+TOP STRIP, spanning page, green, numbered "01 · ORIGEN COMERCIAL"
+Five nodes left to right:
+"Presupuesto\nBorrador: cliente, líneas y condiciones"
+→ "Enviar propuesta\nPDF y correo al cliente"
+→ "Aceptar presupuesto\nQueda aprobado"
+→ "Pedido en borrador\nRevisar fecha y cantidades"
+→ "Confirmar pedido\nActiva la operativa"
+A small optional entry arrow directly into Pedido en borrador: "También puede crearse un pedido sin presupuesto".
+A clearly separated small branch below Presupuesto: "No aceptado / cancelado: no continúa".
+Important: sending a quote is NOT accepting it, and accepting it creates a DRAFT order, not a confirmed one.
+
+MIDDLE LEFT 60%: "02 · EL RECORRIDO DEPENDE DE CADA LÍNEA"
+Four spacious horizontal swimlanes labelled A–D, each ends in a connection to the ONE shared invoice-draft node in middle right:
+A, green: "SERVICIO SIN ALBARÁN"
+"Pedido confirmado" → "Facturar desde pedido"
+Small note "Por cantidades pedidas. Sin entrega física."
+B, blue: "PRODUCTO FACTURADO POR PEDIDO"
+"Pedido confirmado" splits into TWO PARALLEL, clearly separate branches:
+upper "Facturar desde pedido" connects to shared invoice draft.
+lower "Albarán borrador" → "Confirmar entrega" ends independently.
+Small note "La entrega se controla aparte. No condiciona la facturación."
+C, blue: "PRODUCTO FACTURADO POR ENTREGA"
+"Pedido confirmado" → "Albarán borrador" → "Confirmar entrega" → "Facturar desde albarán" → shared invoice draft.
+Small note "Sólo unidades entregadas. Admite entregas y facturas parciales."
+D, purple, independent entry NOT connected to confirmed order:
+"Nueva factura manual" → shared invoice draft.
+Small note "Sin presupuesto, pedido ni albarán. No modifica entregas ni reservas."
+Below these lanes two compact explanatory cards:
+"PEDIDO MIXTO\nCada línea conserva su política. Producto y servicio pueden seguir rutas distintas."
+"ENTREGA PARCIAL · EJEMPLO\nPedido: 10 unidades → Entrega: 6 → Facturable: 6. Quedan 4 por entregar."
+
+MIDDLE RIGHT 40%: connected vertical core "03 · FACTURA, VENCIMIENTOS Y COBRO"
+ONE shared node "FACTURA EN BORRADOR"
+small lines "Revisar líneas, impuestos y condiciones.\nCalcular y comprobar los plazos."
+↓ node "EMITIR FACTURA"
+small lines "Validación final → número fiscal\nPDF definitivo y calendario fijado"
+An error feedback thin loop "Datos incorrectos: corregir borrador", from validation back to draft; NOT from definitive invoice back to draft.
+↓ node "VERIFACTU · ENVÍO Y RESULTADO"
+two branches:
+amber side callout "Pendiente / rechazada / con errores\nRevisar estado y subsanar.\nNo duplicar la factura ni registrar cobros."
+main down arrow specifically labelled "Aceptada" to node "FACTURA HABILITADA PARA COBROS".
+From this accepted node a SIDE branch "Correo al cliente\nContactos activos + PDF fiscal\nAsunto, mensaje e historial". It does NOT feed into collection node; email is independent.
+Main down arrow to "REGISTRAR COBRO"
+small lines "Fecha, importe, medio y referencia\nUsuario conectado + justificante opcional\nCobro total o parcial, sin superar el saldo"
+↓ diamond "¿Saldo pendiente = 0?"
+Yes → green end node "COBRADA\nHistorial conservado"
+No → "PARCIAL / PENDIENTE" → loop back to Registrar cobro.
+Tiny distinct amber loop from Registrar cobro toward outstanding balance "Revertir con motivo: devuelve saldo a los mismos plazos; no borra el movimiento."
+
+BOTTOM BAND full width, three readable cards with no extra arrows into main flow:
+"04 · REGLAS DE VENCIMIENTOS"
+"Uno o varios plazos: porcentaje, importe fijo y saldo restante.\nDías desde la fecha de factura, no desde el plazo anterior.\nFin de mes y días de pago del cliente cuando proceda.\nCada plazo: fecha, importe, cobrado y pendiente.\nCobro automático desde el más antiguo o reparto manual."
+"05 · SEGUIMIENTO Y RECORDATORIOS"
+"Estados: vencido · hoy · próximo · pendiente · cobrado.\nPresupuestos y entregas: avisos internos al responsable.\nVencimientos: usuarios internos seleccionados en Ajustes.\nConsulta previa + confirmación; límite diario por dirección.\nCorreo informativo: no entrega, no factura y no cobra."
+"06 · REGLAS QUE NO DEBEN CONFUNDIRSE"
+"Guardar borrador ≠ entregar ≠ emitir ≠ cobrar.\nLos borradores reservan; no contabilizan entrega ni facturación.\nPedido completado ≠ factura cobrada.\nRegistrar cobro documenta dinero recibido: no ejecuta transferencias.\nCambiar el catálogo no reinterpreta documentos anteriores."
+
+FOOTER a discrete gray dashed box:
+"PENDIENTE · Rectificativas y abonos, con tratamiento de cobros. Fuera del flujo actual."
+Separate amber small but legible line:
+"Mapa funcional · 31/08/2026 · Circuito fiscal documentado en PRUEBAS. Despliegue y validación real según instalación."
+
+Critical layout: diagram rather than a wall of prose. All main routes must be visually navigable. Do not omit branch B or manual D. Don't connect collection to order completion. Do not depict rectification as operational. Don't equate VeriFactu accepted with invoice paid. All text Spanish verbatim; avoid cramped type and overlapping connectors.

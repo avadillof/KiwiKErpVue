@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import ts from 'typescript';
+import axios from 'axios';
+import {ref,reactive} from 'vue';
+import {createPinia,setActivePinia} from 'pinia';
+setActivePinia(createPinia());
+// Compile in memory: no application or test dependency on tmp/.
+function moduleUrl(source) {
+  let code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
+  for(const name of ['axios','vue','pinia']) code=code.replaceAll("from '"+name+"'", "from '"+import.meta.resolve(name)+"'");
+  return 'data:text/javascript;base64,'+Buffer.from(code).toString('base64');
+}
+const authUrl=moduleUrl(fs.readFileSync('src/stores/authStore.ts','utf8'));
+const {useAuthStore}=await import(authUrl);
+const auth=useAuthStore();
+const source=fs.readFileSync('src/services/salesPricing.ts','utf8').replaceAll('import.meta.env.VITE_API_URL',"'http://pricing-test.invalid'").replace('@/stores/authStore',authUrl);
+const {useSalesPricing,resolveSalesPrice,pricingErrorMessage}=await import(moduleUrl(source));
+let handler=async config=>({priceUnit:85,salesTarifaId:config.params.tarifaId||1,source:'Regla de familia',currencyCode:'EUR'});
+let requests=0;
+axios.defaults.adapter=async config=>{requests++;assert.equal(config.headers.get('X-Portal-Session'),auth.portalSession,'send the current portal session');return {data:await handler(config),status:200,statusText:'OK',headers:{},config};};
+await assert.rejects(resolveSalesPrice(1,{productId:10,priceUnit:0}),/Vuelve a iniciar/);
+assert.equal(requests,0,'missing session must not send an anonymous request');
+assert.match(pricingErrorMessage(new Error('Vuelve a iniciar sesión')),/Vuelve a iniciar/);
+auth.setUser({pkid:1,name:'Test',admin:false,userDsCode:'test'},'isolated-test-session');
+await resolveSalesPrice(1,{productId:10,priceUnit:0});
+auth.portalSession='isolated-renewed-session';
+await resolveSalesPrice(1,{productId:10,priceUnit:0});
+const lines=ref([reactive({productId:10,priceUnit:100,discountPercent:7,uomFactor:1})]);
+const tarifa=ref(1),enabled=ref(false);
+const pricing=useSalesPricing({lines:()=>lines.value,tarifa,enabled:()=>enabled.value,currency:id=>id===3?'USD':'EUR'});
+tarifa.value=2;assert.equal(pricing.confirmVisible.value,false,'loading must not prompt');assert.equal(lines.value[0].priceUnit,100);
+enabled.value=true;await pricing.apply(lines.value[0]);assert.equal(lines.value[0].priceUnit,85);assert.equal(lines.value[0].discountPercent,0);
+tarifa.value=1;assert.equal(pricing.confirmVisible.value,true);assert.equal(pricing.canKeep.value,true);pricing.keep();assert.equal(lines.value[0].priceUnit,85);
+tarifa.value=3;assert.equal(pricing.canKeep.value,false);pricing.keep();assert.equal(pricing.confirmVisible.value,true);pricing.cancel();assert.equal(tarifa.value,1);
+lines.value.push(reactive({productId:20,priceUnit:50,discountPercent:0}));
+handler=async config=>{if(config.params.productId===20)throw Error('test failure');return{priceUnit:42,salesTarifaId:1,source:'Fixed',currencyCode:'EUR'}};
+pricing.request();await pricing.recalculate();assert.equal(lines.value[0].priceUnit,85,'failed batch is atomic');assert.equal(lines.value[1].priceUnit,50);assert.equal(pricing.invalid.value,true);pricing.cancel();
+let finish;handler=()=>new Promise(resolve=>{finish=resolve});
+const pending=pricing.apply(lines.value[0]);assert.equal(pricing.busy.value,true);lines.value[0].productId=null;pricing.clear(lines.value[0]);finish({priceUnit:999,salesTarifaId:1,source:'stale',currencyCode:'EUR'});await pending;assert.equal(lines.value[0].priceUnit,85,'cleared product rejects stale response');
+lines.value[0].productId=10;const pending2=pricing.apply(lines.value[0]);tarifa.value=2;finish({priceUnit:999,salesTarifaId:1,source:'stale',currencyCode:'EUR'});await pending2;assert.equal(lines.value[0].priceUnit,85);assert.ok(lines.value[0].pricingError);pricing.cancel();
+handler=async()=>({priceUnit:12,salesTarifaId:1,source:'Fixed',currencyCode:'EUR'});pricing.request();await pricing.recalculate();assert.deepEqual(lines.value.map(l=>l.priceUnit),[12,12]);assert.equal(pricing.invalid.value,false);
+console.log('Pricing state checks passed: load preservation, apply, currency decision, atomic failure, stale results and retry. No real HTTP requests.');
+
+const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
+handler=async config=>({priceUnit:config.params.quantity>=50?90:config.params.quantity>=10?95:100,salesTarifaId:config.params.tarifaId||1,source:'Quantity tier',currencyCode:'EUR'});
+await pricing.apply(lines.value[0]);lines.value[0].discountPercent=7;
+pricing.quantityChanged(lines.value[0],10);await flush();assert.equal(lines.value[0].priceUnit,95);assert.equal(lines.value[0].discountPercent,7);
+pricing.quantityChanged(lines.value[0],50);await flush();assert.equal(lines.value[0].priceUnit,90);
+pricing.quantityChanged(lines.value[0],1);await flush();assert.equal(lines.value[0].priceUnit,100);
+lines.value[0].pricingSource='Precio manual';lines.value[0].priceUnit=44;let before=requests;
+pricing.quantityChanged(lines.value[0],50);await flush();assert.equal(requests,before);assert.equal(lines.value[0].priceUnit,44);
+lines.value[0].pricingSource='';pricing.quantityChanged(lines.value[0],10);await flush();assert.equal(requests,before,'saved price is not recalculated');
+await pricing.apply(lines.value[0]);tarifa.value=tarifa.value===1?2:1;pricing.keep();before=requests;
+pricing.quantityChanged(lines.value[0],50);await flush();assert.equal(requests,before,'keep negotiated price across quantity changes');
+handler=()=>new Promise(resolve=>{finish=resolve});const pendingQuantity=pricing.apply(lines.value[0]);lines.value[0].quantity=11;finish({priceUnit:999,salesTarifaId:1,source:'stale',currencyCode:'EUR'});await pendingQuantity;assert.notEqual(lines.value[0].priceUnit,999);assert.ok(lines.value[0].pricingError);
+console.log('Quantity checks passed: boundaries, quantity request, manual/saved preservation, extra discounts and stale quantity response.');
+
+const reopened=reactive({productId:10,priceUnit:80,quantity:120,pricingSource:'Regla del producto · precio fijo · desde 101 ud. de venta'});
+lines.value=[reopened];before=requests;pricing.quantityChanged(reopened,121);await flush();assert.equal(requests,before,'persisted origin must not reprice on reopening');assert.equal(reopened.priceUnit,80);assert.ok(reopened.pricingSource.startsWith('Regla'));
+console.log('Persisted origin remains visible without automatic repricing.');

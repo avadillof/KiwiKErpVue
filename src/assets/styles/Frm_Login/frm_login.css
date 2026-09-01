@@ -48,8 +48,8 @@
 .login-page .p-inputtext { width: 100%; min-height: 45px; border-radius: 9px; font-size: .92rem; }
 .login-page .p-password { width: 100%; }
 .login-page .p-inputtext:enabled:focus { border-color: var(--kiwi); box-shadow: 0 0 0 3px rgba(156, 193, 10, .14); }
-.login-submit { width: 100%; min-height: 46px; margin-top: 4px; border-color: var(--kiwi-dark) !important; border-radius: 9px !important; background: var(--kiwi-dark) !important; font-weight: 750 !important; }
-.login-submit:hover { border-color: #526f04 !important; background: #526f04 !important; }
+.login-submit { width: 100%; min-height: 46px; margin-top: 4px; border-color: var(--kiwi) !important; border-radius: 9px !important; background: var(--kiwi) !important; color: #253000 !important; font-weight: 750 !important; }
+.login-submit:hover { border-color: #8bad09 !important; background: #8bad09 !important; color: #253000 !important; }
 .access-help { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 22px 0 0; color: #9aa3af; font-size: .72rem; }
 .access-help i { color: var(--kiwi-dark); font-size: .68rem; }
 .access-footer { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px; border-top: 1px solid #edf0f3; color: #9aa3af; background: #fbfcfd; font-size: .72rem; }

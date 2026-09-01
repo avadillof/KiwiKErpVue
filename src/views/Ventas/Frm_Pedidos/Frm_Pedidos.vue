@@ -6,7 +6,7 @@
         </header>
 
         <div class="card list-card">
-            <Toolbar class="list-toolbar"><template #start><div class="workspace-heading"><span>Listado de pedidos</span><small>Controla el estado y avance de cada operación de venta.</small></div></template><template #end><Button label="Nuevo pedido" icon="pi pi-plus" size="small" @click="orderFormRef?.open(null)" /></template></Toolbar>
+            <Toolbar class="list-toolbar"><template #start><div class="workspace-heading"><span>Listado de pedidos</span><small>Controla el estado y avance de cada operación de venta.</small></div></template><template #end><div class="module-actions"><SalesAutomationActions module="orders" @executed="refreshTable" /><Button class="new-document" label="Nuevo pedido" icon="pi pi-plus" size="small" @click="orderFormRef?.open(null)" /></div></template></Toolbar>
             <GenericDataTable class="orders-table" ref="tableRef" dataKey="pkid" selectionMode="single" v-model:selection="selectedOrder"
                 endpoint="WebGetSalesOrders" :params="{ state: selectedState || undefined, pendingFlow: selectedPendingFlow || undefined, deliveryDeadline: selectedDeliveryDeadline || undefined }" :showPaginator="true" :filterable="true" :showActions="true"
                 @row-select="({ data }) => selectedOrder = data" @search="clearDateFilters">
@@ -92,6 +92,7 @@ import Toolbar from 'primevue/toolbar';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import GenericDataTable from '@/components/shared/GenericDataTable.vue';
+import SalesAutomationActions from '../SalesAutomationActions.vue';
 import DateRangePicker from '@/components/shared/DateRangePicker.vue';
 import Frm_PresupuestoForm from '../Frm_Presupuestos/Frm_PresupuestoForm.vue';
 import DeliveryPreparationDialog from '../Frm_Albaranes/DeliveryPreparationDialog.vue';
@@ -235,7 +236,8 @@ const formatQuantity = (value?: number | null) => new Intl.NumberFormat('de-DE',
 .notes-indicator { flex:0 0 auto; color:#7b8f22; font-size:.95rem; }
 .order-state-line { display:flex; align-items:center; gap:.4rem; }.order-lock { color:#687386; font-size:.8rem; }
 .list-card { height:clamp(500px,calc(100dvh - 270px),720px); overflow:hidden; padding:0; border-radius:14px; border-color:#dfe4ea; box-shadow:0 5px 18px rgba(30,41,59,.055); }
-.list-toolbar { padding:13px 17px; border:0; border-bottom:1px solid #e8ecf0; border-radius:0; background:#fff; }.workspace-heading { display:flex; flex-direction:column; gap:3px; }.workspace-heading span { color:#344054; font-size:1rem; font-weight:800; }.workspace-heading small { color:#8a93a2; font-size:.82rem; }.list-toolbar :deep(.p-button) { border-color:var(--kiwi-dark); background:var(--kiwi-dark); }.list-toolbar :deep(.p-button:hover) { border-color:#526f04; background:#526f04; }.list-card :deep(.table-container) { border:0; border-radius:0; }
+.list-toolbar { padding:13px 17px; border:0; border-bottom:1px solid #e8ecf0; border-radius:0; background:#fff; }.workspace-heading { display:flex; flex-direction:column; gap:3px; }.workspace-heading span { color:#344054; font-size:1rem; font-weight:800; }.workspace-heading small { color:#8a93a2; font-size:.82rem; }.list-toolbar :deep(.new-document) { border-color:var(--kiwi); background:var(--kiwi); color:#253000; }.list-toolbar :deep(.new-document:hover) { border-color:#8bad09; background:#8bad09; color:#253000; }.list-card :deep(.table-container) { border:0; border-radius:0; }
+.module-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:.5rem; }
 .creator-avatar { width:24px; height:24px; flex:0 0 24px; overflow:hidden; background:#eef6da; color:#66910f; font-size:.67rem; font-weight:700; }
 .creator-avatar img { width:100%; height:100%; object-fit:cover; }
 .creator-cell > span { overflow:hidden; text-overflow:ellipsis; }

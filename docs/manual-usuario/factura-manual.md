@@ -1,13 +1,18 @@
 # Factura manual sin pedido ni albarán
 
-**Actualizado:** 30 de agosto de 2026 · Manual 2.1
+**Actualizado:** 30 de agosto de 2026 · Manual 2.2
 
 [Volver al manual de usuario](README.md)
+
+
+![Nueva factura manual: cliente, tarifa, forma de pago y líneas.](imagenes/factura-manual.jpg)
+
+*Nueva factura manual: cliente, tarifa, forma de pago y líneas. Datos ficticios.*
 
 1. Entre en **Ventas → Facturas → Nueva factura manual**. Utilice esta opción únicamente si la venta no debe facturarse desde un pedido o albarán existente.
 2. Seleccione un cliente activo con tarifa de venta configurada. Puede cambiar la **tarifa** y la **forma de pago** propuestas; se guardan en la factura sin modificar la ficha del cliente.
 3. Indique fecha, referencia opcional y **motivo obligatorio**. El motivo explica por qué se crea una factura sin documentos de origen.
-4. Añada artículos o servicios existentes y revise cantidades, precios y descuentos. El precio propuesto del artículo no garantiza que se haya aplicado una tarifa negociada.
+4. Añada artículos o servicios existentes y revise cantidades, precios y descuentos. El precio propuesto aplica las reglas de la tarifa; el descuento de línea es adicional. Si el cálculo falla, resuelva el aviso antes de guardar.
 5. Compruebe impuestos, posición fiscal, retención si corresponde, condiciones y total.
 6. Guarde: se abre un **borrador Manual** en el detalle habitual. Guardar no asigna el número fiscal definitivo ni envía a VeriFactu.
 7. Revise el vencimiento propuesto por la condición de cobro. Si necesita ajustarlo manualmente, indique el motivo desde el borrador. Después continúe con la emisión habitual.
@@ -19,6 +24,26 @@ Al reabrir un **borrador**, puede ajustar fecha, condiciones, tarifa, forma de p
 La factura manual no registra entregas ni altera cantidades de pedidos o albaranes. Si la venta ya tiene origen, vuelva a su documento para facturar desde él y conservar el seguimiento.
 
 Si se pierde la respuesta al guardar, conserve el formulario y pulse **Reintentar misma operación**. Los campos quedan bloqueados para repetir exactamente la solicitud y recuperar la misma factura si ya se creó. No abra otra factura para resolver una respuesta incierta.
+
+
+#### Qué revisar en cada campo de la factura manual
+
+| Campo | Uso y comprobación |
+| --- | --- |
+| Cliente | Compruebe que es el destinatario correcto. Se proponen moneda, tarifa, forma de pago y condiciones; revise los avisos si la forma de pago falta o está inactiva. |
+| Fecha y referencia | La fecha identifica el documento. La referencia es opcional y ayuda a localizar la operación. |
+| Motivo | Obligatorio: explica por qué se factura sin documentos de origen. No sustituye la descripción de las líneas. |
+| Tarifa y forma de pago | Son selecciones propias de la factura y no modifican la ficha del cliente. Revise los precios: cambiar tarifa no garantiza recalcularlos. |
+| Artículo y descripción | Elija un artículo o servicio existente y complete una descripción clara. La descripción dispone de más espacio que las columnas numéricas. |
+| Cantidad, precio, descuento e IVA | Revise cada valor y los totales. Los importes se presentan como 1.234,56. La posición fiscal puede fijar el impuesto. |
+| Condiciones | Generales y particulares son textos independientes, al 50 % del ancho en pantallas amplias. Desplácese hacia abajo para editarlos; en pantallas pequeñas se colocan uno bajo otro. |
+
+
+![Condiciones generales y particulares, con importes y botones al pie.](imagenes/factura-condiciones.jpg)
+
+*Condiciones generales y particulares, con importes y botones al pie. Datos ficticios.*
+
+**Añadir línea** desplaza el formulario hasta la fila nueva y enfoca el artículo. El diálogo tiene scroll y puede maximizarse; el cierre gris está en el extremo derecho de la cabecera. Cerrar no sustituye a **Guardar borrador**. Si hay una respuesta de guardado incierta, conserve la misma operación y utilice el reintento ofrecido.
 
 ## Instalación
 

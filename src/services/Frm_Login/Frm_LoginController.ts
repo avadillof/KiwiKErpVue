@@ -131,7 +131,8 @@ export function loginController() {
             if (response.ok) {
                 const userDTO = await response.json();
                 const authStore = useAuthStore();
-                authStore.setUser(userDTO);
+                authStore.setUser(userDTO, response.headers.get('X-Portal-Session') || '');
+                loginData.value.password = '';
                 toast.add({
                     severity: 'success',
                     summary: 'Bienvenido',
