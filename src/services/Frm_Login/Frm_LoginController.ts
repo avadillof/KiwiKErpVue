@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '../../stores/authStore';
 import { useCompanyStore } from '../../stores/companyStore';
 import { useRouter } from 'vue-router';
+import { getInstallationState } from '../Installation/installationService';
 
 export function loginController() {
     const isDataLoaded = ref(false);
@@ -55,6 +56,16 @@ export function loginController() {
     }
 
     async function init() {
+        const installation = await getInstallationState();
+        if (installation.status === 'NEW' || installation.status === 'IN_PROGRESS') {
+            await router.replace({ name: 'Installation' });
+            return;
+        }
+        if (installation.status === 'ERROR') {
+            await router.replace({ name: 'ServiceUnavailable' });
+            return;
+        }
+
         const data = await getCompanyParameters();
         if (data) {
             dataEmpresa.value.txtnombreEmpresa = data.nameCompany;
@@ -73,6 +84,7 @@ export function loginController() {
                 urlLogo: logoSource,
                 toastDuration: data.toastDuration,
                 sloganCompany: data.sloganCompany,
+                documentRoot: data.documentRoot || '',
                 paginationTable: data.paginationTable
                 
             });
@@ -82,7 +94,7 @@ export function loginController() {
     init();
 
     watch(onReconnected, () => {
-        console.log("Conexión restablecida, reintentando carga de parámetros...");
+        console.log("Conexión restablecida, comprobando instalación y parámetros...");
         init();
     });
 

@@ -2,6 +2,8 @@
 
 El asistente de Presupuestos es una herramienta de consulta en solo lectura. Presenta dos paneles exclusivos: **Consulta guiada**, abierta por defecto y sin consumo de API, y **Pregunta con IA**, que utiliza OpenAI únicamente para traducir una frase a filtros permitidos.
 
+El cliente se elige con el selector corporativo por código, nombre o NIF. Puede dejarse vacío para consultar todos los clientes.
+
 Después de consultar, **Descargar respuesta en PDF** genera un informe A4 apaisado con criterios, fecha, moneda, totales, resumen por cliente y presupuestos justificativos. Al explicar un presupuesto también incluye productos, cantidades, precios, descuentos, impuestos y origen del precio. El backend repite la consulta antes de generar el archivo y no confía en importes enviados por el navegador.
 
 OpenAI recibe la pregunta, la fecha actual y si existe un presupuesto seleccionado. No recibe presupuestos, clientes, importes, líneas, notas ni resultados. KiwiKERP valida los filtros, consulta su base de datos y calcula los resultados. El modelo no genera ni ejecuta SQL.
@@ -15,7 +17,7 @@ OpenAI recibe la pregunta, la fecha actual y si existe un presupuesto selecciona
 5. Conversión y comparación entre dos periodos. La tasa mantiene la definición del módulo: presupuestos aprobados entre todos los creados en el periodo.
 6. Explicar un presupuesto concreto, incluidas líneas, descuentos, impuestos y origen del precio.
 
-Cada resultado muestra base, impuestos, retención, total, moneda, resumen por cliente y los documentos que justifican la cifra. Para cada presupuesto se indica estado, fecha de validez, envío y pedidos asociados. Si aparecen monedas distintas, KiwiKERP detiene la suma: no mezcla ni convierte divisas.
+Cada resultado muestra base, impuestos, retención, total, moneda, resumen por cliente y los documentos que justifican la cifra. Para cada presupuesto se indica estado, fecha de validez, envío y pedidos asociados. Si aparecen monedas distintas, KiwiKERP ofrece un total independiente para cada divisa, sin convertirlas ni sumarlas.
 
 ## Límites y seguridad
 

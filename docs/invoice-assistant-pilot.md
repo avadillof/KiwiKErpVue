@@ -2,6 +2,8 @@
 
 Después de consultar, **Descargar respuesta en PDF** genera un informe A4 apaisado con criterios, fecha, moneda, totales, resumen por cliente, facturas justificativas y, al explicar una factura, sus cobros y vencimientos. El backend repite la consulta validada antes de crear el archivo; no acepta del navegador los importes ni las filas del resultado.
 
+El cliente se elige con el selector corporativo por código, nombre o NIF. Puede dejarse vacío para consultar todos los clientes.
+
 ## Alcance y activación
 
 Frontend: diálogo Asistente de Facturas. Backend: `/WebInvoiceAssistant/status`, `/interpret`, `/query`.
@@ -48,7 +50,7 @@ Las comprobaciones aisladas verifican cifrado/descifrado con el servicio real de
 
 Comprobación de solo lectura de la instalación configurada: V26 y su fila existen; IA desactivada, modelo vacío, origen de clave ENV y sin copia de clave guardada. No se inspeccionó la variable secreta del proceso Java ni se llamó al proveedor. Para una primera prueba con IA hay que indicar el modelo y disponer de clave en el origen elegido desde Ajustes; no compartir claves por el chat.
 
-Corregida la agregación de monedas: el resultado y las filas identifican la moneda de la tarifa de la factura. Si las facturas que cumplen el filtro mezclan monedas, se rechaza la consulta completa, sin total parcial ni conversión. Acotar por cliente/periodo o consultar una factura concreta; un mismo cliente también puede tener varias monedas. Si falta una moneda válida, se pide revisar la tarifa, sin asumir EUR. El piloto todavía no ofrece filtro por moneda ni resumen multidivisa agrupado.
+La agregación conserva la moneda de la tarifa de cada factura. Si el filtro encuentra varias divisas, el resultado, el resumen por cliente y el PDF presentan un total independiente para cada moneda, sin conversión ni suma entre ellas. Si falta una moneda válida, se pide revisar la tarifa, sin asumir EUR.
 
 Los importes se muestran con punto de miles, coma decimal y código de moneda, por ejemplo 9.600,00 USD. Se mantienen las condiciones de los documentos guardados, sin recalcular tarifas. Compilación parcial Java correcta, 59 comprobaciones aisladas del asistente y 41 de ajustes correctas; build frontend correcto. No se ha reiniciado el backend ni verificado el cambio en una sesión real del portal.
 

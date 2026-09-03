@@ -4,7 +4,10 @@ import { useAuthStore } from './stores/authStore';
 // 1. Importaciones tradicionales
 
 import Frm_Login from './views/Frm_Login/Frm_Login.vue';
+import Frm_Installation from './views/Installation/Frm_Installation.vue';
+import Frm_ServiceUnavailable from './views/System/Frm_ServiceUnavailable.vue';
 import Frm_Main from './views/Frm_Main/Frm_Main.vue';
+import { getInstallationState } from './services/Installation/installationService';
 import Pn_DashBoard from './views/Frm_Main/Dashboard/Pn_DashBoard.vue';
 import Pn_VentasHub from './views/Ventas/Pn_VentasHub.vue'
 import Frm_Clientes from './views/Ventas/Frm_Clientes/Frm_Clientes.vue';
@@ -27,6 +30,18 @@ const routes = [
     path: '/Frm_Login',
     name: 'Login',
     component: Frm_Login
+  },
+  {
+    path: '/installation',
+    name: 'Installation',
+    component: Frm_Installation,
+    meta: { installationRoute: true }
+  },
+  {
+    path: '/service-unavailable',
+    name: 'ServiceUnavailable',
+    component: Frm_ServiceUnavailable,
+    meta: { serviceUnavailableRoute: true }
   },
   {
     path: '/Frm_Main',
@@ -128,8 +143,27 @@ export const router = createRouter({
 });
 
 // 4. El Guardián de seguridad
-router.beforeEach((to, from) => {
+router.beforeEach(async (to, from) => {
   const authStore = useAuthStore();
+
+  // Sólo se consulta antes del acceso. Un backend antiguo sin el endpoint
+  // continúa hacia el login y una caída de red nunca activa el instalador.
+  if (to.name === 'Login' || to.path === '/') {
+    const installation = await getInstallationState();
+    if (installation.status === 'NEW' || installation.status === 'IN_PROGRESS') {
+      return { name: 'Installation' };
+    }
+    if (installation.status === 'ERROR') {
+      return { name: 'ServiceUnavailable' };
+    }
+  }
+
+  if (to.meta.installationRoute) {
+    const installation = await getInstallationState();
+    if (installation.status === 'COMPLETED' || installation.status === 'LEGACY') {
+      return { name: 'Login' };
+    }
+  }
 
   // Verificamos si la ruta requiere autenticación
   const requiereAutenticacion = to.matched.some((record) => record.meta.requiresAuth);

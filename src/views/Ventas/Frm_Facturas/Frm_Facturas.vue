@@ -1124,11 +1124,14 @@
     <VeriFactuQueuePanel @open-invoice="openDetail" />
     <VeriFactuChainPanel />
     <AeatCasesDialog ref="aeatCasesRef" />
+    <SalesTraceabilityDialog ref="traceabilityRef" />
   </main>
 </template>
 <script setup lang="ts">
 import InvoiceAssistantDialog from "./InvoiceAssistantDialog.vue";
+import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
 const invoiceAssistant = ref<any>();
+const traceabilityRef = ref<any>();
 import SalesAutomationActions from "../SalesAutomationActions.vue";
 import InvoiceDuesDialog from "./InvoiceDuesDialog.vue";
 const duesDialog = ref<any>();
@@ -2073,6 +2076,11 @@ const noteRequest = {
       label: "Abrir factura",
       icon: "pi pi-eye",
       command: () => openDetail(selected.value),
+    },
+    {
+      label: "Trazabilidad comercial",
+      icon: "pi pi-sitemap",
+      command: () => traceabilityRef.value?.open("INVOICE", selected.value?.pkid),
     },
     { separator: true },
     {

@@ -6,7 +6,7 @@
         </header>
 
         <div class="card list-card">
-            <Toolbar class="list-toolbar"><template #start><div class="workspace-heading"><span>Listado de pedidos</span><small>Controla el estado y avance de cada operación de venta.</small></div></template><template #end><div class="module-actions"><SalesAutomationActions module="orders" @executed="refreshTable" /><Button class="new-document" label="Nuevo pedido" icon="pi pi-plus" size="small" @click="orderFormRef?.open(null)" /></div></template></Toolbar>
+            <Toolbar class="list-toolbar"><template #start><div class="workspace-heading"><span>Listado de pedidos</span><small>Controla el estado y avance de cada operación de venta.</small></div></template><template #end><div class="module-actions"><Button label="Asistente de Pedidos" icon="pi pi-sparkles" severity="secondary" size="small" @click="orderAssistantRef?.open(selectedOrder)" /><SalesAutomationActions module="orders" @executed="refreshTable" /><Button class="new-document" label="Nuevo pedido" icon="pi pi-plus" size="small" @click="orderFormRef?.open(null)" /></div></template></Toolbar>
             <GenericDataTable class="orders-table" ref="tableRef" dataKey="pkid" selectionMode="single" v-model:selection="selectedOrder"
                 endpoint="WebGetSalesOrders" :params="{ state: selectedState || undefined, pendingFlow: selectedPendingFlow || undefined, deliveryDeadline: selectedDeliveryDeadline || undefined }" :showPaginator="true" :filterable="true" :showActions="true"
                 @row-select="({ data }) => selectedOrder = data" @search="clearDateFilters">
@@ -62,6 +62,8 @@
         </section>
 
         <Frm_PresupuestoForm ref="orderFormRef" document-type="order" @saved="onOrderSaved" />
+        <OrderAssistantDialog ref="orderAssistantRef" @open-order="openOrderFromAssistant" />
+        <SalesTraceabilityDialog ref="traceabilityRef" />
         <OrderInvoiceDialog ref="orderInvoiceDialogRef" @generated="onOrderInvoiceGenerated" />
         <DeliveryPreparationDialog ref="deliveryDialogRef" :order-id="selectedOrder?.pkid" @generated="onDeliveryGenerated" />
         <AttachmentsDialog v-model:visible="showAttachments" moduleFolder="ATTACHEMENTS_SALESPEDIDOS_DOCUMENTS" :title="`Documentos indexados al pedido ${selectedOrder?.code ?? ''}`" :entityId="selectedOrder?.pkid" @update:visible="onAttachmentsVisible" />
@@ -97,13 +99,16 @@ import DateRangePicker from '@/components/shared/DateRangePicker.vue';
 import Frm_PresupuestoForm from '../Frm_Presupuestos/Frm_PresupuestoForm.vue';
 import DeliveryPreparationDialog from '../Frm_Albaranes/DeliveryPreparationDialog.vue';
 import OrderInvoiceDialog from './OrderInvoiceDialog.vue';
+import OrderAssistantDialog from './OrderAssistantDialog.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue';
+import SalesTraceabilityDialog from '../SalesTraceabilityDialog.vue';
 
 const orderInvoiceDialogRef = ref<any>();
+const traceabilityRef = ref<any>();
 const onOrderInvoiceGenerated = (invoice:any) => { tableRef.value?.refresh(); loadOrderStatistics(); router.push({name:'Facturas',query:{invoiceId:String(invoice.pkid)}}); };
 const router = useRouter(); const toast = useToast(); const confirm = useConfirm();
-const tableRef = ref<any>(); const tableMenu = ref(); const orderMenu = ref(); const orderFormRef = ref<any>(); const deliveryDialogRef = ref<any>(); const selectedOrder = ref<any>(null); const selectedState = ref<string | null>(null); const selectedPendingFlow = ref<string | null>(null); const selectedDeliveryDeadline = ref<string | null>(null); const creationDatePanel = ref(); const creationDateRange = ref<[Date | null, Date | null] | null>(null);
+const tableRef = ref<any>(); const tableMenu = ref(); const orderMenu = ref(); const orderFormRef = ref<any>(); const orderAssistantRef = ref<any>(); const deliveryDialogRef = ref<any>(); const selectedOrder = ref<any>(null); const selectedState = ref<string | null>(null); const selectedPendingFlow = ref<string | null>(null); const selectedDeliveryDeadline = ref<string | null>(null); const creationDatePanel = ref(); const creationDateRange = ref<[Date | null, Date | null] | null>(null);
 const creatorPhotoErrors = ref<Record<number, boolean>>({});
 const showProformas = ref(false); const loadingProformas = ref(false); const generatingProforma = ref(false); const proformas = ref<any[]>([]);
 const showAttachments = ref(false);
@@ -155,6 +160,7 @@ const orderMenuItems = computed(() => {
     if (selectedOrder.value?.canInvoiceFromOrder) items.push({label:'Facturar desde pedido',icon:'pi pi-receipt',command:()=>orderInvoiceDialogRef.value?.open(selectedOrder.value.pkid)});
     if (canGenerateDelivery(selectedOrder.value)) items.push({ label: 'Generar albarán', icon: 'pi pi-truck', command: () => deliveryDialogRef.value?.open(selectedOrder.value?.pkid) });
     items.push({ separator: true },
+        { label: 'Trazabilidad comercial', icon: 'pi pi-sitemap', command: () => traceabilityRef.value?.open('ORDER', selectedOrder.value?.pkid) },
         { label: 'Notas', icon: 'pi pi-comments', command: openNotes },
         { label: `Documentos${selectedOrder.value?.attachmentCount ? ` (${selectedOrder.value.attachmentCount})` : ''}`, icon: 'pi pi-paperclip', command: () => { showAttachments.value = true; } });
     return items;
@@ -186,6 +192,7 @@ const onDeliveryGenerated = () => { selectedOrder.value = null; tableRef.value?.
 const loadOrderStatistics = async () => { loadingStatistics.value = true; try { const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesOrderStatistics`, { params: { year: selectedStatisticsYear.value } }); statistics.value = { ...statistics.value, ...data }; } catch { toast.add({ severity: 'error', summary: 'No se pudieron cargar las estadísticas', life: 3000 }); } finally { loadingStatistics.value = false; } };
 const refreshTable = async () => { await loadDeliverySettings();await tableRef.value?.refresh(); await loadOrderStatistics(); };
 const onOrderSaved = () => { tableRef.value?.refresh(); loadOrderStatistics(); };
+const openOrderFromAssistant = (order: any) => { orderFormRef.value?.open(order.pkid); };
 const clearDateFilters = () => { creationDateRange.value = null; };
 const applyFilters = () => {
     const filters: string[] = [];

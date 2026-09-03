@@ -12,7 +12,7 @@
             style="height: 35px; width: auto; object-fit: contain;" />
         </div>
         <div style="width: 1px; height: 30px; background-color: #e5e7eb;"></div>
-        <div>
+        <div style="display: flex; min-width: 0; flex-direction: column;">
           <div
             style="font-size: 0.85rem; color: #9cc10a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
             KiwiKERP - Sistema Integrado</div>
@@ -102,7 +102,16 @@
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 1px; font-size: 0.85rem; color: #9ca3af; font-weight: 500;">
+      <div style="display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 0.85rem; color: #9ca3af; font-weight: 500;">
+        <span v-if="companyStore.companyInfo.documentRoot" :title="companyStore.companyInfo.documentRoot"
+          style="display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 430px; color: #6f8c7d; font-size: 0.7rem; font-weight: 600;">
+          <i class="pi pi-database" style="flex: 0 0 auto; color: #74a88e; font-size: 0.72rem;"></i>
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            GestDoc · {{ companyStore.companyInfo.documentRoot }}
+          </span>
+        </span>
+        <div v-if="companyStore.companyInfo.documentRoot"
+          style="width: 1px; height: 22px; flex: 0 0 auto; background-color: #e1e4e8;"></div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <img src="../../assets/logos/LogTras.png" alt="Logo" style="height: 18px; width: auto; opacity: 0.85;" />
           <span>{{ erpInfo.nombre }} <span style="color: #9cc10a; font-weight: 700;">{{ erpInfo.version }}</span></span>

@@ -184,15 +184,8 @@
               </div>
             </template>
             <div>
-              <label for="assistant-customer"
-                >Cliente (código o nombre exacto)</label
-              ><InputText
-                id="assistant-customer"
-                v-model="criteria.customer"
-                maxlength="150"
-                :disabled="busy"
-                placeholder="Todos los clientes"
-              />
+              <label for="assistant-customer">Cliente</label>
+              <CustomerLookup id="assistant-customer" :modelValue="selectedCustomerId" :label="customerLabel" :disabled="busy" @update:modelValue="setCustomerId" @selected="selectCustomer" />
             </div>
             <template v-if="criteria.action === 'CONVERSION'">
               <div>
@@ -292,11 +285,9 @@
         {{ result.comparison?.conversionRate }} %. Diferencia:
         {{ result.conversionDelta }} puntos.</Message
       >
-      <div class="summary">
-        <article v-for="metric in metrics" :key="metric.key">
-          <small>{{ metric.label }}</small
-          ><strong>{{ money(result.totals[metric.key]) }}</strong>
-        </article>
+      <div v-for="currencyTotals in result.totalsByCurrency || [result.totals]" :key="currencyTotals.currencyCode || 'total'" class="currency-summary">
+        <h4 v-if="result.totalsByCurrency?.length > 1">Totales en {{ currencyTotals.currencyCode }}</h4>
+        <div class="summary"><article v-for="metric in metrics" :key="metric.key"><small>{{ metric.label }}</small><strong>{{ money(currencyTotals[metric.key], currencyTotals.currencyCode) }}</strong></article></div>
       </div>
       <template v-if="result.criteria.action !== 'EXPLAIN'">
         <h3>Resumen por cliente</h3>
@@ -314,14 +305,14 @@
           />
           <Column header="Total"
             ><template #body="{ data }">{{
-              money(data.total)
+              money(data.total, data.currencyCode)
             }}</template></Column
           >
           <Column header="Base"
-            ><template #body="{ data }">{{ money(data.net) }}</template></Column
+            ><template #body="{ data }">{{ money(data.net, data.currencyCode) }}</template></Column
           >
           <Column header="Impuestos"
-            ><template #body="{ data }">{{ money(data.tax) }}</template></Column
+            ><template #body="{ data }">{{ money(data.tax, data.currencyCode) }}</template></Column
           >
           <template #empty>Sin resultados.</template>
         </DataTable>
@@ -360,7 +351,7 @@
           }}</template></Column
         >
         <Column header="Total"
-          ><template #body="{ data }">{{ money(data.total) }}</template></Column
+          ><template #body="{ data }">{{ money(data.total, data.currencyCode) }}</template></Column
         >
         <template #empty>Sin presupuestos para estos criterios.</template>
       </DataTable>
@@ -423,6 +414,7 @@ import Select from "primevue/select";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import { useAuthStore } from "@/stores/authStore";
+import CustomerLookup from "@/components/shared/CustomerLookup.vue";
 
 type Criteria = {
   action: string;
@@ -453,6 +445,8 @@ const loading = ref(false),
   error = ref("");
 const selectedQuote = ref<any>(null),
   result = ref<any>(null);
+const selectedCustomerId = ref<number | null>(null);
+const customerLabel = ref("");
 const resultsSection = ref<HTMLElement | null>(null);
 // Keep the safe, no-API mode open by default and never show both modes at once.
 const activeMode = ref<"AI" | "GUIDED">("GUIDED");
@@ -515,8 +509,8 @@ const resultCriteria = computed(() => {
   )?.label;
   return `${label}; ${c.from ? c.from + " a " + c.to : "sin fechas"}; cliente: ${c.customer || "todos"}${c.quoteCode || c.quoteId ? "; presupuesto: " + (c.quoteCode || c.quoteId) : ""}`;
 });
-const money = (value: number) =>
-  `${new Intl.NumberFormat("de-DE", { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))}${result.value?.currencyCode ? " " + result.value.currencyCode : ""}`;
+const money = (value: number, currencyCode?: string | null) =>
+  `${new Intl.NumberFormat("de-DE", { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))}${currencyCode || result.value?.currencyCode ? " " + (currencyCode || result.value.currencyCode) : ""}`;
 const dateTime = (value: string) =>
   new Intl.DateTimeFormat("es-ES", {
     dateStyle: "short",
@@ -604,6 +598,8 @@ function changeAction() {
     criteria.value.compareTo = null;
   }
 }
+function setCustomerId(value: number | null) { selectedCustomerId.value = value; if (value === null) { criteria.value.customer = null; customerLabel.value = ""; } }
+function selectCustomer(customer: any) { selectedCustomerId.value = customer.pkid; criteria.value.customer = customer.code || customer.name; customerLabel.value = `${customer.code ? customer.code + " — " : ""}${customer.name}`; }
 function useSelected() {
   criteria.value = {
     action: "EXPLAIN",
@@ -626,6 +622,8 @@ async function open(quote: any = null) {
   selectedQuote.value = quote;
   activeMode.value = "GUIDED";
   criteria.value = initialCriteria();
+  selectedCustomerId.value = null;
+  customerLabel.value = "";
   result.value = null;
   error.value = "";
   question.value = "";
@@ -663,6 +661,8 @@ async function interpret() {
     interpretation.value = data.message;
     if (!data.needsClarification) {
       criteria.value = { ...data.criteria };
+      selectedCustomerId.value = null;
+      customerLabel.value = criteria.value.customer || "";
       guidedKind.value = ["EXPIRING", "EXPIRED"].includes(criteria.value.action)
         ? "VALIDITY"
         : ["APPROVED", "CANCELLED"].includes(criteria.value.action)

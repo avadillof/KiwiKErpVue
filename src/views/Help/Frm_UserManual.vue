@@ -19,7 +19,7 @@
           en el portal.
         </p>
       </div>
-      <span class="version">Versión 2.5 · 31/08/2026</span>
+      <span class="version">Versión 2.7 · 01/09/2026</span>
     </header>
 
     <div class="manual-layout">
@@ -27,7 +27,8 @@
         <strong>Contenido</strong>
         <div class="toc-group">
           <a class="toc-main" href="#introduccion">Introducción al sistema</a
-          ><a class="toc-sub" href="#novedades">Novedades del 31 de agosto</a
+          ><a class="toc-sub" href="#instalacion">Puesta en marcha</a
+          ><a class="toc-sub" href="#novedades">Novedades del 1 de septiembre</a
           ><a class="toc-sub" href="#cierre-ventas"
             >Estado de cierre de Ventas</a
           >
@@ -151,9 +152,106 @@
             o configuración de empresa.
           </p>
         </section>
+        <section id="instalacion">
+          <h2>Puesta en marcha e instalación</h2>
+          <p>
+            Si KiwiKERP no encuentra una identidad de instalación válida, abre
+            el asistente en lugar de la pantalla de acceso. La detección utiliza
+            dos archivos externos que deben conservarse juntos:
+            <code>installation/installation.properties</code> e
+            <code>installation/installation.key</code>.
+          </p>
+          <p>
+            Se guardan bajo <code>KIWIKERP_DATA_DIR</code>. Sin configurarlo, se
+            utiliza la carpeta <code>.kiwikerp</code> del usuario que ejecuta el
+            servidor; en Windows, por ejemplo,
+            <code>C:\Users\usuario\.kiwikerp</code>. La variable
+            <code>KIWIK_INSTALLATION_FILE</code> permite indicar directamente
+            otra ubicación para el fichero de propiedades; la clave se guarda a
+            su lado. No copie uno de los dos archivos por separado ni publique
+            su contenido.
+          </p>
+          <p>
+            La base de datos conserva una segunda identidad en
+            <code>kiwikerp_installation</code>. Sólo se considera una instalación
+            nueva si faltan los archivos, la base está disponible y no contiene
+            la marca ni tablas de KiwiKERP. Si una instalación completada pierde
+            uno o ambos archivos, se regeneran con una clave nueva conservando
+            el mismo identificador de la base. Si la recuperación no puede
+            escribirse, hay datos sin marca, la base no responde o ambas
+            identidades no coinciden, el instalador se bloquea por seguridad.
+          </p>
+          <p>
+            El primer paso comprueba el servidor, la conexión con la base de
+            datos y la creación protegida de la identidad. Continuar permanece
+            desactivado mientras haya comprobaciones pendientes o fallidas. Si
+            el servidor no responde, el portal muestra una pantalla corporativa
+            de servicio no disponible y permite volver a intentarlo.
+          </p>
+          <p>
+            A continuación se solicitan empresa, NIF/CIF, contacto, dirección,
+            logotipo y primer administrador. GestDoc utiliza por defecto
+            <code>&lt;KIWIKERP_DATA_DIR&gt;/gestdoc</code>; KiwiKERP intenta crear
+            la carpeta y sólo continúa si permite lectura y escritura.
+          </p>
+          <h3>Base de datos y esquema inicial</h3>
+          <p>
+            El esquema de instalación se mantiene en el backend, en
+            <code>BackUpBBDD/SchemaEmptyBBDD/BBDD.sql</code>, y se ejecutará con
+            el contenido que el responsable del proyecto haya preparado.
+          </p>
+          <div class="note">
+            <i class="pi pi-exclamation-triangle"></i
+            ><span
+              ><b>Pendiente de implementación:</b> la copia y recreación final
+              automática todavía no está operativa. El flujo acordado creará
+              primero un dump fechado en
+              <code>&lt;KIWIKERP_DATA_DIR&gt;/backups</code>, comprobará que sea
+              válido, recreará la base, aplicará el esquema y guardará empresa y
+              administrador antes de completar la instalación. Si el dump
+              falla, no deberá modificar la base existente. Hasta validarlo con
+              una base real, mantenga una copia administrada independiente.</span
+            >
+          </div>
+          <h3>GestDoc después de instalar</h3>
+          <p>
+            La ruta activa aparece al extremo derecho del pie, antes del logo y
+            la versión. Un administrador puede cambiarla desde
+            <b>Configuración / Ajustes → Preferencias → Repositorio documental</b>.
+            Debe ser absoluta, existir y permitir lectura y escritura. Cambiarla
+            no traslada documentos, facturas, adjuntos, imágenes ni logotipos.
+          </p>
+          <p>
+            La configuración se guarda inmediatamente, pero hay que reiniciar el
+            servidor de KiwiKERP para publicar imágenes y documentos desde la
+            nueva ubicación. Conserve la ruta anterior hasta comprobar un
+            documento histórico, un adjunto, una imagen y un PDF.
+          </p>
+          <h3>Verificación del correo</h3>
+          <p>
+            <b>Verificar conexión</b> prueba la conexión y autenticación SMTP
+            con los datos del formulario, sin enviar correo. Utiliza la sesión
+            del administrador iniciada en el portal. Si ha caducado o el
+            servidor se ha reiniciado, vuelva a iniciar sesión. Una conexión
+            aceptada no confirma la entrega de mensajes a destinatarios.
+          </p>
+        </section>
         <section id="novedades">
-          <h2>Novedades del 31 de agosto de 2026</h2>
+          <h2>Novedades del 1 de septiembre de 2026</h2>
           <ul>
+            <li>
+              Trazabilidad comercial visual e imprimible desde Presupuestos,
+              Pedidos, Albaranes y Facturas, conservando todas las ramas hasta
+              los cobros.
+            </li>
+            <li>
+              Asistente de Pedidos de solo lectura y resultados de asistentes
+              separados por moneda, sin conversiones ni sumas engañosas.
+            </li>
+            <li>
+              Selector de cliente coherente con el resto de las pantallas de
+              Ventas.
+            </li>
             <li>
               Tarifas por producto, familia o catálogo, descuentos por cantidad
               y simulación con cambios sin guardar.
@@ -325,6 +423,24 @@
             directamente a cada etapa. Las tarjetas resumen las funciones
             disponibles en cada módulo; las marcadas como
             <b>Próximamente</b> permanecen bloqueadas.
+          </p>
+          <h3>Trazabilidad comercial</h3>
+          <p>
+            Desde el menú <b>…</b> de cualquier Presupuesto, Pedido, Albarán o
+            Factura, <b>Trazabilidad comercial</b> reconstruye el recorrido
+            visual hasta los cobros y resalta el documento consultado.
+          </p>
+          <p>
+            Las tarjetas conservan las ramas reales —varios pedidos, albaranes,
+            facturas o cobros parciales y revertidos— y muestran código, estado,
+            fecha e importe. <b>Ir al módulo</b> permite revisar otro documento
+            del recorrido y <b>Imprimir trazabilidad</b> prepara la vista para
+            impresión.
+          </p>
+          <p>
+            Una etapa vacía indica que todavía no existe o que el circuito no
+            pasa por ella, como puede ocurrir con facturas o albaranes manuales.
+            La consulta no inventa enlaces ni modifica ningún documento.
           </p>
           <p>
             <b>Ventas</b> requiere acceso comercial y <b>Configuración</b> solo
@@ -933,6 +1049,24 @@
             entre 1 y 365 días, con el segundo mayor que el primero. Incluyen
             hoy y el último día completo. Refresque el listado tras guardar
             cambios.
+          </p>
+          <h3>Asistente de Pedidos</h3>
+          <p>
+            El botón <b>Asistente de Pedidos</b> abre consultas de solo lectura
+            por periodo y cliente, pendientes de entregar o facturar, entregas
+            previstas vencidas, pedidos completados y cancelados. También puede
+            explicar un pedido línea por línea y abrir el documento que
+            justifica el resultado.
+          </p>
+          <p>
+            La consulta guiada no consume API. La pregunta con IA únicamente
+            convierte la frase en filtros: KiwiKERP calcula las cantidades y
+            los importes. El cliente se elige con el buscador habitual. Si hay
+            varias divisas, los totales aparecen en bloques independientes, sin
+            conversión ni suma entre monedas. La explicación por línea distingue
+            cantidad pedida, cancelada, entregada, facturada y pendiente, además
+            de la política de facturación. El asistente no confirma, cancela,
+            entrega ni factura pedidos.
           </p>
           <h3 id="pedidos-recordatorio">Recordatorio diario</h3>
           <figure class="manual-figure">
@@ -2295,6 +2429,21 @@
             La proforma no sustituye a la factura definitiva. Su generación no
             debe interpretarse como emisión fiscal, entrega de mercancía ni
             registro de cobro.
+          </p>
+          <h3>Repositorio documental</h3>
+          <p>
+            Los administradores pueden revisar en
+            <b>Configuración / Ajustes → Preferencias → Repositorio documental</b>
+            la carpeta raíz donde KiwiKERP conserva adjuntos, documentos
+            históricos, facturas archivadas, imágenes y recursos corporativos.
+            La ruta debe ser absoluta y accesible para el usuario que ejecuta el
+            backend.
+          </p>
+          <p>
+            Guardar otra ruta <b>no mueve ni copia los archivos existentes</b>.
+            Conserve la ruta anterior, prepare los documentos y permisos, reinicie
+            el backend y compruebe un documento histórico, un adjunto y un PDF. Si
+            algo falla, restaure la ruta anterior; no genere documentos duplicados.
           </p>
           <h3>Configuración antes de comenzar</h3>
           <ol>

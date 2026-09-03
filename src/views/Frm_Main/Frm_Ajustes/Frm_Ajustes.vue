@@ -127,9 +127,13 @@
 
 
                 <div class="bg-white p-4 border-round-md shadow-sm border-1 surface-border mb-4">
-                  <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
-                    <i class="pi pi-envelope"></i> Configuración SMTP
-                  </h5>
+                  <div class="flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <h5 class="text-primary m-0 flex align-items-center gap-2">
+                      <i class="pi pi-envelope"></i> Configuración SMTP
+                    </h5>
+                    <Button label="Verificar conexión" icon="pi pi-check-circle" severity="secondary" outlined
+                      size="small" :loading="testingSmtp" :disabled="loading" @click="testSmtpConnection" />
+                  </div>
 
 
                   <div class="grid">
@@ -250,6 +254,24 @@
                       </FloatLabel>
                     </div>
                   </div>
+
+                  <template v-if="aiAuth.user?.admin">
+                    <h5 class="text-primary mt-5 mb-4 flex align-items-center gap-2">
+                      <i class="pi pi-folder-open"></i> Repositorio documental
+                    </h5>
+                    <div class="grid">
+                      <div class="col-12 md:col-8">
+                        <FloatLabel variant="in">
+                          <InputText v-model="formData.documentRoot" id="documentRoot" maxlength="1000" class="w-full" size="small" />
+                          <label for="documentRoot">Ruta raíz de documentos</label>
+                        </FloatLabel>
+                      </div>
+                    </div>
+                    <div class="document-root-warning">
+                      <i class="pi pi-exclamation-triangle"></i>
+                      <span>Esta ruta contiene documentos históricos, facturas, adjuntos, imágenes y logotipos. Cambiarla no mueve los archivos existentes. Después de guardarla, reinicia el servidor de KiwiKERP para que las imágenes y los documentos se publiquen desde la nueva ubicación. Conserva la ruta anterior hasta comprobar que todo funciona correctamente.</span>
+                    </div>
+                  </template>
 
 
 
@@ -457,6 +479,8 @@
 .master-card:hover .master-action i { transform: translateX(3px); }
 .master-note { display: flex; align-items: center; gap: 9px; margin-top: 18px; padding: 12px 15px; border: 1px dashed #d8dee6; border-radius: 10px; color: #7d8797; background: #fafbfc; font-size: .84rem; }
 .master-note i { color: var(--kiwi-dark); }
+.document-root-warning { display:flex; align-items:flex-start; gap:9px; margin-top:12px; padding:12px 14px; border:1px solid #efd99d; border-radius:9px; color:#735b18; background:#fff9e8; font-size:.84rem; line-height:1.45; }
+.document-root-warning i { margin-top:2px; color:#a97800; }
 
 @media (max-width: 760px) {
   .settings-page { padding: 16px 14px 84px; }
@@ -502,7 +526,7 @@ import Frm_FamiliasProductos from '../../Frm_Products/Frm_FamiliasProductos/Frm_
 const activeTab = ref<string>('0');
 const route = useRoute();
 const router = useRouter();
-const { formData, loading, saveData, provincias, loadData, onUploadLogo, baseUrl, handleImageError, handleImageLoad, openUserDialog } = Frm_Ajustes();
+const { formData, loading, testingSmtp, testSmtpConnection, saveData, provincias, loadData, onUploadLogo, baseUrl, handleImageError, handleImageLoad, openUserDialog } = Frm_Ajustes();
 const familiasProductosRef = ref<InstanceType<typeof Frm_FamiliasProductos> | null>(null);
 
 onMounted(() => {

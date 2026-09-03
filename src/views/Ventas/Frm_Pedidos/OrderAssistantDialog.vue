@@ -135,28 +135,6 @@
                 @change="changeAction"
               />
             </div>
-            <div v-if="guidedKind === 'VALIDITY'">
-              <label for="assistant-validity">Situación de validez</label>
-              <Select
-                inputId="assistant-validity"
-                v-model="criteria.action"
-                :options="validityActions"
-                optionLabel="label"
-                optionValue="value"
-                :disabled="busy"
-              />
-            </div>
-            <div v-if="guidedKind === 'STATUS'">
-              <label for="assistant-status">Estado</label>
-              <Select
-                inputId="assistant-status"
-                v-model="criteria.action"
-                :options="statusActions"
-                optionLabel="label"
-                optionValue="value"
-                :disabled="busy"
-              />
-            </div>
             <template v-if="criteria.action !== 'EXPLAIN'">
               <div>
                 <label for="assistant-from">Fecha de pedido desde</label
@@ -184,42 +162,9 @@
               </div>
             </template>
             <div>
-              <label for="assistant-customer"
-                >Cliente (código o nombre exacto)</label
-              ><InputText
-                id="assistant-customer"
-                v-model="criteria.customer"
-                maxlength="150"
-                :disabled="busy"
-                placeholder="Todos los clientes"
-              />
+              <label for="assistant-customer">Cliente</label>
+              <CustomerLookup id="assistant-customer" :modelValue="selectedCustomerId" :label="customerLabel" :disabled="busy" @update:modelValue="setCustomerId" @selected="selectCustomer" />
             </div>
-            <template v-if="criteria.action === 'CONVERSION'">
-              <div>
-                <label for="assistant-compare-from">Comparar desde</label
-                ><DatePicker
-                  inputId="assistant-compare-from"
-                  v-model="compareFromDate"
-                  dateFormat="dd/mm/yy"
-                  showIcon
-                  showButtonBar
-                  fluid
-                  :disabled="busy"
-                />
-              </div>
-              <div>
-                <label for="assistant-compare-to">Comparar hasta</label
-                ><DatePicker
-                  inputId="assistant-compare-to"
-                  v-model="compareToDate"
-                  dateFormat="dd/mm/yy"
-                  showIcon
-                  showButtonBar
-                  fluid
-                  :disabled="busy"
-                />
-              </div>
-            </template>
             <div v-if="criteria.action === 'EXPLAIN'">
               <label for="assistant-order">Código exacto de pedido</label
               ><InputText
@@ -253,10 +198,9 @@
             </div>
           </form>
           <p class="scope">
-            Revisa los criterios antes de consultar. En próximos a vencer y
-            vencidos, las fechas se aplican a la validez; en las demás
-            consultas, a la creación. Máximo 500 documentos y 366 días por
-            periodo.
+            Revisa los criterios antes de consultar. Las fechas se aplican a la
+            creación del pedido; “entrega vencida” comprueba además la fecha
+            prevista. Máximo 500 documentos y 366 días por periodo.
           </p>
         </div>
       </section>
@@ -284,19 +228,9 @@
         :closable="false"
         >{{ warning }}</Message
       >
-      <Message
-        v-if="result.criteria.action === 'CONVERSION'"
-        severity="info"
-        :closable="false"
-        >Conversión del periodo: {{ result.conversionRate }} %. Comparación:
-        {{ result.comparison?.conversionRate }} %. Diferencia:
-        {{ result.conversionDelta }} puntos.</Message
-      >
-      <div class="summary">
-        <article v-for="metric in metrics" :key="metric.key">
-          <small>{{ metric.label }}</small
-          ><strong>{{ money(result.totals[metric.key]) }}</strong>
-        </article>
+      <div v-for="currencyTotals in result.totalsByCurrency || [result.totals]" :key="currencyTotals.currencyCode || 'total'" class="currency-summary">
+        <h4 v-if="result.totalsByCurrency?.length > 1">Totales en {{ currencyTotals.currencyCode }}</h4>
+        <div class="summary"><article v-for="metric in metrics" :key="metric.key"><small>{{ metric.label }}</small><strong>{{ money(currencyTotals[metric.key], currencyTotals.currencyCode) }}</strong></article></div>
       </div>
       <template v-if="result.criteria.action !== 'EXPLAIN'">
         <h3>Resumen por cliente</h3>
@@ -314,14 +248,14 @@
           />
           <Column header="Total"
             ><template #body="{ data }">{{
-              money(data.total)
+              money(data.total, data.currencyCode)
             }}</template></Column
           >
           <Column header="Base"
-            ><template #body="{ data }">{{ money(data.net) }}</template></Column
+            ><template #body="{ data }">{{ money(data.net, data.currencyCode) }}</template></Column
           >
           <Column header="Impuestos"
-            ><template #body="{ data }">{{ money(data.tax) }}</template></Column
+            ><template #body="{ data }">{{ money(data.tax, data.currencyCode) }}</template></Column
           >
           <template #empty>Sin resultados.</template>
         </DataTable>
@@ -348,37 +282,27 @@
           field="customer"
           header="Cliente"
         /><Column field="state" header="Estado" />
-        <Column field="validityDate" header="Validez" />
-        <Column header="Envío"
-          ><template #body="{ data }">{{
-            data.sendDate || "No enviado"
-          }}</template></Column
-        >
-        <Column header="Pedido asociado"
-          ><template #body="{ data }">{{
-            linkedOrdersText(data)
-          }}</template></Column
-        >
+        <Column field="deliveryDate" header="Entrega prevista" />
+        <Column header="Pendiente entrega"><template #body="{ data }">{{ quantity(data.pendingDeliveryQuantity) }}</template></Column>
+        <Column header="Pendiente factura"><template #body="{ data }">{{ quantity(data.pendingInvoiceQuantity) }}</template></Column>
         <Column header="Total"
-          ><template #body="{ data }">{{ money(data.total) }}</template></Column
+          ><template #body="{ data }">{{ money(data.total, data.currencyCode) }}</template></Column
         >
         <template #empty>Sin pedidos para estos criterios.</template>
       </DataTable>
       <template v-if="result.criteria.action === 'EXPLAIN'">
-        <h3>Productos, precios, descuentos e impuestos</h3>
+        <h3>Seguimiento por línea</h3>
         <DataTable :value="result.lines" stripedRows size="small" scrollable>
           <Column field="product" header="Producto" />
           <Column header="Cantidad"
             ><template #body="{ data }">{{ data.quantity }}</template></Column
           >
-          <Column header="Precio unitario"
-            ><template #body="{ data }">{{
-              money(data.unitPrice)
-            }}</template></Column
-          >
-          <Column field="discount" header="Descuento %" />
-          <Column field="tax" header="Impuesto %" />
-          <Column field="pricingSource" header="Origen del precio" />
+          <Column field="cancelled" header="Cancelada" />
+          <Column field="delivered" header="Entregada" />
+          <Column field="pendingDelivery" header="Pendiente entrega" />
+          <Column field="invoiced" header="Facturada" />
+          <Column field="pendingInvoice" header="Pendiente factura" />
+          <Column field="invoicingPolicy" header="Política" />
           <template #empty>El pedido no contiene líneas.</template>
         </DataTable>
       </template>
@@ -388,15 +312,6 @@
         <!-- Separador corporativo obligatorio antes de las acciones del diálogo. -->
         <div class="kiwik-separator dialog-footer-separator" />
         <div class="dialog-footer-actions">
-          <Button
-            v-if="result"
-            label="Descargar respuesta en PDF"
-            icon="pi pi-file-pdf"
-            severity="secondary"
-            :loading="downloadingPdf"
-            :disabled="busy"
-            @click="downloadPdf"
-          />
           <Button
             label="Cerrar"
             severity="secondary"
@@ -423,13 +338,12 @@ import Select from "primevue/select";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import { useAuthStore } from "@/stores/authStore";
+import CustomerLookup from "@/components/shared/CustomerLookup.vue";
 
 type Criteria = {
   action: string;
   from: string | null;
   to: string | null;
-  compareFrom: string | null;
-  compareTo: string | null;
   customer: string | null;
   orderCode: string | null;
   orderId: number | null;
@@ -447,19 +361,20 @@ const visible = ref(false),
   aiAvailable = ref(false);
 const loading = ref(false),
   interpreting = ref(false),
-  downloadingPdf = ref(false),
   question = ref(""),
   interpretation = ref(""),
   error = ref("");
 const selectedOrder = ref<any>(null),
   result = ref<any>(null);
+const selectedCustomerId = ref<number | null>(null);
+const customerLabel = ref("");
 const resultsSection = ref<HTMLElement | null>(null);
 // Keep the safe, no-API mode open by default and never show both modes at once.
 const activeMode = ref<"AI" | "GUIDED">("GUIDED");
-const guidedKind = ref("QUOTED");
+const guidedKind = ref("ORDERED");
 const criteria = ref<Criteria>(initialCriteria());
 // Keep date-only API values; UTC conversion would shift days in some time zones.
-function dateField(key: "from" | "to" | "compareFrom" | "compareTo") {
+function dateField(key: "from" | "to") {
   return computed<Date | null>({
     get() {
       const value = criteria.value[key];
@@ -475,32 +390,21 @@ function dateField(key: "from" | "to" | "compareFrom" | "compareTo") {
     },
   });
 }
-const fromDate = dateField("from"),
-  toDate = dateField("to"),
-  compareFromDate = dateField("compareFrom"),
-  compareToDate = dateField("compareTo");
+const fromDate = dateField("from"), toDate = dateField("to");
 const busy = computed(
   () =>
     loading.value ||
     interpreting.value ||
-    downloadingPdf.value ||
     statusLoading.value,
 );
 const actions = [
-  { label: "Presupuestado por periodo y cliente", value: "QUOTED" },
-  { label: "Pendientes de aceptación", value: "PENDING" },
-  { label: "Próximos a vencer y vencidos", value: "VALIDITY" },
-  { label: "Aprobados y cancelados", value: "STATUS" },
-  { label: "Conversión y comparación entre periodos", value: "CONVERSION" },
+  { label: "Pedidos por periodo y cliente", value: "ORDERED" },
+  { label: "Pendientes de entregar", value: "PENDING_DELIVERY" },
+  { label: "Entrega prevista vencida", value: "OVERDUE_DELIVERY" },
+  { label: "Pendientes de facturar", value: "PENDING_INVOICE" },
+  { label: "Pedidos completados", value: "COMPLETED" },
+  { label: "Pedidos cancelados", value: "CANCELLED" },
   { label: "Explicar un pedido concreto", value: "EXPLAIN" },
-];
-const validityActions = [
-  { label: "Próximos a vencer", value: "EXPIRING" },
-  { label: "Vencidos", value: "EXPIRED" },
-];
-const statusActions = [
-  { label: "Aprobados", value: "APPROVED" },
-  { label: "Cancelados o rechazados", value: "CANCELLED" },
 ];
 const metrics = [
   { key: "net", label: "Base registrada" },
@@ -510,22 +414,21 @@ const metrics = [
 ];
 const resultCriteria = computed(() => {
   const c = result.value.criteria;
-  const label = [...actions, ...validityActions, ...statusActions].find(
+  const label = actions.find(
     (a) => a.value === c.action,
   )?.label;
   return `${label}; ${c.from ? c.from + " a " + c.to : "sin fechas"}; cliente: ${c.customer || "todos"}${c.orderCode || c.orderId ? "; pedido: " + (c.orderCode || c.orderId) : ""}`;
 });
-const money = (value: number) =>
-  `${new Intl.NumberFormat("de-DE", { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))}${result.value?.currencyCode ? " " + result.value.currencyCode : ""}`;
+const money = (value: number, currencyCode?: string | null) =>
+  `${new Intl.NumberFormat("de-DE", { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))}${currencyCode || result.value?.currencyCode ? " " + (currencyCode || result.value.currencyCode) : ""}`;
 const dateTime = (value: string) =>
   new Intl.DateTimeFormat("es-ES", {
     dateStyle: "short",
     timeStyle: "medium",
     timeZone: "Europe/Madrid",
   }).format(new Date(value));
-const linkedOrdersText = (order: any) =>
-  order.linkedOrders?.map((order: any) => order.code).join(", ") ||
-  "Sin pedido";
+const quantity = (value: number) =>
+  new Intl.NumberFormat("de-DE", { useGrouping: true, maximumFractionDigits: 3 }).format(Number(value || 0));
 const endpoint = `${import.meta.env.VITE_API_URL}/WebOrderAssistant`;
 let sequence = 0;
 watch(
@@ -549,11 +452,9 @@ function initialCriteria(): Criteria {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   return {
-    action: "QUOTED",
+    action: "ORDERED",
     from: `${year}-${month}-01`,
     to: `${year}-${month}-${String(new Date(year, now.getMonth() + 1, 0).getDate()).padStart(2, "0")}`,
-    compareFrom: null,
-    compareTo: null,
     customer: null,
     orderCode: null,
     orderId: null,
@@ -576,41 +477,25 @@ function message(e: any) {
         : "No se pudo completar la consulta de pedidos. Comprueba el backend y vuelve a intentarlo.";
 }
 function changeAction() {
-  criteria.value.action =
-    guidedKind.value === "VALIDITY"
-      ? "EXPIRING"
-      : guidedKind.value === "STATUS"
-        ? "APPROVED"
-        : guidedKind.value;
+  criteria.value.action = guidedKind.value;
   criteria.value.orderId = null;
   criteria.value.orderCode = null;
   const initial = initialCriteria();
   if (criteria.value.action === "EXPLAIN") {
     criteria.value.from = null;
     criteria.value.to = null;
-    criteria.value.compareFrom = null;
-    criteria.value.compareTo = null;
     return;
   }
   criteria.value.from = initial.from;
   criteria.value.to = initial.to;
-  if (criteria.value.action === "CONVERSION") {
-    const year = new Date().getFullYear() - 1;
-    const month = String(new Date().getMonth() + 1).padStart(2, "0");
-    criteria.value.compareFrom = `${year}-${month}-01`;
-    criteria.value.compareTo = `${year}-${month}-${String(new Date(year, new Date().getMonth() + 1, 0).getDate()).padStart(2, "0")}`;
-  } else {
-    criteria.value.compareFrom = null;
-    criteria.value.compareTo = null;
-  }
 }
+function setCustomerId(value: number | null) { selectedCustomerId.value = value; if (value === null) { criteria.value.customer = null; customerLabel.value = ""; } }
+function selectCustomer(customer: any) { selectedCustomerId.value = customer.pkid; criteria.value.customer = customer.code || customer.name; customerLabel.value = `${customer.code ? customer.code + " — " : ""}${customer.name}`; }
 function useSelected() {
   criteria.value = {
     action: "EXPLAIN",
     from: null,
     to: null,
-    compareFrom: null,
-    compareTo: null,
     customer: null,
     orderCode: null,
     orderId: selectedOrder.value.pkid,
@@ -626,6 +511,8 @@ async function open(order: any = null) {
   selectedOrder.value = order;
   activeMode.value = "GUIDED";
   criteria.value = initialCriteria();
+  selectedCustomerId.value = null;
+  customerLabel.value = "";
   result.value = null;
   error.value = "";
   question.value = "";
@@ -663,11 +550,9 @@ async function interpret() {
     interpretation.value = data.message;
     if (!data.needsClarification) {
       criteria.value = { ...data.criteria };
-      guidedKind.value = ["EXPIRING", "EXPIRED"].includes(criteria.value.action)
-        ? "VALIDITY"
-        : ["APPROVED", "CANCELLED"].includes(criteria.value.action)
-          ? "STATUS"
-          : criteria.value.action;
+      selectedCustomerId.value = null;
+      customerLabel.value = criteria.value.customer || "";
+      guidedKind.value = criteria.value.action;
       interpretation.value += " Revisa los filtros y pulsa Consultar datos.";
       activeMode.value = "GUIDED";
     }
@@ -702,34 +587,6 @@ async function consult() {
     if (current === sequence) error.value = message(e);
   } finally {
     if (current === sequence) loading.value = false;
-  }
-}
-async function downloadPdf() {
-  if (!result.value) return;
-  downloadingPdf.value = true;
-  error.value = "";
-  try {
-    // El informe se recalcula en el servidor; no se envían al backend los
-    // totales ni las filas mostradas por el navegador.
-    const response = await axios.post(
-      endpoint + "/pdf",
-      result.value.criteria,
-      {
-        ...auth.portalRequestConfig(),
-        responseType: "blob",
-        timeout: 60000,
-      },
-    );
-    const url = URL.createObjectURL(response.data);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `consulta-pedidos-${new Date().toISOString().slice(0, 10)}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
-  } catch (e: any) {
-    error.value = message(e);
-  } finally {
-    downloadingPdf.value = false;
   }
 }
 function openDocument(order: any) {

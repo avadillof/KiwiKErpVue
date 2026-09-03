@@ -25,6 +25,7 @@ export interface CompanyState {
     toastDuration: number | null;
     paginationTable:number;
     smtpPasswordCountSmtp:string
+    documentRoot:string
 }
 
 export const useCompanyStore = defineStore('company', {
@@ -53,7 +54,8 @@ export const useCompanyStore = defineStore('company', {
             reportRgpd: '',
             toastDuration: 3000,
             paginationTable: 500,
-            smtpPasswordCountSmtp: ''
+            smtpPasswordCountSmtp: '',
+            documentRoot: 'C:\\gestdoc'
         } as CompanyState
     }),
     actions: {

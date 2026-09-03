@@ -1,7 +1,7 @@
 # Manual de usuario de KiwiK ERP
 
-**Versión:** 2.5
-**Última actualización:** 31 de agosto de 2026
+**Versión:** 2.7
+**Última actualización:** 1 de septiembre de 2026
 
 Este manual explica el funcionamiento de KiwiK ERP desde el punto de vista del usuario. Se actualizará conforme se incorporen nuevas funciones o cambien los procesos existentes.
 
@@ -20,7 +20,7 @@ Su finalidad es evitar volver a introducir los mismos datos en cada documento y 
 
 ### Qué incluye y cuáles son sus límites
 
-El manual describe las funciones implementadas en el proyecto a 31 de agosto de 2026. La instalación debe tener frontend, backend y actualizaciones de base de datos compatibles para utilizarlas. Compras e Informes siguen identificados como áreas en preparación; no debe interpretarse su tarjeta como una función disponible.
+El manual describe las funciones implementadas en el proyecto a 1 de septiembre de 2026. La instalación debe tener frontend, backend y actualizaciones de base de datos compatibles para utilizarlas. Compras e Informes siguen identificados como áreas en preparación; no debe interpretarse su tarjeta como una función disponible.
 
 El circuito fiscal descrito está configurado para **PRUEBAS**. Esta guía explica botones y resultados de la aplicación; no acredita una puesta en producción ni sustituye la revisión de los requisitos de la empresa. Las rectificativas, remesas, conciliación y gestión de impagados no forman parte del flujo básico actualmente documentado.
 
@@ -36,7 +36,7 @@ Guía específica: [Lista de precios y tarifas de venta](lista-precios.md).
 
 Estado de cierre: [Auditoría de Ventas del 31/08/2026](../auditoria-cierre-ventas-2026-08-31.md).
 
-Novedades: [Tarifas y mejoras de uso](#novedades-del-31-de-agosto-de-2026).
+Novedades: [Trazabilidad, asistentes y mejoras de uso](#novedades-del-1-de-septiembre-de-2026).
 
 Mapa visual: [Diagrama de los flujos de ventas](#diagrama-de-los-flujos-de-ventas).
 
@@ -47,6 +47,7 @@ Guía específica: [Facturación desde pedido y cierre por línea](facturacion-d
 Guía específica: [Crear una factura manual](factura-manual.md).
 
 - [Introducción al sistema](#introducción-qué-es-kiwik-erp)
+- [Puesta en marcha e instalación](#puesta-en-marcha-e-instalación)
 
 1. [Acceso al sistema](#1-acceso-al-sistema)
 2. [Panel de control](#2-panel-de-control)
@@ -75,7 +76,45 @@ Mapa revisado el **31/08/2026**, con circuito fiscal documentado en **PRUEBAS**.
 
 **Mantenimiento:** al actualizar la documentación, revisar también este diagrama. Si cambian pasos, estados, reglas o conexiones del circuito, actualizar la imagen y sus referencias tanto aquí como en el manual del portal. Véase [la guía de mantenimiento del diagrama](diagramas/README.md).
 
-## Novedades del 31 de agosto de 2026
+## Puesta en marcha e instalación
+
+Cuando KiwiKERP no encuentra una identidad de instalación válida, el portal abre el asistente de puesta en marcha en lugar del acceso habitual. La detección no depende de que las tablas contengan datos: utiliza dos archivos externos a la aplicación que deben conservarse juntos:
+
+```text
+<KIWIKERP_DATA_DIR>/installation/installation.properties
+<KIWIKERP_DATA_DIR>/installation/installation.key
+```
+
+Sin `KIWIKERP_DATA_DIR`, en Windows se utiliza por defecto `%USERPROFILE%\.kiwikerp`; por ejemplo, `C:\Users\usuario\.kiwikerp`. En Linux se utiliza el directorio personal del usuario que ejecuta el servidor, bajo `.kiwikerp`. `KIWIK_INSTALLATION_FILE` permite indicar directamente otra ubicación para `installation.properties`; la clave se guarda a su lado. No copie uno de los dos archivos por separado ni publique su contenido.
+
+Como segunda protección, la base de datos registra su identidad en `kiwikerp_installation`. La aplicación sólo considera nueva una instalación cuando faltan los archivos externos, la base está disponible y no contiene la marca ni tablas de la aplicación. Si se borra uno o ambos archivos de una instalación completada, KiwiKERP los vuelve a crear con una clave nueva y conserva el mismo `installation_id` registrado en la base. Si la recuperación no puede escribirse, hay tablas sin marca, la base no responde o las identidades no coinciden, el instalador se bloquea; nunca interpreta esa situación como permiso para borrar datos.
+
+El primer paso comprueba visualmente la disponibilidad del servidor, la conexión con la base de datos y la posibilidad de crear y proteger la identidad externa. **Continuar** permanece desactivado mientras una comprobación esté pendiente o haya fallado. Si el servidor de KiwiKERP no responde, se muestra una pantalla corporativa de servicio no disponible con la opción de volver a intentarlo; no se envía al usuario al acceso como si la instalación estuviera operativa.
+
+Después se solicitan los datos esenciales de la empresa, NIF/CIF, contacto, dirección, logotipo y el primer administrador. El repositorio documental predeterminado es `<KIWIKERP_DATA_DIR>/gestdoc`; si no existe, KiwiKERP intenta crearlo. La instalación sólo puede continuar si la carpeta permite lectura y escritura al usuario que ejecuta el servidor.
+
+### Base de datos y esquema inicial
+
+El esquema de referencia para una instalación limpia se mantiene en el backend, en `BackUpBBDD/SchemaEmptyBBDD/BBDD.sql`. El responsable del proyecto debe conservarlo actualizado. Que actualmente contenga datos provisionales no cambia la regla: se ejecutará exactamente el contenido preparado en ese archivo.
+
+**Estado actual:** el flujo automático de copia y recreación final todavía está pendiente de implementación. El comportamiento acordado será: comprobar el esquema; crear un dump fechado en `<KIWIKERP_DATA_DIR>/backups`; verificar que el dump terminó correctamente y no está vacío; recrear la base; ejecutar el esquema; guardar empresa y administrador; y sólo entonces marcar la instalación como completada. Si el dump falla, la base existente no debe borrarse ni modificarse. Hasta que este flujo esté implementado y probado con una base real, no utilice el botón final como sustituto de una copia de seguridad administrada.
+
+### GestDoc después de instalar
+
+La ruta activa aparece discretamente al extremo derecho del pie del portal, antes del logo y la versión: `GestDoc · ruta`. Un administrador puede cambiarla en **Configuración / Ajustes → Preferencias → Repositorio documental**. La ruta debe ser absoluta, existir y permitir lectura y escritura. Guardar otra ruta no mueve los documentos históricos, facturas, adjuntos, imágenes ni logotipos existentes. Conserve la ubicación anterior y traslade los archivos de forma controlada.
+
+La configuración se guarda inmediatamente, pero actualmente es necesario reiniciar el servidor de KiwiKERP para que las direcciones públicas de imágenes y documentos se registren con la nueva ubicación. Después compruebe un documento histórico, un adjunto, una imagen y un PDF antes de retirar la carpeta anterior.
+
+### Correo y sesión administrativa
+
+**Verificar conexión** en la configuración SMTP realiza una conexión y autenticación con los valores del formulario, sin enviar un correo. La petición utiliza la sesión iniciada en el portal mediante `X-Portal-Session`; sólo un administrador activo puede ejecutarla. Si la sesión ha caducado o el servidor se ha reiniciado, cierre la sesión y vuelva a entrar antes de repetir la prueba. No confunda una verificación SMTP correcta con la entrega de un mensaje a un destinatario.
+
+## Novedades del 1 de septiembre de 2026
+
+- **Trazabilidad comercial** desde Presupuestos, Pedidos, Albaranes y Facturas, con recorrido visual hasta los cobros, conservación de ramas e impresión.
+- **Asistente de Pedidos** de solo lectura para consultar seguimiento, pendientes y fechas previstas, y explicar un pedido línea por línea.
+- Los asistentes permiten localizar el cliente mediante el selector habitual y separan los totales por moneda, sin conversiones ni sumas engañosas.
+- Tarifas por producto, familia o catálogo, descuentos por cantidad y simulación con cambios sin guardar.
 
 ### Tarifas de venta: del precio base al precio acordado
 
@@ -221,6 +260,14 @@ El Área comercial agrupa el circuito de ventas:
 **Presupuesto → Pedido de venta → Albarán → Facturación**
 
 Cada documento conserva su trazabilidad. Esto permite conocer qué se ha solicitado, qué se ha entregado, qué se ha cancelado y qué queda pendiente de facturar.
+
+### 3.1 Consultar la trazabilidad comercial
+
+Desde el menú **…** de cualquier Presupuesto, Pedido, Albarán o Factura, seleccione **Trazabilidad comercial**. KiwiKERP reconstruye el recorrido completo hasta los cobros y resalta el documento desde el que se abrió la consulta.
+
+La vista conserva las ramas reales: un presupuesto puede originar varios pedidos; un pedido puede tener varios albaranes o facturas; y una factura puede contener cobros parciales o movimientos revertidos. Cada tarjeta muestra código, estado, fecha e importe. **Ir al módulo** permite continuar la revisión en otro documento del recorrido y **Imprimir trazabilidad** abre una versión preparada para impresión.
+
+Una etapa vacía indica que ese documento todavía no existe o que el circuito no pasa por ella. En particular, una factura o un albarán manual pueden carecer de presupuesto o pedido anterior. La consulta no inventa enlaces ni modifica estados, cantidades, facturas o cobros.
 
 ## 4. Entidades
 
@@ -380,7 +427,7 @@ Cambiar un artículo no debe reinterpretar una operación anterior: cada línea 
 
 ## 6. Presupuestos
 
-El botón **Consultar presupuestos** abre un asistente de solo lectura. **Consulta guiada** funciona sin saldo de OpenAI; **Pregunta con IA** solamente traduce la frase a filtros y nunca recibe resultados del ERP. KiwiKERP calcula importes por periodo, pendientes, validez, estados, conversión y el detalle de un presupuesto. Los resultados indican moneda, envío, validez y pedido asociado, y se detienen si la selección mezcla divisas. **Descargar respuesta en PDF** crea un informe con los criterios, totales y documentos justificativos. El asistente no envía, aprueba, cancela ni convierte documentos en pedidos. Consulte el [alcance completo](../quote-assistant-pilot.md).
+El botón **Consultar presupuestos** abre un asistente de solo lectura. **Consulta guiada** funciona sin saldo de OpenAI; **Pregunta con IA** solamente traduce la frase a filtros y nunca recibe resultados del ERP. KiwiKERP calcula importes por periodo, pendientes, validez, estados, conversión y el detalle de un presupuesto. Los resultados indican moneda, envío, validez y pedido asociado; cuando existen varias divisas, presenta un total independiente para cada una sin convertirlas ni sumarlas. **Descargar respuesta en PDF** conserva esa separación. El asistente no envía, aprueba, cancela ni convierte documentos en pedidos. Consulte el [alcance completo](../quote-assistant-pilot.md).
 
 ### 6.1 Crear o editar un presupuesto
 
@@ -522,6 +569,10 @@ El filtro adicional **Pendiente de** permite localizar directamente:
 Este filtro puede combinarse con el estado, el intervalo de fechas y la búsqueda general.
 
 El filtro **Plazo entrega** ayuda a planificar la preparación de albaranes y solo incluye pedidos confirmados que todavía tienen productos físicos pendientes. Los pedidos en **Borrador** no se tienen en cuenta, porque aún no representan un compromiso logístico. Permite consultar los pedidos **Vencidos**, los que **Vencen hoy**, los de los dos plazos configurados (por defecto, **Próximos 7 días** y **Próximos 30 días**) y los que están **Sin fecha prevista**. En la columna de entrega prevista, el rojo identifica retrasos, el ámbar fechas dentro del primer plazo configurado y el verde fechas posteriores.
+
+El botón **Asistente de Pedidos** abre un piloto de solo lectura. Permite consultar pedidos por periodo y cliente, pendientes de entregar o facturar, entregas previstas vencidas, completados y cancelados, y explicar un pedido línea por línea. En esa explicación se distinguen cantidad pedida, cancelada, entregada, facturada y pendiente, además de la política de facturación.
+
+La consulta guiada no consume API; la pregunta con IA sólo convierte la frase en filtros. El cliente se elige con el buscador habitual y KiwiKERP calcula cantidades e importes. Si el resultado contiene varias divisas, presenta un bloque independiente para cada moneda: no convierte ni suma importes incompatibles. Desde un resultado puede abrirse el pedido que lo justifica. El asistente no confirma, cancela, entrega ni factura. Consulte el [alcance completo](../order-assistant-pilot.md).
 
 ### 7.5 Planificación de entregas y avisos
 
@@ -1072,7 +1123,13 @@ Dentro de Datos maestros se encuentran, entre otras opciones:
 
 Al regresar a Ajustes desde cualquiera de estas tres pantallas, el sistema vuelve a abrir directamente la pestaña **Datos maestros**.
 
-### 11.1 Revisión inicial y proformas
+### 11.1 Repositorio documental
+
+Los administradores pueden revisar en **Configuración / Ajustes → Preferencias → Repositorio documental** la carpeta raíz donde KiwiKERP conserva adjuntos, documentos históricos, facturas archivadas, imágenes de productos y usuarios y recursos corporativos como el logotipo.
+
+La ruta debe ser absoluta y corresponder a una carpeta accesible para el usuario que ejecuta el backend. Guardar una ruta nueva **no mueve ni copia los archivos existentes**. Antes del cambio, conserve una copia de la ruta anterior, prepare o traslade los documentos de forma controlada, compruebe permisos de lectura y escritura y reinicie el backend. Después valide la consulta de un documento histórico, la descarga de un adjunto y la generación de un PDF. Si cualquiera de estas comprobaciones falla, restaure la ruta anterior; no genere documentos duplicados para compensarlo.
+
+### 11.2 Revisión inicial y proformas
 
 Desde un pedido confirmado, genere la proforma cuando necesite presentar el contenido previsto de la operación. Si existen proformas, **Ver proformas** permite consultar y descargar sus PDF. Compruebe la **Fecha prevista de entrega** que se muestra.
 
@@ -1115,6 +1172,18 @@ Si hay un error de comunicación durante la emisión, consulte la factura y su c
 ---
 
 ## Historial del manual
+
+### Versión 2.7 — 1 de septiembre de 2026
+
+- Asistente de instalación, identidad externa y variables de ubicación.
+- Configuración y validación de GestDoc, indicación en el pie y reinicio requerido al cambiar la ruta.
+- Verificación SMTP con sesión administrativa y diseño pendiente de dump y recreación de la base.
+
+### Versión 2.6 — 1 de septiembre de 2026
+
+- Trazabilidad comercial visual e imprimible desde Presupuestos, Pedidos, Albaranes y Facturas.
+- Asistente de Pedidos de solo lectura y totales de asistentes separados por moneda.
+- Selector de cliente coherente con el resto de Ventas.
 
 ### Versión 2.4 — 31 de agosto de 2026
 

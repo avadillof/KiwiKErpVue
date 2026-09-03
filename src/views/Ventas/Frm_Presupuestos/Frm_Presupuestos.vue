@@ -583,6 +583,7 @@
       :entityId="selectedQuote?.pkid"
       @update:visible="onAttachmentsVisible"
     />
+    <SalesTraceabilityDialog ref="traceabilityRef" />
     <OverlayPanel ref="creationDatePanel" appendTo="body"
       ><DateRangePicker v-model="creationDateRange"
     /></OverlayPanel>
@@ -618,6 +619,7 @@ import AttachmentsDialog from "@/components/attachments/AttachmentsDialog.vue";
 import DialogNotes from "@/components/dialogs/DialogNotes.vue";
 import Frm_PresupuestoForm from "./Frm_PresupuestoForm.vue";
 import QuoteAssistantDialog from "./QuoteAssistantDialog.vue";
+import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
 
 const router = useRouter();
 const confirm = useConfirm();
@@ -625,6 +627,7 @@ const toast = useToast();
 const tableRef = ref();
 const quoteFormRef = ref();
 const quoteAssistantRef = ref();
+const traceabilityRef = ref<any>();
 const menuTable = ref();
 const quoteMenu = ref();
 const selectedQuote = ref<any>(null);
@@ -836,6 +839,12 @@ const quoteMenuItems = computed(() => {
       command: () => requestQuoteAction("reopen"),
     });
   items.push({ separator: true });
+  items.push({
+    label: "Trazabilidad comercial",
+    icon: "pi pi-sitemap",
+    command: () =>
+      traceabilityRef.value?.open("QUOTE", selectedQuote.value?.pkid),
+  });
   items.push({
     label: "Notas",
     icon: "pi pi-comments",
