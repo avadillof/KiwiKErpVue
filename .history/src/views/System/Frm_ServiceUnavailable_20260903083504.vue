@@ -25,7 +25,7 @@
       <Button label="Reintentar conexión" icon="pi pi-refresh" class="service-unavailable-retry"
         :loading="isRetrying" @click="retry" />
 
-      <small><i class="pi pi-info-circle"></i> Comprueba que el servidor de KiwiKERP esté iniciado y vuelve a intentarlo. V2</small>
+      <small><i class="pi pi-info-circle"></i> Comprueba que el servidor de KiwiKERP esté iniciado y vuelve a intentarlo. V</small>
     </section>
   </main>
 </template>
