@@ -104,8 +104,8 @@
                     </div>
                     <div class="col-12 md:col-4 mb-2">
                       <FloatLabel variant="in">
-                        <Select v-model="formData.province" id="province" :options="provincias" maxlength="200"
-                          optionLabel="nombre" optionValue="nombre" class="w-full" size="small" filter />
+                        <Select v-model="formData.province" inputId="province" :options="provincias"
+                          optionLabel="nombre" optionValue="nombre" class="w-full province-select" size="small" filter />
                         <label for="province">Provincia</label>
                       </FloatLabel>
                     </div>
@@ -262,14 +262,16 @@
                     <div class="grid">
                       <div class="col-12 md:col-8">
                         <FloatLabel variant="in">
-                          <InputText v-model="formData.documentRoot" id="documentRoot" maxlength="1000" class="w-full" size="small" />
+                          <InputText v-model="formData.documentRoot" id="documentRoot" maxlength="1000" class="w-full"
+                            size="small" :disabled="documentRootManaged" />
                           <label for="documentRoot">Ruta raíz de documentos</label>
                         </FloatLabel>
                       </div>
                     </div>
-                    <div class="document-root-warning">
-                      <i class="pi pi-exclamation-triangle"></i>
-                      <span>Esta ruta contiene documentos históricos, facturas, adjuntos, imágenes y logotipos. Cambiarla no mueve los archivos existentes. Después de guardarla, reinicia el servidor de KiwiKERP para que las imágenes y los documentos se publiquen desde la nueva ubicación. Conserva la ruta anterior hasta comprobar que todo funciona correctamente.</span>
+                    <div class="document-root-warning" :class="{ 'document-root-managed': documentRootManaged }">
+                      <i :class="documentRootManaged ? 'pi pi-cloud' : 'pi pi-exclamation-triangle'"></i>
+                      <span v-if="documentRootManaged">Esta ruta pertenece a {{ deploymentLabel }} y está administrada por la infraestructura. Se muestra como información y no puede modificarse desde KiwiKERP.</span>
+                      <span v-else>Esta ruta contiene documentos históricos, facturas, adjuntos, imágenes y logotipos. Cambiarla no mueve los archivos existentes. Después de guardarla, reinicia el servidor de KiwiKERP para que las imágenes y los documentos se publiquen desde la nueva ubicación. Conserva la ruta anterior hasta comprobar que todo funciona correctamente.</span>
                     </div>
                   </template>
 
@@ -307,10 +309,15 @@
                 <h2>Datos maestros</h2>
                 <p>Configura la información utilizada de forma común por los distintos módulos de KiwiKERP.</p>
               </div>
-              <div class="master-summary"><i class="pi pi-database"></i><strong>3</strong><span>catálogos</span></div>
+              <div class="master-summary"><i class="pi pi-database"></i><strong>4</strong><span>catálogos</span></div>
             </div>
 
             <div class="master-grid">
+              <button type="button" class="master-card master-card--family" @click="router.push({name:'BankAccounts'})">
+                <span class="master-icon"><i class="pi pi-building-columns"></i></span>
+                <span class="master-copy"><strong>Cuentas bancarias</strong><small>Cuentas para compras y ventas, con comprobación del formato y control del IBAN.</small></span>
+                <span class="master-action">Gestionar <i class="pi pi-arrow-right"></i></span>
+              </button>
               <button type="button" class="master-card master-card--tax" @click="openSalesTax">
                 <span class="master-icon"><i class="pi pi-percentage"></i></span>
                 <span class="master-copy"><strong>Impuestos</strong><small>Tipos impositivos aplicables a productos, servicios, compras y ventas.</small></span>
@@ -448,6 +455,10 @@
 .settings-page :deep(.p-inputnumber),
 .settings-page :deep(.p-select),
 .settings-page :deep(.p-password) { border-radius: 8px; }
+.settings-page :deep(.p-floatlabel-in .province-select .p-select-label) {
+  padding-block-start: var(--p-floatlabel-in-input-padding-top);
+  padding-block-end: var(--p-floatlabel-in-input-padding-bottom);
+}
 .settings-page :deep(.p-inputtext:focus),
 .settings-page :deep(.p-select.p-focus) { border-color: var(--kiwi); box-shadow: 0 0 0 2px rgba(156, 193, 10, .13); }
 .settings-page :deep(.p-button:not(.p-button-text)) { border-color: var(--kiwi-dark); background: var(--kiwi-dark); }
@@ -481,6 +492,8 @@
 .master-note i { color: var(--kiwi-dark); }
 .document-root-warning { display:flex; align-items:flex-start; gap:9px; margin-top:12px; padding:12px 14px; border:1px solid #efd99d; border-radius:9px; color:#735b18; background:#fff9e8; font-size:.84rem; line-height:1.45; }
 .document-root-warning i { margin-top:2px; color:#a97800; }
+.document-root-warning.document-root-managed { border-color:#cfe3d8; color:#416456; background:#f2faf6; }
+.document-root-warning.document-root-managed i { color:#5e987d; }
 
 @media (max-width: 760px) {
   .settings-page { padding: 16px 14px 84px; }
@@ -521,6 +534,7 @@ import { useRoute } from 'vue-router';
 import { Frm_Ajustes } from '../../../services/Frm_Ajustes/Frm_Ajustes';
 import 'primeicons/primeicons.css';
 import Frm_FamiliasProductos from '../../Frm_Products/Frm_FamiliasProductos/Frm_FamiliaProductos.vue';
+import { getInstallationState } from '../../../services/Installation/installationService';
 
 
 const activeTab = ref<string>('0');
@@ -528,9 +542,15 @@ const route = useRoute();
 const router = useRouter();
 const { formData, loading, testingSmtp, testSmtpConnection, saveData, provincias, loadData, onUploadLogo, baseUrl, handleImageError, handleImageLoad, openUserDialog } = Frm_Ajustes();
 const familiasProductosRef = ref<InstanceType<typeof Frm_FamiliasProductos> | null>(null);
+const documentRootManaged = ref(false);
+const deploymentLabel = ref('KiwiKERP Cloud');
 
-onMounted(() => {
+onMounted(async () => {
   loadData();
+  const installation = await getInstallationState();
+  documentRootManaged.value = installation.documentRootManaged === true;
+  if (installation.deploymentMode === 'STANDARD_CLOUD') deploymentLabel.value = 'KiwiKERP Standard Cloud';
+  if (installation.deploymentMode === 'CUSTOM_CLOUD') deploymentLabel.value = 'KiwiKERP Custom Cloud';
 });
 
 

@@ -120,6 +120,11 @@ const routes = [
         component: Frm_SalesTax
       },
       {
+        path: '/configuracion/cuentas-bancarias',
+        name: 'BankAccounts',
+        component: () => import('./views/Frm_Main/Frm_Ajustes/Frm_BankAccounts.vue')
+      },
+      {
         path: '/security/Frm_Certificates',
         name: 'Certificates', // <--- Este nombre debe coincidir EXACTAMENTE con la 'ruta' en tu lista
         component: Frm_Certificates
@@ -150,7 +155,7 @@ router.beforeEach(async (to, from) => {
   // continúa hacia el login y una caída de red nunca activa el instalador.
   if (to.name === 'Login' || to.path === '/') {
     const installation = await getInstallationState();
-    if (installation.status === 'NEW' || installation.status === 'IN_PROGRESS') {
+    if (installation.status === 'NEW' || installation.status === 'DATABASE_EXISTS' || installation.status === 'IN_PROGRESS') {
       return { name: 'Installation' };
     }
     if (installation.status === 'ERROR') {

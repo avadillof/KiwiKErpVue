@@ -10,7 +10,7 @@
         <div class="installation-brand-copy">
           <span class="installation-eyebrow">Asistente de puesta en marcha</span>
           <h1>Todo preparado para empezar.</h1>
-          <p>Configuraremos una instalación limpia de KiwiKERP y los datos esenciales de tu empresa.</p>
+          <p>Configuraremos KiwiKERP y los datos esenciales de tu empresa.</p>
         </div>
 
         <ol class="installation-progress" aria-label="Progreso de la instalación">
@@ -34,14 +34,14 @@
             <span>Paso {{ currentStep + 1 }} de {{ steps.length }}</span>
             <h2>{{ steps[currentStep].title }}</h2>
           </div>
-          <span class="installation-secure"><i class="pi pi-shield"></i> Configuración segura</span>
+          <span class="installation-secure"><i :class="deploymentIcon"></i> {{ deploymentLabel }}</span>
         </header>
 
         <div class="installation-form-area">
           <section v-if="currentStep === 0" class="installation-welcome">
             <div class="installation-hero-icon"><i class="pi pi-box"></i></div>
             <h3>Nueva instalación de KiwiKERP</h3>
-            <p>El servidor creará la estructura de datos y cargará únicamente los catálogos necesarios para comenzar.</p>
+            <p>{{ preparationMessage }}</p>
             <ul class="installation-check-list">
               <li v-for="check in preflightChecks" :key="check.key" :class="`check-${check.status}`">
                 <i :class="checkIcon(check.status)"></i>
@@ -104,6 +104,7 @@
               <article><i class="pi pi-user"></i><div><span>Administrador</span><strong>{{ administrator.name }}</strong><small>{{ administrator.username }}</small></div></article>
               <article><i class="pi pi-database"></i><div><span>Datos iniciales</span><strong>Catálogos del sistema</strong><small>Sin datos operativos</small></div></article>
               <article><i class="pi pi-lock"></i><div><span>Identidad</span><strong>Clave externa protegida</strong><small>Volumen persistente</small></div></article>
+              <article><i :class="deploymentIcon"></i><div><span>Modalidad</span><strong>{{ deploymentLabel }}</strong><small>{{ documentRootSummary }}</small></div></article>
             </div>
           </section>
         </div>
@@ -121,6 +122,26 @@
       </section>
     </section>
   </main>
+
+  <Dialog v-model:visible="recreateDialogVisible" modal :closable="!recreatingDatabase" :dismissableMask="false"
+    header="Base de datos existente" class="installation-recreate-dialog" :style="{ width: 'min(560px, 94vw)' }">
+    <div class="installation-recreate-warning">
+      <i class="pi pi-exclamation-triangle"></i>
+      <div><strong>Esta operación eliminará la información actual.</strong>
+        <p>Antes de recrear la base, KiwiKERP generará una copia de seguridad. Si la copia falla, no se borrará nada.</p>
+      </div>
+    </div>
+    <label class="installation-confirm-label">Escribe <strong>RECREAR</strong> para confirmar
+      <InputText v-model="recreationConfirmation" autocomplete="off" :disabled="recreatingDatabase" fluid />
+    </label>
+    <template #footer>
+      <Button label="Cancelar" severity="secondary" text :disabled="recreatingDatabase"
+        @click="recreateDialogVisible = false" />
+      <Button label="Crear copia y recrear" icon="pi pi-database" class="installation-danger-action"
+        :loading="recreatingDatabase" :disabled="recreationConfirmation.trim().toUpperCase() !== 'RECREAR'"
+        @click="confirmDatabaseRecreation" />
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -129,17 +150,20 @@ import { useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
+import Dialog from 'primevue/dialog';
 import corporateLogo from '../../assets/logos/corporate.png';
 import {
   completeInstallation,
   checkInstallationDatabase,
   getInstallationState,
   initialiseDatabase,
+  recreateInstallationDatabase,
   saveAdministrator,
   saveCompany,
   type AdministratorInstallationData,
   type CompanyInstallationData
 } from '../../services/Installation/installationService';
+import type { InstallationState } from '../../services/Installation/installationService';
 
 const router = useRouter();
 const currentStep = ref(0);
@@ -147,12 +171,16 @@ const isSubmitting = ref(false);
 const errorMessage = ref('');
 const passwordConfirmation = ref('');
 const logoPreview = ref('');
+const installationState = ref<InstallationState>({ status: 'NEW' });
+const recreateDialogVisible = ref(false);
+const recreationConfirmation = ref('');
+const recreatingDatabase = ref(false);
 type CheckStatus = 'idle' | 'checking' | 'success' | 'error';
 const preflightRunning = ref(false);
 const preflightChecks = reactive([
   { key: 'backend', label: 'Servidor backend disponible', status: 'idle' as CheckStatus, message: 'Pendiente de comprobar' },
   { key: 'database', label: 'Base de datos accesible', status: 'idle' as CheckStatus, message: 'Pendiente de comprobar' },
-  { key: 'identity', label: 'Configuración inicial protegida', status: 'idle' as CheckStatus, message: 'Pendiente de comprobar' }
+  { key: 'identity', label: 'Instalación protegida', status: 'idle' as CheckStatus, message: 'Pendiente de comprobar' }
 ]);
 
 const steps = [
@@ -180,6 +208,18 @@ const canContinue = computed(() => {
 });
 
 const preflightHasError = computed(() => preflightChecks.some((check) => check.status === 'error'));
+const deploymentLabel = computed(() => {
+  if (installationState.value.deploymentMode === 'STANDARD_CLOUD') return 'Standard Cloud';
+  if (installationState.value.deploymentMode === 'CUSTOM_CLOUD') return 'Custom Cloud';
+  return 'Instalación en servidor propio';
+});
+const deploymentIcon = computed(() => installationState.value.documentRootManaged ? 'pi pi-cloud' : 'pi pi-server');
+const preparationMessage = computed(() => installationState.value.documentRootManaged
+  ? 'La infraestructura ha preparado los datos y el almacenamiento. Comprobaremos que todo está disponible antes de configurar tu empresa.'
+  : 'Comprobaremos la base de datos y el almacenamiento de este servidor antes de configurar tu empresa.');
+const documentRootSummary = computed(() => installationState.value.documentRootManaged
+  ? 'Almacenamiento administrado por KiwiKERP'
+  : 'Almacenamiento configurable por el administrador');
 
 function checkIcon(status: CheckStatus) {
   if (status === 'checking') return 'pi pi-spinner pi-spin';
@@ -200,20 +240,27 @@ async function runPreflight() {
   preflightChecks.forEach((check) => { check.status = 'idle'; check.message = 'Pendiente de comprobar'; });
 
   try {
-    setCheck(0, 'checking', 'Comprobando comunicación con Spring Boot…');
+    setCheck(0, 'checking', 'Comprobando que el servicio está disponible…');
     let installation = await getInstallationState();
+    installationState.value = installation;
     if (installation.status === 'ERROR') throw new Error(installation.message || 'El backend no está disponible.');
-    setCheck(0, 'success', 'Spring Boot responde correctamente.');
+    setCheck(0, 'success', 'El servicio de KiwiKERP responde correctamente.');
 
     setCheck(1, 'checking', 'Comprobando conexión y permisos…');
     const database = await checkInstallationDatabase();
+    if (database.requiresRecreation) {
+      setCheck(1, 'error', database.message);
+      recreateDialogVisible.value = true;
+      return;
+    }
     if (!database.ok) throw new Error(database.message);
     setCheck(1, 'success', database.message);
 
     setCheck(2, 'checking', 'Protegiendo la configuración inicial…');
     if (installation.status === 'NEW') installation = await initialiseDatabase();
+    installationState.value = installation;
     if (installation.status !== 'IN_PROGRESS') throw new Error(installation.message || 'No se pudo validar la identidad de instalación.');
-    setCheck(2, 'success', 'La configuración de esta instalación se ha guardado de forma segura.');
+    setCheck(2, 'success', 'Se ha creado una identidad segura para evitar que esta instalación pueda reiniciarse o sobrescribirse accidentalmente.');
   } catch (error) {
     const activeIndex = preflightChecks.findIndex((check) => check.status === 'checking');
     const message = error instanceof Error ? error.message : 'La comprobación no se pudo completar.';
@@ -221,6 +268,23 @@ async function runPreflight() {
     errorMessage.value = message;
   } finally {
     preflightRunning.value = false;
+  }
+}
+
+async function confirmDatabaseRecreation() {
+  if (recreationConfirmation.value.trim().toUpperCase() !== 'RECREAR' || recreatingDatabase.value) return;
+  recreatingDatabase.value = true;
+  errorMessage.value = '';
+  try {
+    const result = await recreateInstallationDatabase(recreationConfirmation.value);
+    if (!result.ok) throw new Error(result.message);
+    recreateDialogVisible.value = false;
+    recreationConfirmation.value = '';
+    await runPreflight();
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'No se pudo recrear la base de datos.';
+  } finally {
+    recreatingDatabase.value = false;
   }
 }
 

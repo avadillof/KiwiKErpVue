@@ -24,6 +24,7 @@ declare module 'vue' {
     Column: typeof import('primevue/column')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     ConnectionMonitor: typeof import('./src/components/shared/ConnectionMonitor.vue')['default']
+    CorporateLoader: typeof import('./src/components/shared/CorporateLoader.vue')['default']
     CustomerLookup: typeof import('./src/components/shared/CustomerLookup.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     DatePicker: typeof import('primevue/datepicker')['default']

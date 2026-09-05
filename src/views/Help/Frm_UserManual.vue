@@ -615,8 +615,9 @@
             </li>
             <li>
               En los atributos de venta, revise tarifa, posición fiscal,
-              condición de cobro y días de pago. La tarifa es obligatoria para
-              la nueva factura manual.
+              condición de cobro y días de pago. La tarifa es opcional en la
+              ficha del cliente, aunque deberá seleccionarla al crear una
+              factura manual.
             </li>
             <li>
               Escriba los acuerdos particulares en las condiciones de venta y
@@ -634,6 +635,13 @@
 
         <section id="articulos">
           <h2>Artículos y flujo de venta</h2>
+          <p>
+            En Ventas y Compras, el selector <b>Unidad de medida</b> agrupa las
+            opciones por categoría, sin un campo adicional. Al seleccionar un
+            artículo en un documento se consulta su configuración actual para
+            rellenar la nueva línea. Las líneas ya guardadas no se actualizan
+            automáticamente.
+          </p>
           <p>
             El artículo proporciona descripción, precio, impuesto y unidad de
             medida. Su configuración también decide si necesita entrega física y
@@ -2281,7 +2289,7 @@
             <b>Parámetros generales</b> —condiciones de venta, correo de
             presupuestos, recordatorio diario y plazos de entrega— de los
             <b>Parámetros VeriFactu</b>, donde se controla su activación, envío
-            automático, reintentos y código QR. El entorno permanece limitado a
+            automático, reintentos y código QR. Si VeriFactu está desactivado, sus campos quedan deshabilitados salvo el interruptor de activación y no son obligatorios para guardar; se conserva la configuración guardada. Al activarlo, se validan sus parámetros operativos. La identificación del desarrollador (ID 77, Andres Vadillo de la Fuente, NIF 50854156Y, KiwiKERP, versión V2) está precargada y es de solo lectura, también en el servidor. El número de instalación tampoco se modifica desde esta pantalla; las instalaciones nuevas parten de 1 y las existentes conservan el suyo. El entorno permanece limitado a
             <b>PRUEBAS</b>; los certificados y sus contraseñas no se guardan en
             este formulario.
           </p>
@@ -2453,8 +2461,8 @@
             </li>
             <li>
               En <b>Datos maestros</b>, compruebe impuestos, familias de
-              productos y certificados digitales. Al volver desde estas
-              pantallas se mantiene la pestaña Datos maestros.
+              productos, certificados digitales y cuentas bancarias. Al volver desde estas
+              pantallas se mantiene la pestaña Datos maestros. El mantenimiento de cuentas bancarias permite buscar, crear, editar y eliminar cuentas compartidas de clientes y proveedores, con descripción, sucursal opcional e IBAN. El IBAN se guarda en mayúsculas y sin espacios; se comprueban su formato general y dígitos de control, y para España los 24 caracteres. La comprobación local no confirma existencia, titularidad ni disponibilidad, ni todas las estructuras nacionales. Las cuentas vinculadas a otros registros no se pueden eliminar. Las cuentas existentes se validan al guardarlas y no se modifican automáticamente.
             </li>
             <li>
               En <b>Ventas → Ajustes de Ventas → Parámetros generales</b>,

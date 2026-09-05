@@ -24,6 +24,9 @@
         :loading="loading" lazy scrollable scrollHeight="flex" @row-select="onRowSelect" @sort="onSort"
         class="compact-table custom-header-table">
         <slot />
+        <template #loading>
+          <CorporateLoader />
+        </template>
         <template #empty>
           <div class="p-4 text-center text-gray-500">No se encontraron registros</div>
         </template>
@@ -74,6 +77,7 @@
 import { ref, computed, onMounted } from 'vue';
 import axios, { type AxiosRequestConfig } from 'axios';
 import DataTable from 'primevue/datatable';
+import CorporateLoader from './CorporateLoader.vue';
 import Paginator from 'primevue/paginator';
 import Select from 'primevue/select'; // Importación correcta v4
 import Message from 'primevue/message';
@@ -415,6 +419,8 @@ onMounted(() => {
   position: absolute !important;
   inset: 0 !important;
   z-index: 5 !important;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(2px);
 }
 
 :deep(.p-datatable) {

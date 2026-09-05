@@ -50,7 +50,7 @@ async function retry() {
   const installation = await getInstallationState();
   isRetrying.value = false;
 
-  if (installation.status === 'NEW' || installation.status === 'IN_PROGRESS') {
+  if (installation.status === 'NEW' || installation.status === 'DATABASE_EXISTS' || installation.status === 'IN_PROGRESS') {
     await router.replace({ name: 'Installation' });
     return;
   }

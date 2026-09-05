@@ -412,12 +412,12 @@
 
                             <div class="grid">
 
-                                <!-- UNIDAD DE MEDIDA -->
+<!-- UNIDAD DE MEDIDA -->
                                 <div class="col-12 md:col-3">
 
                                     <FloatLabel variant="on">
 
-                                        <Select id="uomSales" v-model="product.uomId" :options="units"
+                                        <Select id="uomSales" v-model="product.uomId" :options="groupedUnits" optionGroupLabel="label" optionGroupChildren="items"
                                             optionLabel="description" optionValue="pkid" class="w-full" filter />
 
                                         <label for="uomSales">
@@ -505,15 +505,15 @@
 
                             <div class="grid">
 
-                                <!-- UNIDAD DE MEDIDA -->
+<!-- UNIDAD DE MEDIDA -->
                                 <div class="col-12 md:col-3">
 
                                     <FloatLabel variant="on">
 
-                                        <Select id="uomPurchases" v-model="product.uomIdPurchases" :options="units"
+                                        <Select id="uomPurchases" v-model="product.uomIdPurchases" :options="groupedUnits" optionGroupLabel="label" optionGroupChildren="items"
                                             optionLabel="description" optionValue="pkid" class="w-full" filter />
 
-                                        <label for="uomSales">
+                                        <label for="uomPurchases">
                                             Unidad de medida
                                         </label>
 
@@ -739,7 +739,7 @@ const createProduct = (): Product => ({
 
     purchasesDescription: '',
 
-    dateUp: null,
+    dateUp: new Date(),
 
     salePrice: 0,
     saleTaxId: null,
@@ -758,6 +758,17 @@ const createProduct = (): Product => ({
 
 
 const product = ref<Product>(createProduct());
+const groupedUnits = computed(() => {
+    const groups = new Map<number | null, { label: string; items: any[] }>();
+    units.value.forEach(unit => {
+        const key = unit.categoryId ?? null;
+        if (!groups.has(key)) {
+            groups.set(key, { label: unit.categoryDescription || 'Sin categoría', items: [] });
+        }
+        groups.get(key)!.items.push(unit);
+    });
+    return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+});
 
 
 type ErrorKey =

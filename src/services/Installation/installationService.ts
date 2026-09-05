@@ -1,5 +1,6 @@
 export type InstallationStatus =
     | 'NEW'
+    | 'DATABASE_EXISTS'
     | 'IN_PROGRESS'
     | 'COMPLETED'
     | 'ERROR'
@@ -11,6 +12,10 @@ export interface InstallationState {
     installationId?: string;
     schemaVersion?: string;
     message?: string;
+    deploymentMode?: 'STANDARD_CLOUD' | 'CUSTOM_CLOUD' | 'ON_PREMISE';
+    documentRootManaged?: boolean;
+    documentRoot?: string;
+    configurationRequired?: boolean;
 }
 
 export interface CompanyInstallationData {
@@ -40,6 +45,8 @@ export interface InstallationCheckResult {
     ok: boolean;
     message: string;
     value?: string;
+    databaseState?: 'EMPTY' | 'PREPARED' | 'RECREATE_REQUIRED';
+    requiresRecreation?: boolean;
 }
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || '';
@@ -77,6 +84,14 @@ export function initialiseDatabase(): Promise<InstallationState> {
 
 export function checkInstallationDatabase(): Promise<InstallationCheckResult> {
     return request<InstallationCheckResult>('/checks/database', { method: 'POST' });
+}
+
+export function recreateInstallationDatabase(confirmation: string): Promise<InstallationCheckResult> {
+    return request<InstallationCheckResult>('/database/recreate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation })
+    });
 }
 
 export function saveCompany(data: CompanyInstallationData): Promise<InstallationState> {

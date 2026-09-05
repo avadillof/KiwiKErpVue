@@ -1,0 +1,25 @@
+import {createApp} from 'vue';
+import {createPinia} from 'pinia';
+import {createRouter,createMemoryHistory} from 'vue-router';
+import PrimeVue from 'primevue/config';
+import ToastService from 'primevue/toastservice';
+import InputText from 'primevue/inputtext';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import axios from 'axios';
+import Page from '../src/views/Frm_Main/Frm_Ajustes/Frm_BankAccounts.vue';
+import Theme from '../src/theme/KiwiKTheme';
+import {useAuthStore} from '../src/stores/authStore';
+import 'primeicons/primeicons.css';import 'primeflex/primeflex.css';import '../src/assets/styles/global.css';
+const rows=[{id:1,description:'Cuenta de ejemplo',sucursal:'Oficina principal',ibam:'ES9121000418450200051332'}];
+axios.defaults.adapter=async config=>{
+ if(!String(config.url).includes('/WebBankAccounts'))throw new Error('Vista previa: petición no permitida');
+ const data=config.method==='get'?{content:rows,totalElements:rows.length}:config.method==='post'?JSON.parse(config.data):null;
+ return {data,status:200,statusText:'OK',headers:{},config};
+};
+const app=createApp(Page);const pinia=createPinia();app.use(pinia);
+const auth=useAuthStore();auth.isAuthenticated=true;auth.portalSession='preview-only';
+app.use(createRouter({history:createMemoryHistory(),routes:[{path:'/',component:Page}]}));
+app.use(PrimeVue,{theme:{preset:Theme}});app.use(ToastService);
+app.component('InputText',InputText);app.component('IconField',IconField);app.component('InputIcon',InputIcon);
+app.mount('#app');

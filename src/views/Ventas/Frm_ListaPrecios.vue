@@ -81,7 +81,7 @@ const blank=()=>({id:null as number|null,version:0,code:'',description:'',curren
 const form=reactive(blank());
 const savedForm=ref('');
 const hasUnsavedChanges=computed(()=>!!form.id && JSON.stringify(form)!==savedForm.value);
-const scopes=[{label:'Todos',value:'ALL'},{label:'Familia',value:'FAMILY'},{label:'Producto',value:'PRODUCT'}],calculations=[{label:'Precio fijo',value:'FIXED'},{label:'Descuento',value:'DISCOUNT'}];
+const scopes=[{label:'Familia',value:'FAMILY'},{label:'Producto',value:'PRODUCT'},{label:'Todos',value:'ALL'}],calculations=[{label:'Precio fijo',value:'FIXED'},{label:'Descuento',value:'DISCOUNT'}];
 const ruleCount=computed(()=>(catalog.value?.rates||[]).reduce((n:number,r:any)=>n+Number(r.ruleCount),0));
 function accept(data:any){catalog.value=data;Object.assign(settings,data.settings);baseConfigured.value=data.settings.baseCurrencyId!=null;if(!baseConfigured.value)configExpanded.value=true;}
 async function load(){loading.value=true;error.value='';try{const {data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebSalesPricingCatalog`,auth.portalRequestConfig());accept(data)}catch(e){error.value=pricingErrorMessage(e)}finally{loading.value=false}}

@@ -121,8 +121,7 @@
                     <div class="grid">
                         <div class="col-12 md:col-6 mb-2">
                             <FloatLabel variant="in">
-                                <InputText v-model="entity.address" id="address" maxlength="145" class="w-full"
-                                    size="small" />
+                                <InputText v-model="entity.address" id="address" maxlength="145" class="w-full" />
                                 <label for="address">Calle / Avenida</label>
                             </FloatLabel>
                         </div>
@@ -131,8 +130,7 @@
 
                         <div class="col-12 md:col-6 mb-2">
                             <FloatLabel variant="in">
-                                <InputText v-model="entity.address2" id="address2" maxlength="145" class="w-full"
-                                    size="small" />
+                                <InputText v-model="entity.address2" id="address2" maxlength="145" class="w-full" />
                                 <label for="address2">Otra Dirección</label>
                             </FloatLabel>
                         </div>
@@ -143,28 +141,28 @@
                         <div class="col-12 md:col-3 mb-2">
                             <FloatLabel variant="in">
                                 <Select v-model="entity.province" id="province" :options="provincias" maxlength="200"
-                                    optionLabel="nombre" optionValue="nombre" class="w-full" size="small" filter />
+                                    optionLabel="nombre" optionValue="nombre" class="w-full" filter />
                                 <label for="province">Provincia</label>
                             </FloatLabel>
                         </div>
                         <div class="col-12 md:col-1 mb-2">
                             <FloatLabel variant="in">
-                                <InputText v-model="entity.zipcode" id="zipCode" maxlength="20" class="w-full"
-                                    size="small" /><label for="zipCode">CP</label>
+                                <InputText v-model="entity.zipcode" id="zipCode" maxlength="20" class="w-full" /><label
+                                    for="zipCode">CP</label>
                             </FloatLabel>
                         </div>
 
                         <div class="col-12 md:col-4 mb-2">
                             <FloatLabel variant="in">
-                                <InputText v-model="entity.city" id="city" maxlength="200" class="w-full"
-                                    size="small" /><label for="city">Localidad</label>
+                                <InputText v-model="entity.city" id="city" maxlength="200" class="w-full" /><label
+                                    for="city">Localidad</label>
                             </FloatLabel>
                         </div>
 
                         <div class="col-12 md:col-2 mb-2">
                             <FloatLabel variant="in">
                                 <Select v-model="entity.country" id="country" :options="countries" maxlength="120"
-                                    optionLabel="nombre" optionValue="nombre" class="w-full" size="small" filter />
+                                    optionLabel="nombre" optionValue="nombre" class="w-full" filter />
                                 <label for="country">Pais</label>
                             </FloatLabel>
                         </div>
@@ -172,8 +170,8 @@
 
                         <div class="col-12 md:col-2 mb-2">
                             <FloatLabel variant="in">
-                                <InputText v-model="entity.phone" id="phone" maxlength="75" class="w-full"
-                                    size="small" /><label for="phone">Teléfono</label>
+                                <InputText v-model="entity.phone" id="phone" maxlength="75" class="w-full" /><label
+                                    for="phone">Teléfono</label>
                             </FloatLabel>
                         </div>
                     </div>
@@ -612,6 +610,7 @@ import PaymentTermCreateDialog from '../Frm_AjustesVentas/PaymentTermCreateDialo
 /* =========================
    HELPERS
 ========================= */
+const emit = defineEmits<{ saved: [] }>();
 const toast = useToast();
 const { setRef, scrollToError } = useFormValidator();
 const companyStore = useCompanyStore();
@@ -801,7 +800,7 @@ const createEntity = (): Entity => ({
     active: true,
     isclient: false,
     isprove: false,
-    dateUp: null,
+    dateUp: new Date(),
     address: '',
     address2: '',
     province: '',
@@ -945,10 +944,6 @@ const validate = async (): Promise<boolean> => {
             activeTab.value = "0";
         }
 
-        if (entity.value.salesAttributes.salesTarifaId == null) {
-            setError('tarifasventas', 'Obligatorio para Clientes');
-            activeTab.value = "0";
-        }
         if (!entity.value.salesAttributes.sepa?.trim()) {
 
         } else if (!HelperString.isValidBic(entity.value.salesAttributes.sepa)) {
@@ -1098,6 +1093,7 @@ const save = async () => {
             life: companyStore.companyInfo.toastDuration ?? 3000
         });
 
+        emit('saved');
         visible.value = false;
 
     } catch (error: any) {

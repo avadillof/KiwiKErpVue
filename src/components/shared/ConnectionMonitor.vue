@@ -1,8 +1,7 @@
 <template>
   <Teleport to="body"><div v-if="connectionLost || activeOperation" class="connection-overlay" role="alertdialog" aria-modal="true" aria-labelledby="operation-title" @keydown.stop.prevent>
     <div class="connection-card">
-      <img src="../../assets/logos/LogTras.png" alt="Logo" class="connection-logo" />
-      <i class="pi pi-spin pi-spinner"></i>
+      <CorporateLoader label="" aria-hidden="true" />
       <h2 id="operation-title">{{ connectionLost ? 'Esperando conexión...' : activeOperation?.title }}</h2>
       <p>{{ connectionLost ? 'Intentando reconectar con el servidor.' : activeOperation?.message }}</p>
     </div>
@@ -11,6 +10,7 @@
 
 <script setup>
     import { watch, onUnmounted } from 'vue';
+    import CorporateLoader from './CorporateLoader.vue';
     import { activeOperation } from '../../services/composables/useOperationBlocker';
     import { useConnectionMonitor } from '../../services/composables/Sv_MonitorConnectionBack.ts';
     const { connectionLost } = useConnectionMonitor(false);

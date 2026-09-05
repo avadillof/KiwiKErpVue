@@ -411,6 +411,8 @@ El artículo proporciona descripción, precio, impuesto y unidad de medida. Su c
 
 ### Configurar el recorrido del artículo
 
+En Ventas y Compras, el selector **Unidad de medida** agrupa las opciones por su categoría (unidades, peso, tiempo, distancia o volumen). Puede elegir la unidad del producto sin un campo adicional. La selección de un artículo en un documento consulta su configuración actual antes de rellenar la nueva línea; las líneas ya guardadas no se actualizan automáticamente.
+
 1. Abra el artículo desde **Ventas → Artículos** y revise sus datos comerciales.
 2. Seleccione el tipo logístico: **Almacenable**, **Consumible** o **Servicio**. Un consumible puede requerir albarán aunque no tenga control estricto de existencias.
 3. Revise el tipo comercial compatible. Su configuración propone el flujo de venta.
@@ -1001,7 +1003,7 @@ La opción **Ver / Imprimir factura** se habilita con VeriFactu en **Aceptada** 
 
 ### 9.8 Ajustes de Ventas y VeriFactu
 
-**Ajustes de Ventas** se organiza en dos pestañas. **Parámetros generales** contiene las condiciones generales aplicables a los nuevos documentos y el cuerpo predeterminado del correo de presupuestos. **Parámetros VeriFactu** configura si VeriFactu está activo, el envío automático, los reintentos, la presentación del QR, los datos identificativos de KiwiKERP y el número de instalación. El entorno está limitado a **PRUEBAS** y el backend comprueba además que el destino sea el portal de preproducción de la AEAT.
+**Ajustes de Ventas** se organiza en dos pestañas. **Parámetros generales** contiene las condiciones generales aplicables a los nuevos documentos y el cuerpo predeterminado del correo de presupuestos. **Parámetros VeriFactu** configura si VeriFactu está activo, el envío automático, los reintentos, la presentación del QR y muestra la identificación de KiwiKERP y el número de instalación. Si VeriFactu está desactivado, todos sus campos quedan deshabilitados salvo el interruptor de activación y no son obligatorios para guardar los ajustes de Ventas; se conserva la configuración guardada. Al activarlo, se validan sus parámetros operativos. La identificación del desarrollador (ID 77, Andres Vadillo de la Fuente, NIF 50854156Y, KiwiKERP, versión V2) está precargada y es de solo lectura, también en el servidor. El número de instalación tampoco se modifica desde esta pantalla; las instalaciones nuevas parten de 1 y las existentes conservan el suyo. El entorno está limitado a **PRUEBAS** y el backend comprueba además que el destino sea el portal de preproducción de la AEAT.
 
 En **Parámetros generales → Numeración de facturas** se define el prefijo de la serie. Con el valor `KW`, una factura emitida en 2026 se numera como `FC-KW-2026/0001`. La serie se aplica al emitir y queda incorporada al número fiscal, al PDF, a Facturae y al registro VeriFactu. Cambiarla no modifica facturas ya emitidas. En pruebas puede utilizarse una serie nueva para evitar colisiones con registros enviados anteriormente; no debe eliminarse ni renumerarse una factura definitiva en producción.
 
@@ -1120,8 +1122,11 @@ Dentro de Datos maestros se encuentran, entre otras opciones:
 - Impuestos.
 - Certificados digitales.
 - Familias de productos.
+- Cuentas bancarias.
 
-Al regresar a Ajustes desde cualquiera de estas tres pantallas, el sistema vuelve a abrir directamente la pestaña **Datos maestros**.
+Al regresar a Ajustes desde cualquiera de estas pantallas, el sistema vuelve a abrir directamente la pestaña **Datos maestros**.
+
+**Cuentas bancarias:** permite buscar, crear, editar y eliminar las cuentas compartidas utilizadas por clientes y proveedores. Introduzca una descripción, la sucursal (opcional) y el IBAN. El IBAN se guarda sin espacios y en mayúsculas; se comprueban su formato general y dígitos de control, y para España la longitud de 24 caracteres. Esta comprobación local no confirma existencia, titularidad ni disponibilidad, ni verifica todas las estructuras nacionales. No se pueden eliminar cuentas vinculadas a otros registros. Las cuentas ya existentes no se modifican automáticamente; se validan al guardarlas.
 
 ### 11.1 Repositorio documental
 
