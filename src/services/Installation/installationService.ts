@@ -3,8 +3,7 @@ export type InstallationStatus =
     | 'DATABASE_EXISTS'
     | 'IN_PROGRESS'
     | 'COMPLETED'
-    | 'ERROR'
-    | 'LEGACY';
+    | 'ERROR';
 
 export interface InstallationState {
     status: InstallationStatus;
@@ -68,8 +67,12 @@ export async function getInstallationState(): Promise<InstallationState> {
             headers: { Accept: 'application/json' }
         });
 
-        // Las instalaciones anteriores al asistente no tienen este endpoint.
-        if (response.status === 404) return { status: 'LEGACY' };
+        if (response.status === 404) {
+            return {
+                status: 'ERROR',
+                message: 'El servicio de KiwiKERP no está disponible o no es compatible.'
+            };
+        }
         if (!response.ok) throw new Error(`Estado ${response.status}`);
         return (await response.json()) as InstallationState;
     } catch {

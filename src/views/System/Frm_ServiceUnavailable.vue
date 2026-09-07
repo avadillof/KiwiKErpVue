@@ -54,7 +54,7 @@ async function retry() {
     await router.replace({ name: 'Installation' });
     return;
   }
-  if (installation.status === 'COMPLETED' || installation.status === 'LEGACY') {
+  if (installation.status === 'COMPLETED') {
     await router.replace({ name: 'Login' });
     return;
   }

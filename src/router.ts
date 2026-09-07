@@ -151,8 +151,8 @@ export const router = createRouter({
 router.beforeEach(async (to, from) => {
   const authStore = useAuthStore();
 
-  // Sólo se consulta antes del acceso. Un backend antiguo sin el endpoint
-  // continúa hacia el login y una caída de red nunca activa el instalador.
+  // Sólo se consulta antes del acceso. Una caída de red o un backend sin el
+  // endpoint de instalación nunca deben permitir que se muestre el login.
   if (to.name === 'Login' || to.path === '/') {
     const installation = await getInstallationState();
     if (installation.status === 'NEW' || installation.status === 'DATABASE_EXISTS' || installation.status === 'IN_PROGRESS') {
@@ -165,7 +165,7 @@ router.beforeEach(async (to, from) => {
 
   if (to.meta.installationRoute) {
     const installation = await getInstallationState();
-    if (installation.status === 'COMPLETED' || installation.status === 'LEGACY') {
+    if (installation.status === 'COMPLETED') {
       return { name: 'Login' };
     }
   }
