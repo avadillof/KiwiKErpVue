@@ -233,7 +233,7 @@ const formatQuantity = (value?: number | null) => new Intl.NumberFormat('de-DE',
 </script>
 
 <style scoped>
-.sales-page { --kiwi:#9cc10a; --kiwi-dark:#648506; width:100%; background:#f7f8fa; min-height:calc(100dvh - 66px); box-sizing:border-box; padding:18px 16px 72px; display:flex; flex-direction:column; }
+.sales-page { --kiwi:#9cc10a; --kiwi-dark:#648506; width:100%; background:rgba(247,248,250,.58); min-height:calc(100dvh - 66px); box-sizing:border-box; padding:18px 16px 72px; display:flex; flex-direction:column; }
 .page-header { position:relative; isolation:isolate; overflow:hidden; background:#fff; padding:15px 20px; border-radius:15px; border:1px solid #e3e8d2; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; gap:24px; box-shadow:0 6px 18px rgba(31,41,55,.055); }
 .page-header::after { content:""; position:absolute; z-index:0; width:150px; height:150px; right:42px; top:50%; transform:translateY(-50%); background:url('/logos/logo512.png') center/contain no-repeat; filter:grayscale(1); opacity:.075; pointer-events:none; }
 .page-header > * { position:relative; z-index:1; }

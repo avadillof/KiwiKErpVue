@@ -2397,7 +2397,7 @@ const openInvoicePdf = (item: any) => {
   --pink: #648506;
   min-height: calc(100dvh - 66px);
   padding: 16px 14px 72px;
-  background: #f7f8fa;
+  background: rgba(247, 248, 250, .58);
   color: #243044;
 }
 .hero {

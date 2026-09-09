@@ -1175,7 +1175,7 @@ const stateSeverity = (state = "") => {
   --kiwi: #9cc10a;
   --kiwi-dark: #648506;
   width: 100%;
-  background: #f7f8fa;
+  background: rgba(247, 248, 250, .58);
   height: auto;
   min-height: calc(100dvh - 66px);
   box-sizing: border-box;

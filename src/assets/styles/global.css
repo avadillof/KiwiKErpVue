@@ -14,11 +14,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  background-image: url('/logos/wallpaper.jpg'); /* Tu fondo corporativo */
+  background-color: #f4f6f3;
+  background-image: url('/logos/backtransparent.png');
   background-position: center;
   background-repeat: no-repeat;
   background-size:cover;
   background-attachment: fixed;
+}
+
+@media (max-width: 760px) {
+  body {
+    background-position: 62% center;
+    background-attachment: scroll;
+  }
 }
 
 

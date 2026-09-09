@@ -1,4 +1,4 @@
-.service-unavailable-page { --kiwi:#9cc10a; --kiwi-ink:#253000; display:grid; min-height:100dvh; place-items:center; padding:80px 24px 28px; color:#263246; background:linear-gradient(145deg,rgba(246,249,240,.7),rgba(235,241,226,.56)),url('/logos/wallpaper.jpg') center/cover fixed no-repeat; }
+.service-unavailable-page { --kiwi:#9cc10a; --kiwi-ink:#253000; display:grid; min-height:100dvh; place-items:center; padding:80px 24px 28px; color:#263246; background:linear-gradient(145deg,rgba(246,249,240,.58),rgba(235,241,226,.46)),url('/logos/backtransparent.png') center/cover fixed no-repeat; }
 .service-unavailable-page * { box-sizing:border-box; }
 .service-unavailable-card { position:relative; width:min(560px,100%); padding:82px 54px 42px; border:1px solid rgba(211,219,204,.94); border-radius:26px; text-align:center; background:#fff; box-shadow:0 28px 75px rgba(42,55,25,.16); }
 .service-unavailable-card::before { position:absolute; top:0; right:0; left:0; height:7px; border-radius:26px 26px 0 0; content:''; background:linear-gradient(90deg,#648506,var(--kiwi)); }

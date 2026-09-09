@@ -130,7 +130,7 @@
 </template>
 
 <style scoped>
-.products-page { --kiwi: #9cc10a; --kiwi-dark: #648506; display: flex; width: 100%; min-height: calc(100dvh - 66px); flex-direction: column; padding: 18px 16px 72px; color: #243044; background: #f7f8fa; }
+.products-page { --kiwi: #9cc10a; --kiwi-dark: #648506; display: flex; width: 100%; min-height: calc(100dvh - 66px); flex-direction: column; padding: 18px 16px 72px; color: #243044; background: rgba(247,248,250,.58); }
 .products-header { position:relative; isolation:isolate; overflow:hidden; display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 18px; padding: 15px 20px; border: 1px solid #e3e8d2; border-radius: 15px; background:#fff; box-shadow: 0 6px 18px rgba(31,41,55,.055); }
 .products-header::after { content:""; position:absolute; z-index:0; width:300px; height:300px; right:20px; top:50%; transform:translateY(-50%); background:url('/logos/logo512.png') center/contain no-repeat; filter:grayscale(1); opacity:.075; pointer-events:none; }
 .products-header > * { position:relative; z-index:1; }
