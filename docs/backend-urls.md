@@ -45,3 +45,20 @@ cliente Axios. `npm run build` comprueba TypeScript y el bundle.
 Tras desplegar, verificar en Red: catálogo y CRUD de clientes, estado de
 instalación, notas y adjuntos. Las nativas deben llegar a Spring con `/api`;
 las legacy, sin él. Repetir con una base absoluta en la instalación tradicional.
+
+## Caché del frontend
+
+El Dockerfile instala `nginx.conf` y valida su sintaxis con `nginx -t` al construir
+la imagen. El HTML, incluido el `index.html` servido al abrir `/`, lleva
+`Cache-Control: no-store, no-cache, must-revalidate`. Los recursos de `/assets/`
+con hash usan caché de un año e `immutable`; los archivos sin versión revalidan.
+Los errores 404 de assets no reciben la cabecera de caché de un año.
+
+Reconstruir la imagen y recrear el contenedor para aplicar esta configuración.
+Comprobar con `curl -I` las cabeceras de `/`, `/index.html` y un JS real enlazado
+desde el HTML. Las pestañas ya abiertas no se recargan automáticamente.
+
+La primera actualización puede requerir una recarga forzada para clientes que
+ya tengan el HTML antiguo almacenado. Si Cloudflare tiene reglas que fuerzan
+caché de HTML, ajustarlas para respetar estas cabeceras y purgar el HTML anterior.
+Esta configuración no modifica Cloudflare, Traefik ni el servidor de desarrollo.
