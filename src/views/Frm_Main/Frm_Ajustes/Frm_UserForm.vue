@@ -110,7 +110,7 @@
 </style>
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import {computed, ref } from 'vue';
 import axios from 'axios';
 import { useToast } from 'primevue/usetoast'; // Importa el hook de Toast
@@ -179,10 +179,9 @@ const groupOptions = ref<DropdownOption[]>([]);
 // Ahora open recibe un ID opcional (number | null)
 const open = async (id: number | null = null) => {
     try {
-        const baseUrl = import.meta.env.VITE_API_URL;
         
         // 1. Cargamos los grupos (esto siempre es necesario)
-        const groupsRes = await axios.get(`${baseUrl}/WebGetGroups`);
+        const groupsRes = await axios.get(backendUrl(`/WebGetGroups`));
         groupOptions.value = Array.isArray(groupsRes.data) 
             ? groupsRes.data.map((g: any) => ({ label: g.descriptionEs, value: g.id })) 
             : [];
@@ -191,7 +190,7 @@ const open = async (id: number | null = null) => {
         if (id) {
             
             
-            const userRes = await axios.get(`${baseUrl}/WebGetUserById?pkid=${id}`);
+            const userRes = await axios.get(backendUrl(`/WebGetUserById?pkid=${id}`));
             
             const user = userRes.data;
 
@@ -276,7 +275,7 @@ const save = async () => {
 
     // 4. Envío al servidor
     try {
-        await axios.post(`${import.meta.env.VITE_API_URL}/WebSaveUser`, dataToSend);
+        await axios.post(backendUrl(`/WebSaveUser`), dataToSend);
         toast.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario guardado correctamente', life: companyStore.companyInfo.toastDuration ?? 3000 });
         visible.value = false;
         emit('saved');
@@ -312,8 +311,7 @@ const save = async () => {
 
 const generateCode = async () => {
     try {
-        const baseUrl = import.meta.env.VITE_API_URL;
-        const res = await axios.get(`${baseUrl}/WebGenerateUserCode`);
+        const res = await axios.get(backendUrl(`/WebGenerateUserCode`));
         // Asignamos el código generado al modelo
         formData.value.userDsCode = res.data;
     } catch (error) {
@@ -379,7 +377,7 @@ const getProfilePhotoUrl = () => {
     if (formData.value.pkid > 0) {
 
         const timestamp = new Date().getTime();
-        return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`;
+        return backendUrl(`/gestdoc/users/${formData.value.pkid}/photoPerfil.jpg?t=${timestamp}`);
 
 
     }

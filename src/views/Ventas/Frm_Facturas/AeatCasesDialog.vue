@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {computed,onUnmounted,ref,watch} from 'vue';
 import axios from 'axios';
 import Button from 'primevue/button';
@@ -71,7 +72,7 @@ import Message from 'primevue/message';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
 import {blockOperation,unblockOperation} from '@/services/composables/useOperationBlocker';
-const base=`${import.meta.env.VITE_API_URL}/WebSalesAeatCases`;
+const base=backendUrl(`/WebSalesAeatCases`);
 const visible=ref(false),tab=ref('list'),error=ref(''),loading=ref(false),searching=ref(false),preparing=ref(false),uploading=ref(false),downloading=ref(false);
 const cases=ref<any[]>([]),activeCase=ref<any>(null),candidates=ref<any[]>([]),selectedInvoices=ref<any[]>([]),page=ref(0),totalPages=ref(0);
 const fromDate=ref<Date|null>(new Date(new Date().getFullYear(),0,1)),toDate=ref<Date|null>(new Date()),deadline=ref<Date|null>(null),form=ref({reference:'',notes:''});

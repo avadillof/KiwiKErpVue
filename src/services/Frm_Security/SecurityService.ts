@@ -1,6 +1,4 @@
-const API = import.meta.env.VITE_API_URL
-
-
+import { backendUrl } from '@/services/backendUrl';
 /**
  * ============================================
  * CARGAR PERMISOS DE UNA SECCIÓN
@@ -13,7 +11,7 @@ export async function getSecurityAttributesUser(
 
     const response = await fetch(
 
-        `${API}/WebGetSecurityAttributesUser`,
+        backendUrl(`/WebGetSecurityAttributesUser`),
 
         {
 
@@ -50,7 +48,7 @@ export async function updatePermissionUser(
     active: boolean
 ) {
 
-    await fetch(`${API}/WebUpdateSecurityPermission`, {
+    await fetch(backendUrl(`/WebUpdateSecurityPermission`), {
 
         method: 'POST',
 
@@ -76,7 +74,7 @@ export async function updateModuleUser(
     active: boolean
 ) {
 
-    await fetch(`${API}/WebUpdateSecurityModuleUser`, {
+    await fetch(backendUrl(`/WebUpdateSecurityModuleUser`), {
 
         method: 'POST',
 

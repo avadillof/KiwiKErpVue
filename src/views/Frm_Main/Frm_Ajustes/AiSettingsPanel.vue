@@ -204,6 +204,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import axios from "axios";
 import Button from "primevue/button";
@@ -232,7 +233,7 @@ const dirty = computed(
       form.value.enabled !== saved.value.enabled ||
       form.value.model !== saved.value.model),
 );
-const endpoint = `${import.meta.env.VITE_API_URL}/WebAiSettings`;
+const endpoint = backendUrl(`/WebAiSettings`);
 const secureTransport = (() => {
   try {
     const api = new URL(endpoint, window.location.href);

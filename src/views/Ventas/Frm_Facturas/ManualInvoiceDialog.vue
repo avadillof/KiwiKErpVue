@@ -35,6 +35,7 @@
   <PriceRecalculationDialog :visible="pricing.confirmVisible.value" :busy="pricing.batchBusy.value" :canKeep="pricing.canKeep.value" :error="pricing.error.value" @cancel="pricing.cancel" @keep="pricing.keep" @recalculate="pricing.recalculate"/>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {computed,reactive,ref,onUnmounted,nextTick} from 'vue';
 import axios from 'axios';
 import PriceRecalculationDialog from '@/components/shared/PriceRecalculationDialog.vue';
@@ -50,7 +51,7 @@ const linesTable=ref<any>();
 const catalogId=(value:any):number|null=>value!=null&&value!==''&&Number.isInteger(Number(value))&&Number(value)>0?Number(value):null;
 const rates=ref<any[]>([]),paymentTerms=ref<any[]>([]),catalogLoading=ref(false);
 const currencyCode=computed(()=>rates.value.find(rate=>rate.pkid===form.salesTarifaId)?.currencyCode||defaults.value?.currencyCode||'EUR');
-async function loadCatalog(){catalogLoading.value=true;try{const{data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebLoadSalesQuoteCatalog`);rates.value=(data.rates||[]).map((rate:any)=>({...rate,pkid:catalogId(rate.pkid)}));paymentTerms.value=(data.terms||[]).map((term:any)=>({...term,pkid:catalogId(term.pkid),disabled:term.active===false}))}catch(e){error.value=errorMessage(e)}finally{catalogLoading.value=false}}
+async function loadCatalog(){catalogLoading.value=true;try{const{data}=await axios.get(backendUrl(`/WebLoadSalesQuoteCatalog`));rates.value=(data.rates||[]).map((rate:any)=>({...rate,pkid:catalogId(rate.pkid)}));paymentTerms.value=(data.terms||[]).map((term:any)=>({...term,pkid:catalogId(term.pkid),disabled:term.active===false}))}catch(e){error.value=errorMessage(e)}finally{catalogLoading.value=false}}
 let profileVersion=0,lineKey=0;
 const newLine=()=>({key:++lineKey,productId:null as number|null,productLabel:'',description:'',quantity:1 as number|null,priceUnit:0 as number|null,discount:0 as number|null,tax:0 as number|null,productTax:0,pricingSource:'',pricingError:'',pricingPending:false});
 type ManualLine=ReturnType<typeof newLine>;
@@ -68,7 +69,7 @@ function open(){if(locked.value){visible.value=true;return}pricing.cancel();prof
 function setCustomerId(id:number|null){form.entityId=id;if(id==null){profileVersion++;selectedCustomer.value=null;defaults.value=null;profileLoading.value=false;form.salesTarifaId=null;form.salesTermId=null;form.terms='';form.customerTerms='';}}
 async function selectCustomer(customer:any){
   const oldRate=form.salesTarifaId;profileLoading.value=true;selectedCustomer.value=customer;form.entityId=customer.pkid;defaults.value=null;form.salesTarifaId=null;form.salesTermId=null;profileLoading.value=true;error.value='';const version=++profileVersion;
-  try{const {data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebGetManualSalesInvoiceCustomer/${customer.pkid}`);if(version!==profileVersion)return;defaults.value=data;form.salesTarifaId=catalogId(data.salesTarifaId);form.salesTermId=catalogId(data.salesTermId===undefined?customer.salesTermId:data.salesTermId);form.terms=data.terms||'';form.customerTerms=data.customerTerms||'';form.lines.forEach(l=>{l.tax=data.fixedTax??l.productTax})}
+  try{const {data}=await axios.get(backendUrl(`/WebGetManualSalesInvoiceCustomer/${customer.pkid}`));if(version!==profileVersion)return;defaults.value=data;form.salesTarifaId=catalogId(data.salesTarifaId);form.salesTermId=catalogId(data.salesTermId===undefined?customer.salesTermId:data.salesTermId);form.terms=data.terms||'';form.customerTerms=data.customerTerms||'';form.lines.forEach(l=>{l.tax=data.fixedTax??l.productTax})}
   catch(e){if(version===profileVersion)error.value=errorMessage(e)}finally{if(version===profileVersion){profileLoading.value=false;pricing.changed(oldRate);}}
 }
 async function addLine(){
@@ -88,7 +89,7 @@ async function save(){
   const userCode=auth.user?.userDsCode?.trim();if(!auth.isAuthenticated||!userCode){error.value='No se ha identificado al usuario conectado. Vuelve a iniciar sesión.';return}
   const request=retryRequest.value||{operationKey:crypto.randomUUID(),userCode,entityId:form.entityId,salesTarifaId:form.salesTarifaId,salesTermId:form.salesTermId,createDate:form.date.toISOString(),reference:form.reference.trim(),reason:form.reason.trim(),notes:form.notes,terms:form.terms,customerTerms:form.customerTerms,lines:form.lines.map(l=>({productId:l.productId,description:l.description.trim(),quantity:l.quantity,priceUnit:l.priceUnit,discount:l.discount,tax:l.tax}))};
   retryRequest.value=request;saving.value=true;error.value='';
-  try{const {data}=await axios.post(`${import.meta.env.VITE_API_URL}/WebCreateManualSalesInvoice`,request,{timeout:20000});retryRequest.value=null;visible.value=false;emit('saved',data)}
+  try{const {data}=await axios.post(backendUrl(`/WebCreateManualSalesInvoice`),request,{timeout:20000});retryRequest.value=null;visible.value=false;emit('saved',data)}
   catch(e:any){error.value=errorMessage(e);if(e.response?.status>=400&&e.response?.status<500)retryRequest.value=null}
   finally{saving.value=false}
 }

@@ -98,7 +98,7 @@
 
 
 <script setup>
-
+import { backendUrl } from '@/services/backendUrl';
 import { computed } from 'vue'
 import { ref, reactive } from 'vue';
 import { useToast } from 'primevue/usetoast';
@@ -217,7 +217,7 @@ async function loadTax(pkid) {
     try {
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/WebGetSalesTaxById?id=${pkid}`
+            backendUrl(`/WebGetSalesTaxById?id=${pkid}`)
         );
 
         if (!response.ok) {
@@ -257,7 +257,7 @@ const save = async () => {
         };
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/WebSaveSalesTax`,
+            backendUrl(`/WebSaveSalesTax`),
             {
                 method: 'POST',
                 headers: {

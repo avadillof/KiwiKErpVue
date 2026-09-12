@@ -513,7 +513,7 @@
 </template>
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref } from 'vue';
 import { useToast } from "primevue/usetoast";
 import { useCompanyStore } from '../../stores/companyStore';
@@ -753,7 +753,7 @@ async function loadContact(id: number) {
     try {
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/WebGetContact?pkid=${id}`
+            backendUrl(`/WebGetContact?pkid=${id}`)
         );
 
         if (!response.ok) {
@@ -812,7 +812,7 @@ async function loadCargos() {
     try {
 
         const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/WebGetCargos`
+            backendUrl(`/WebGetCargos`)
         );
 
         cargos.value = response.data;
@@ -848,7 +848,7 @@ async function loadAllDepartamentos() {
     try {
 
         const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/WebGetDepartamentos`
+            backendUrl(`/WebGetDepartamentos`)
         );
 
 
@@ -910,7 +910,7 @@ const save = async () => {
     try {
 
         await axios.post(
-            `${import.meta.env.VITE_API_URL}/WebSaveContact`,
+            backendUrl(`/WebSaveContact`),
             payload
         );
 

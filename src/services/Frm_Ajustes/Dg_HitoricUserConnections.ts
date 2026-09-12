@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import { ref, nextTick } from 'vue';
 import { HelperDates } from '../../libs/HelperDates.ts';
 import { HelperString } from '../../libs/HelperString.ts';
@@ -152,9 +153,8 @@ export function useDgHistoricUserConnectionsController() {
 
 
         try {
-            const baseUrl = import.meta.env.VITE_API_URL;
 
-            const resStats = await fetch(baseUrl + `/api/historicuser/${userId}/stats`);
+            const resStats = await fetch(backendUrl(`/api/historicuser/${userId}/stats`));
 
             const result = await resStats.json();
             data.value = result.records || [];

@@ -324,6 +324,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { computed, nextTick, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
@@ -429,7 +430,7 @@ const dateTime = (value: string) =>
   }).format(new Date(value));
 const quantity = (value: number) =>
   new Intl.NumberFormat("de-DE", { useGrouping: true, maximumFractionDigits: 3 }).format(Number(value || 0));
-const endpoint = `${import.meta.env.VITE_API_URL}/WebOrderAssistant`;
+const endpoint = backendUrl(`/WebOrderAssistant`);
 let sequence = 0;
 watch(
   visible,

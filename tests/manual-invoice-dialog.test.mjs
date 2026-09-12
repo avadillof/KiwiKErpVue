@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 const source=fs.readFileSync(new URL('../src/views/Ventas/Frm_Facturas/ManualInvoiceDialog.vue',import.meta.url),'utf8').split('<script setup lang="ts">')[1].split('</script>')[0].replace(/import\s+[\s\S]*?from\s*['"][^'"]+['"];?/g,'').replaceAll('import.meta.env.VITE_API_URL',"'test.invalid'");
 function setup(get){
- const context={axios:{get},ref:value=>({value}),reactive:value=>value,computed:fn=>({get value(){return fn()}}),nextTick:async()=>{},onUnmounted:()=>{},defineEmits:()=>()=>{},defineExpose:()=>{},useAuthStore:()=>({}),window:{addEventListener:()=>{},removeEventListener:()=>{}}};
+ const context={backendUrl:path=>'test.invalid'+path,axios:{get},ref:value=>({value}),reactive:value=>value,computed:fn=>({get value(){return fn()}}),nextTick:async()=>{},onUnmounted:()=>{},defineEmits:()=>()=>{},defineExpose:()=>{},useAuthStore:()=>({}),window:{addEventListener:()=>{},removeEventListener:()=>{}}};
  vm.createContext(context);vm.runInContext(ts.transpileModule(source+';globalThis.api={form,selectCustomer,setCustomerId,loadCatalog,paymentTerms,addLine,linesTable,retryRequest};',{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,context);return context.api;
 }
 test('customer payment ID is inherited when older defaults response omits it',async()=>{

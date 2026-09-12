@@ -81,8 +81,7 @@
 </style>
 
 <script setup>
-
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -227,7 +226,7 @@ const deleteCertificate = () => {
         accept: async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteCertificate`, {
+                    backendUrl(`/WebDeleteCertificate`), {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

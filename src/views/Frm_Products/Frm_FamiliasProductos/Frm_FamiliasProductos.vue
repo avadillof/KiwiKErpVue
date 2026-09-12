@@ -144,6 +144,7 @@
 
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue'
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -382,7 +383,7 @@ const confirmDelete = async () => {
     try {
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/WebDeleteFamilia`,
+            backendUrl(`/WebDeleteFamilia`),
             {
                 method: 'POST',
 

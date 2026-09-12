@@ -238,7 +238,7 @@
 </style>
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref, watch, reactive, nextTick, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Toolbar from 'primevue/toolbar';
@@ -287,7 +287,7 @@ const loadStatistics = async (entityId?: number | null) => {
     loadingStatistics.value = true;
     try {
         const suffix = entityId ? `?entityId=${entityId}` : '';
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/WebGetEntityStatistics${suffix}`);
+        const response = await fetch(backendUrl(`/WebGetEntityStatistics${suffix}`));
         if (!response.ok) throw new Error(await response.text());
         const data = await response.json();
         entityStatistics.value = { global: data.global ?? entityStatistics.value.global, selected: data.selected ?? null };
@@ -430,7 +430,7 @@ const deleteClient = () => {
         accept: async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteEntitie`,
+                    backendUrl(`/WebDeleteEntitie`),
                     {
                         method: 'POST',
                         headers: {

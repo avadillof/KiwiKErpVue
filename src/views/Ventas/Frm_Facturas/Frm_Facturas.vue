@@ -1128,6 +1128,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import InvoiceAssistantDialog from "./InvoiceAssistantDialog.vue";
 import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
 const invoiceAssistant = ref<any>();
@@ -1225,7 +1226,7 @@ const submitCorrection = async () => {
   correcting.value = true;
   try {
     await axios.post(
-      `${import.meta.env.VITE_API_URL}/WebCorrectSalesInvoiceVeriFactu/${item.pkid}`,
+      backendUrl(`/WebCorrectSalesInvoiceVeriFactu/${item.pkid}`),
       {
         reason: correctionReason.value.trim(),
         certificatePassword: correctionPassword.value,
@@ -1313,7 +1314,7 @@ async function loadInvoiceCatalog() {
   catalogError.value = "";
   try {
     const { data } = await axios.get(
-      `${import.meta.env.VITE_API_URL}/WebLoadSalesQuoteCatalog`,
+      backendUrl(`/WebLoadSalesQuoteCatalog`),
     );
     invoiceRates.value = data.rates || [];
     invoicePaymentTerms.value = (data.terms || []).filter(
@@ -1549,7 +1550,7 @@ const validateIssueTarget = async () => {
     if (detail.value.pkid !== item.pkid || !(await saveDetail()))
       throw new Error("Guarda y revisa el borrador antes de emitir.");
     const { data } = await axios.get(
-      `${import.meta.env.VITE_API_URL}/WebValidateSalesInvoice/${item.pkid}`,
+      backendUrl(`/WebValidateSalesInvoice/${item.pkid}`),
     );
     if (data?.valid !== true)
       issueValidationErrors.value =
@@ -1634,7 +1635,7 @@ const confirmIssue = async () => {
       ? "WebRetrySalesInvoiceVeriFactu"
       : "WebIssueSalesInvoice";
     const { data } = await axios.post(
-      `${import.meta.env.VITE_API_URL}/${endpoint}/${item.pkid}`,
+      backendUrl(`/${endpoint}/${item.pkid}`),
       { certificatePassword: issuePassword.value },
       requestConfig,
     );
@@ -1727,7 +1728,7 @@ const loadStats = async () => {
     loadingStats.value = true;
     try {
       const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/WebGetSalesInvoiceStatistics`,
+        backendUrl(`/WebGetSalesInvoiceStatistics`),
         { params: { year: year.value } },
       );
       stats.value = { ...stats.value, ...data };
@@ -1762,10 +1763,10 @@ const loadStats = async () => {
     try {
       const [originResponse, detailResponse] = await Promise.all([
         axios.get(
-          `${import.meta.env.VITE_API_URL}/WebGetSalesInvoiceDeliveries/${i.pkid}`,
+          backendUrl(`/WebGetSalesInvoiceDeliveries/${i.pkid}`),
         ),
         axios.get(
-          `${import.meta.env.VITE_API_URL}/WebGetSalesInvoice/${i.pkid}`,
+          backendUrl(`/WebGetSalesInvoice/${i.pkid}`),
         ),
       ]);
       const origins = Array.isArray(originResponse.data)
@@ -1801,7 +1802,7 @@ const loadStats = async () => {
     try {
       const data = (
         await axios.get(
-          `${import.meta.env.VITE_API_URL}/WebGetSalesInvoice/${i.pkid}`,
+          backendUrl(`/WebGetSalesInvoice/${i.pkid}`),
         )
       ).data;
       if (
@@ -1908,7 +1909,7 @@ const loadStats = async () => {
     const version = ++duePreviewSequence;
     try {
       const { data } = await axios.post(
-        import.meta.env.VITE_API_URL + "/WebPreviewSalesInvoiceDues",
+        backendUrl("/WebPreviewSalesInvoiceDues"),
         {
           invoiceId: detail.value.pkid,
           termId: detail.value.salesTermId,
@@ -1972,7 +1973,7 @@ const loadStats = async () => {
         })),
       };
       const { data } = await axios.put(
-        `${import.meta.env.VITE_API_URL}/WebUpdateSalesInvoice/${detail.value.pkid}`,
+        backendUrl(`/WebUpdateSalesInvoice/${detail.value.pkid}`),
         payload,
       );
       detail.value = {
@@ -2239,7 +2240,7 @@ const cancelDraft = (item: any) => {
       if (invoiceProtected(item) || issuing.value) return;
       try {
         await axios.post(
-          `${import.meta.env.VITE_API_URL}/WebCancelSalesInvoiceDraft/${item.pkid}`,
+          backendUrl(`/WebCancelSalesInvoiceDraft/${item.pkid}`),
         );
         detailVisible.value = false;
         await refresh();
@@ -2263,7 +2264,7 @@ const cancelDraft = (item: any) => {
 const openInvoicePdf = (item: any) => {
   if (item?.pkid && item.verifactuStatus === "ACCEPTED") {
     window.open(
-      `${import.meta.env.VITE_API_URL}/WebGetSalesInvoicePdf/${item.pkid}`,
+      backendUrl(`/WebGetSalesInvoicePdf/${item.pkid}`),
       "_blank",
       "noopener",
     );

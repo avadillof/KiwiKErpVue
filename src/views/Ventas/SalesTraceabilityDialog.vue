@@ -143,6 +143,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
@@ -203,7 +204,7 @@ const open = async (documentType: string, documentId: number) => {
   activeRequest = request;
   try {
     const { data } = await axios.get(
-      `${import.meta.env.VITE_API_URL}/WebGetSalesTraceability`,
+      backendUrl(`/WebGetSalesTraceability`),
       {
         params: { documentType, documentId },
         signal: request.signal,

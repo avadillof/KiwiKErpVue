@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import { ref, type Ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useCompanyStore } from '../../stores/companyStore';
@@ -12,12 +13,11 @@ export function useForgotPasswordController(isVisibleRef: Ref<boolean>) {
     async function handleRequestReset() {
         loading.value = true;
         try {
-            const baseUrl = import.meta.env.VITE_API_URL;
             
             // Creamos los parámetros de la URL: /WebResetPasswordRequest?email=valor
             const params = new URLSearchParams({ email: username.value });
 
-            const response = await fetch(`${baseUrl}/WebResetPasswordRequest?${params.toString()}`, {
+            const response = await fetch(backendUrl(`/WebResetPasswordRequest?${params.toString()}`), {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
                 // IMPORTANTE: En un GET, no se envía la propiedad 'body'

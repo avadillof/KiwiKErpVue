@@ -67,7 +67,7 @@
 
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { computed } from 'vue'
@@ -112,7 +112,7 @@ onMounted(async () => {
 
     try {
         // 4. Llamada API con manejo de errores
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/WebGetSecurityModulesUser`, {
+        const response = await fetch(backendUrl(`/WebGetSecurityModulesUser`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

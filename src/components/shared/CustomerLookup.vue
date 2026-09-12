@@ -9,11 +9,12 @@
   </Dialog>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import CorporateLoader from './CorporateLoader.vue';
 import { ref } from 'vue'; import axios from 'axios'; import Button from 'primevue/button'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import Dialog from 'primevue/dialog'; import InputGroup from 'primevue/inputgroup'; import InputText from 'primevue/inputtext';
 const props = withDefaults(defineProps<{ id?: string; modelValue: number | null; label?: string; disabled?: boolean }>(), { disabled: false }); const emit = defineEmits<{ 'update:modelValue': [value: number | null]; selected: [customer: any] }>();
 const visible = ref(false), loading = ref(false), items = ref<any[]>([]), total = ref(0), search = ref(''); let timer: ReturnType<typeof setTimeout> | undefined;
-const load = async (page = 0) => { loading.value = true; try { const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesQuoteCustomers`, { params: { page, size: 20, query: search.value } }); items.value = data?.content ?? []; total.value = data?.totalElements ?? 0; } finally { loading.value = false; } };
+const load = async (page = 0) => { loading.value = true; try { const { data } = await axios.get(backendUrl(`/WebGetSalesQuoteCustomers`), { params: { page, size: 20, query: search.value } }); items.value = data?.content ?? []; total.value = data?.totalElements ?? 0; } finally { loading.value = false; } };
 const open = () => { if (props.disabled) return; visible.value = true; load(); }; const clear = () => { if (!props.disabled) emit('update:modelValue', null); }; const select = (customer: any) => { emit('update:modelValue', customer.pkid); emit('selected', customer); visible.value = false; }; const searchCustomers = (value: string | undefined) => { search.value = value ?? ''; clearTimeout(timer); timer = setTimeout(() => load(0), 300); };
 </script>
 

@@ -1,4 +1,4 @@
-
+import { backendUrl } from '@/services/backendUrl';
 import { onReconnected } from '../composables/Sv_MonitorConnectionBack.ts';
 import { ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
@@ -17,7 +17,6 @@ export function loginController() {
     const isLoading = ref(false);
     const errorMessage = ref('');
     const router = useRouter();
-    const apiBaseUrl = import.meta.env.VITE_API_URL;
 
     const initialLogoUrl = companyStore.companyInfo.urlLogo || '';
 
@@ -34,10 +33,9 @@ export function loginController() {
 
     async function getCompanyParameters() {
         
-        const baseUrl =  import.meta.env.VITE_API_URL;
 
         try {
-            const response = await fetch(baseUrl + '/WebGetParameters', {
+            const response = await fetch(backendUrl('/WebGetParameters'), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -73,7 +71,7 @@ export function loginController() {
 
             const logoSource = data.urlLogoCompany
                 || companyStore.companyInfo.urlLogo
-                || `${apiBaseUrl}/base/logo.png`;
+                || backendUrl(`/base/logo.png`);
             const newLogoUrl = `${logoSource}${logoSource.includes('?') ? '&' : '?'}t=${Date.now()}`;
             dataEmpresa.value.txtLogoEmpresa = newLogoUrl;
             
@@ -121,7 +119,6 @@ export function loginController() {
 
         try {
             const companyStore = useCompanyStore();
-            const baseUrl =  import.meta.env.VITE_API_URL;
             
             
             const loginPayload = {
@@ -129,7 +126,7 @@ export function loginController() {
                 password: loginData.value.password
             };
 
-            const response = await fetch(`${baseUrl}/WebLoginUser`, {
+            const response = await fetch(backendUrl(`/WebLoginUser`), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -163,7 +163,7 @@
 </template>
 
 <script setup>
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref, computed } from 'vue';
 import CertificatePasswordDialog from './CertificatePasswordDialog.vue';
 import { useToast } from 'primevue/usetoast'; // Importa el hook de Toast
@@ -191,7 +191,7 @@ const loadCertificateInfo = async () => {
     try {
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/WebGetCertificateInfo`,
+            backendUrl(`/WebGetCertificateInfo`),
             {
                 method: 'POST',
                 headers: {

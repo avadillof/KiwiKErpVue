@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import { ref } from 'vue';
 import axios from 'axios';
 
@@ -34,7 +35,7 @@ export function formatHumanDate(date: Date | string | null): string {
 export function useServerTime() {
     const fetchTime = async () => {
         try {
-            const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/system/time`);
+            const response = await axios.get(backendUrl(`/api/system/time`));
 
             // 1. Obtenemos el valor crudo
             let rawDate = response.data.serverTime;

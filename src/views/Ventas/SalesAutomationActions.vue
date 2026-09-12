@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { formatCalendarDate } from '@/libs/HelperDates';
 import { computed, ref } from 'vue';
 import axios from 'axios';
@@ -90,7 +91,7 @@ async function request(preview: boolean) {
     const endpoint = action.value === 'invoice' ? preview ? 'WebPreviewSalesInvoiceReminders' : 'WebSendSalesInvoiceReminders' : action.value === 'delivery'
       ? preview ? 'WebPreviewSalesDeliveryReminders' : 'WebSendSalesDeliveryReminders'
       : `${preview ? 'WebPreviewSalesQuoteAutomation' : 'WebRunSalesQuoteAutomation'}/${action.value}`;
-    const url = `${import.meta.env.VITE_API_URL}/${endpoint}`;
+    const url = backendUrl(`/${endpoint}`);
     const config = auth.portalRequestConfig();
     result.value = (preview ? await axios.get(url, config) : await axios.post(url, { confirmed: true }, config)).data;
   } catch (failure: any) {

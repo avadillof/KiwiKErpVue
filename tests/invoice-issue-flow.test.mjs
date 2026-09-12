@@ -22,6 +22,7 @@ function scenario(post, refresh = async () => {}) {
   const messages = [];
   let saves = 0;
   const context = {
+    backendUrl: path => 'http://test.invalid' + path,
     ...protection, ref, computed: fn => ({ get value() { return fn(); } }),
     detail: ref({ ...invoice }), selected: ref({ ...invoice }), issuing: ref(false), detailSaving: ref(false),
     issueTarget: ref(invoice), issuePassword: ref('fake-test-secret'), issueRetry: ref(false),

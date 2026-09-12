@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import { defineStore } from 'pinia'
 import axios from 'axios'
 
@@ -37,10 +38,9 @@ export const useSecurityStore = defineStore('security', {
 
             this.clearSecurity();
 
-            const baseUrl = import.meta.env.VITE_API_URL;
 
             const response = await axios.post(
-                baseUrl + '/WebLoadSecurityUser',
+                backendUrl('/WebLoadSecurityUser'),
                 {
                     pkid: userPk
                 }

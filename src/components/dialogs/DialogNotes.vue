@@ -120,6 +120,7 @@
 
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { computed, ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useCompanyStore } from '@/stores/companyStore'
@@ -153,7 +154,6 @@ const toast = useToast()
 const companyStore = useCompanyStore()
 const note = ref('')
 const isSaving = ref(false)
-const baseUrl = import.meta.env.VITE_API_URL;
 
 const dialogVisible = computed({
     get: () => props.visible,
@@ -194,7 +194,7 @@ async function load() {
 
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}${endpoint}`,
+            backendUrl(`${endpoint}`),
             {
                 method: 'POST',
                 headers: {
@@ -291,7 +291,7 @@ async function save() {
 
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}${endpoint}`,
+            backendUrl(`${endpoint}`),
             {
                 method: 'POST',
                 headers: {

@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 import { computed, ref, watch, type Ref } from 'vue';
@@ -18,7 +19,7 @@ export interface PricedLine {
 export const pricingErrorMessage = (e: any): string => typeof e.response?.data === 'string'
   ? e.response.data : e.response?.data?.message || e.message || 'No se pudo calcular el precio. Revisa la configuración de tarifas.';
 export async function resolveSalesPrice(tarifaId: number | null, line: PricedLine) {
-  const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/WebResolveSalesPrice`, {
+  const { data } = await axios.get(backendUrl(`/WebResolveSalesPrice`), {
     ...useAuthStore().portalRequestConfig(),
     params: { tarifaId, productId: line.productId, uomId: line.uomId, quantity: line.quantity ?? 1 }, timeout: 15000
   });

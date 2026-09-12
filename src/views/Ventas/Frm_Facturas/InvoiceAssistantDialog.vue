@@ -382,6 +382,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { computed, nextTick, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
@@ -494,7 +495,7 @@ const dateTime = (value: string) =>
     timeStyle: "medium",
     timeZone: "Europe/Madrid",
   }).format(new Date(value));
-const endpoint = `${import.meta.env.VITE_API_URL}/WebInvoiceAssistant`;
+const endpoint = backendUrl(`/WebInvoiceAssistant`);
 let sequence = 0;
 watch(
   visible,

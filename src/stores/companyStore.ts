@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-
+import { backendUrl } from '@/services/backendUrl';
 export interface CompanyState {
     nameCompany: string;
     cifCompany: string;
@@ -33,8 +33,8 @@ export const useCompanyStore = defineStore('company', {
         companyInfo: {
             nameCompany: '',
             cifCompany: '',
-            urlServer: 'https://localhost:8083',
-            urlLogo: 'https://localhost:8083/base/logo.png',
+            urlServer: backendUrl(''),
+            urlLogo: backendUrl('/base/logo.png'),
             sloganCompany: '',
             email: '',
             phone: '',

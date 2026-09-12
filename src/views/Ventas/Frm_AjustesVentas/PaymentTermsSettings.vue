@@ -24,6 +24,7 @@
  </section>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {useAuthStore} from "@/stores/authStore";
 import DatePicker from 'primevue/datepicker';
 import ToggleSwitch from 'primevue/toggleswitch';
@@ -37,7 +38,7 @@ function sampleDay(value:Date|null){
  return [value.getFullYear(),String(value.getMonth()+1).padStart(2,'0'),String(value.getDate()).padStart(2,'0')].join('-');
 }
 const types=[{label:'Porcentaje',value:'PERCENT'},{label:'Importe fijo',value:'FIXED'},{label:'Saldo restante',value:'BALANCE'}];
-const api=(path:string)=>import.meta.env.VITE_API_URL+'/'+path;
+const api=(path:string)=>backendUrl('/' + path);
 const message=(e:any)=>typeof e.response?.data==='string'?e.response.data:e.message;
 function edit(){const t=selected.value;if(!t)return;error.value='';saved.value=false;sample.value=[];form.value={id:t.id,description:t.descriptionEs,active:t.active,previousRules:t.dueRules??null,rules:t.dueRules?JSON.parse(t.dueRules):[{type:'BALANCE',value:0,days:t.value||0,endOfMonth:false}]};}
 function fresh(){selected.value=null;sample.value=[];saved.value=false;form.value={description:'',active:true,rules:[{type:'BALANCE',value:0,days:0,endOfMonth:false}]};}

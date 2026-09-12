@@ -16,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import CorporateLoader from './CorporateLoader.vue';
 import { ref } from 'vue';
 import axios from 'axios';
@@ -31,7 +32,7 @@ const load = async (page = 0) => {
   error.value = '';
   items.value = [];
   try {
-    const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesQuoteProducts`, {
+    const { data } = await axios.get(backendUrl(`/WebGetSalesQuoteProducts`), {
       params: { page, size: props.rows, query: search.value }
     });
     if (version !== requestVersion) return;
@@ -62,7 +63,7 @@ const select = async (product: any) => {
   error.value = '';
   try {
     // La búsqueda identifica el producto; la línea usa su configuración actual.
-    const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesQuoteProduct/${product.pkid}`);
+    const { data } = await axios.get(backendUrl(`/WebGetSalesQuoteProduct/${product.pkid}`));
     emit('update:modelValue', data.pkid);
     emit('selected', data);
     visible.value = false;

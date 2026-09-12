@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import { computed, defineComponent, ref, onMounted, onUnmounted, onActivated } from 'vue';
 import { useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'vue-router';
@@ -42,7 +43,7 @@ export default defineComponent({
         const profilePhotoUrl = computed(() => {
             const pkid = authStore.user?.pkid;
             if (!pkid) return '';
-            return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${authStore.photoTimestamp}`;
+            return backendUrl(`/gestdoc/users/${pkid}/photoPerfil.jpg?t=${authStore.photoTimestamp}`);
         });
 
         // Nombre de usuario reactivo
@@ -87,7 +88,7 @@ export default defineComponent({
         const getProfilePhotoUrl = computed(() => (pkid: number) => {
             if (!pkid || pkid === 0) return '';
             // Al usar authStore.photoTimestamp, Vue "se suscribe" a su valor
-            return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${authStore.photoTimestamp}`;
+            return backendUrl(`/gestdoc/users/${pkid}/photoPerfil.jpg?t=${authStore.photoTimestamp}`);
         });
 
         function verMensajes(): void {

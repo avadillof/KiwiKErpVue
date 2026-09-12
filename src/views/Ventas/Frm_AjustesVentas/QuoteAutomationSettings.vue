@@ -44,6 +44,7 @@
   </Dialog>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { formatCalendarDate } from '@/libs/HelperDates';
 import {computed,reactive,ref,watch} from 'vue';
 import {useAuthStore} from '../../../stores/authStore';
@@ -61,7 +62,7 @@ async function run(){
  if(blocked.value)return;
  const kind=action.value,test=preview.value;
  visible.value=false;busy.value=kind+(test?'-preview':'-run');emit('busy',true);errors[kind]='';results[kind]=null;
- try{const config=auth.portalRequestConfig();const url=`${import.meta.env.VITE_API_URL}/${test?'WebPreviewSalesQuoteAutomation':'WebRunSalesQuoteAutomation'}/${kind}`;results[kind]=(test?await axios.get(url,config):await axios.post(url,{confirmed:true},config)).data;}
+ try{const config=auth.portalRequestConfig();const url=backendUrl(`/${test?'WebPreviewSalesQuoteAutomation':'WebRunSalesQuoteAutomation'}/${kind}`);results[kind]=(test?await axios.get(url,config):await axios.post(url,{confirmed:true},config)).data;}
  catch(e:any){errors[kind]=e.response?.status===401||!auth.portalSession?'La sesión ha caducado o es anterior a esta actualización. Vuelve a iniciar sesión en el portal.':test?'No se pudo obtener la prueba. Comprueba el backend y la migración.':'Resultado no confirmado. Puede haber cambios y correos enviados. Revisa los estados y utiliza Probar antes de repetir.';}
  finally{busy.value='';emit('busy',false);}
 }

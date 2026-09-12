@@ -74,6 +74,7 @@
 <style scoped></style>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { ref, computed, onMounted } from 'vue';
 import axios, { type AxiosRequestConfig } from 'axios';
 import DataTable from 'primevue/datatable';
@@ -179,8 +180,7 @@ async function fetchData(page: number, size: number) {
     }
 
 
-    const baseUrl = import.meta.env.VITE_API_URL;
-    const response = await axios.get(baseUrl + '/' + props.endpoint, { ...props.requestConfig?.(), params, timeout: 15000 });
+    const response = await axios.get(backendUrl('/' + props.endpoint), { ...props.requestConfig?.(), params, timeout: 15000 });
 
     tableData.value = response.data.content;
     totalRecords.value = response.data.totalElements;
@@ -231,10 +231,9 @@ async function fetchDataWithQuery(
         }
 
 
-        const baseUrl = import.meta.env.VITE_API_URL;
 
         const response = await axios.get(
-            `${baseUrl}/${props.endpoint}`,
+            backendUrl(`/${props.endpoint}`),
             { ...props.requestConfig?.(), params, timeout: 15000 }
         );
 

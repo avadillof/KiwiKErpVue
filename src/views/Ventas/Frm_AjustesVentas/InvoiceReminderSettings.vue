@@ -17,12 +17,13 @@
  </section>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {ref,onMounted} from 'vue';import axios from 'axios';import Button from 'primevue/button';import Message from 'primevue/message';import InputText from 'primevue/inputtext';import InputNumber from 'primevue/inputnumber';import MultiSelect from 'primevue/multiselect';import ToggleSwitch from 'primevue/toggleswitch';import Tag from 'primevue/tag';
 import SalesAutomationActions from '../SalesAutomationActions.vue';import {useAuthStore} from '@/stores/authStore';
 const auth=useAuthStore(),busy=ref(false),loaded=ref(false),saved=ref(false),error=ref(''),historyError=ref('');
 const form=ref<{version:number|null,enabled:boolean,time:string,days:number|null,recipientIds:number[]}>({version:null,enabled:false,time:'08:30',days:7,recipientIds:[]}),users=ref<any[]>([]),history=ref<any[]>([]);
 const statuses:Record<string,string>={SENT:'Enviado',FAILED:'Incierto o fallido',CLAIMED:'Reservado o en curso'};
-const api=(path:string)=>import.meta.env.VITE_API_URL+'/'+path;
+const api=(path:string)=>backendUrl('/' + path);
 function message(e:any){return typeof e.response?.data==='string'?e.response.data:'No se pudo completar la operación. Comprueba la sesión, el backend y las migraciones V23 y V24.';}
 function formatDate(v:any){if(Array.isArray(v)){const[y,m,d,h=0,min=0,s=0]=v;return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y} ${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(s).padStart(2,'0')}`;}const match=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}:\d{2}:\d{2})/);return match?`${match[3]}/${match[2]}/${match[1]} ${match[4]}`:'—';}
 async function loadHistory(){try{history.value=(await axios.get(api('WebGetInvoiceReminderHistory'),auth.portalRequestConfig())).data;historyError.value='';}catch(e){historyError.value=message(e);}}

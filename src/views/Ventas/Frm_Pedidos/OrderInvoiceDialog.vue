@@ -20,6 +20,7 @@
   </Dialog>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {computed,ref} from 'vue';
 import axios from 'axios';
 import Dialog from 'primevue/dialog';
@@ -38,7 +39,7 @@ const message=(e:any)=>typeof e.response?.data==='string'?e.response.data:e.resp
 async function open(id:number){
   if(retryRequest.value){visible.value=true;return}
   orderId.value=id;lines.value=[];code.value='';error.value='';visible.value=true;loading.value=true;
-  try{const {data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebPrepareSalesOrderInvoice/${id}`);code.value=data.code;lines.value=data.lines.map((l:any)=>({...l,selectedQuantity:l.direct?l.available:0}));}catch(e){error.value=message(e)}finally{loading.value=false}
+  try{const {data}=await axios.get(backendUrl(`/WebPrepareSalesOrderInvoice/${id}`));code.value=data.code;lines.value=data.lines.map((l:any)=>({...l,selectedQuantity:l.direct?l.available:0}));}catch(e){error.value=message(e)}finally{loading.value=false}
 }
 async function save(){
   if(busy.value||(!retryRequest.value&&!valid.value))return;
@@ -46,7 +47,7 @@ async function save(){
   if(!auth.isAuthenticated||!userCode){error.value='Vuelve a iniciar sesión antes de facturar.';return}
   const request=retryRequest.value||{operationKey:crypto.randomUUID(),userCode,lines:selected.value.map(l=>({id:l.id,quantity:l.selectedQuantity}))};
   retryRequest.value=request;busy.value=true;error.value='';
-  try{const {data}=await axios.post(`${import.meta.env.VITE_API_URL}/WebCreateSalesOrderInvoice/${orderId.value}`,request,{timeout:20000});retryRequest.value=null;visible.value=false;emit('generated',data)}
+  try{const {data}=await axios.post(backendUrl(`/WebCreateSalesOrderInvoice/${orderId.value}`),request,{timeout:20000});retryRequest.value=null;visible.value=false;emit('generated',data)}
   catch(e:any){error.value=message(e);if(e.response?.status>=400&&e.response?.status<500){retryRequest.value=null;const savedError=error.value;await open(orderId.value!);error.value=savedError}}
   finally{busy.value=false}
 }

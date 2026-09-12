@@ -33,6 +33,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { computed, nextTick, reactive, ref } from 'vue';
 import axios from 'axios';
 import PriceRecalculationDialog from '@/components/shared/PriceRecalculationDialog.vue';
@@ -55,7 +56,7 @@ const pricing=useSalesPricing({lines:()=>form.lines,tarifa:computed({get:()=>for
 const currencyCode=computed(()=>rates.value.find(r=>r.pkid===form.salesTarifaId)?.currencyCode||'EUR');
 const customerLabel = computed(() => selectedCustomer.value ? `${selectedCustomer.value.code ? `${selectedCustomer.value.code} — ` : ''}${selectedCustomer.value.name}` : '');
 const reset = () => { selectedCustomer.value=null; form.entityId=null; form.salesTarifaId=null; form.date=new Date(); form.reference=''; form.reason=''; form.notes=''; form.lines=[newLine()]; };
-const open = async () => { pricing.cancel();reset();visible.value=true;try{const{data}=await axios.get(import.meta.env.VITE_API_URL+'/WebLoadSalesQuoteCatalog');rates.value=data.rates||[];form.salesTarifaId=data.defaultTarifaId??null}catch{rates.value=[];}};
+const open = async () => { pricing.cancel();reset();visible.value=true;try{const{data}=await axios.get(backendUrl('/WebLoadSalesQuoteCatalog'));rates.value=data.rates||[];form.salesTarifaId=data.defaultTarifaId??null}catch{rates.value=[];}};
 const selectCustomer = (customer:any) => { selectedCustomer.value=customer; form.salesTarifaId=customer.salesTarifaId ?? form.salesTarifaId; };
 const addLine = async () => { form.lines.push(newLine()); await nextTick(); requestAnimationFrame(() => { const containers=manualLinesTable.value?.$el?.querySelectorAll('.p-datatable-table-container, .p-datatable-wrapper, .p-datatable-scrollable-body') as NodeListOf<HTMLElement>|undefined; containers?.forEach(container=>{container.scrollTop=container.scrollHeight;}); }); }; const removeLine = (index:number) => form.lines.splice(index,1);
 const selectProduct = (line:any, product:any) => { line.productId=product.pkid; line.productLabel=`${product.code} — ${product.description}`; line.description=product.description || ''; line.priceUnit=Number(product.salePrice ?? 0); line.tax=Number(product.taxValue ?? 0); line.uomId=product.uomId ?? null; void pricing.apply(line); };
@@ -66,7 +67,7 @@ const save = async () => {
   if (!form.reason) { toast.add({severity:'error',summary:'Motivo obligatorio',detail:'Indica por qué se crea el albarán sin pedido.',life:4000}); return; }
   if (!form.lines.length || form.lines.some(line=>!line.productId || Number(line.quantity)<=0)) { toast.add({severity:'error',summary:'Líneas incompletas',detail:'Todas las líneas deben tener producto y una cantidad mayor que cero.',life:4000}); return; }
   saving.value=true;
-  try { const {data}=await axios.post(`${import.meta.env.VITE_API_URL}/WebCreateManualSalesDelivery`,{userId:authStore.user?.pkid ?? null,entityId:form.entityId,salesTarifaId:form.salesTarifaId,dateCreate:form.date.toISOString(),reference:form.reference,reason:form.reason,notes:form.notes,lines:form.lines.map(({productId,description,quantity,priceUnit,tax,uomId})=>({productId,description,quantity:Number(quantity),priceUnit:Number(priceUnit),tax:Number(tax),uomId}))}); toast.add({severity:'success',summary:'Albarán manual creado',detail:`${data.code} se ha guardado como borrador.`,life:4000}); visible.value=false; emit('saved',data); }
+  try { const {data}=await axios.post(backendUrl(`/WebCreateManualSalesDelivery`),{userId:authStore.user?.pkid ?? null,entityId:form.entityId,salesTarifaId:form.salesTarifaId,dateCreate:form.date.toISOString(),reference:form.reference,reason:form.reason,notes:form.notes,lines:form.lines.map(({productId,description,quantity,priceUnit,tax,uomId})=>({productId,description,quantity:Number(quantity),priceUnit:Number(priceUnit),tax:Number(tax),uomId}))}); toast.add({severity:'success',summary:'Albarán manual creado',detail:`${data.code} se ha guardado como borrador.`,life:4000}); visible.value=false; emit('saved',data); }
   catch(error:any){toast.add({severity:'error',summary:'No se pudo crear el albarán',detail:error.response?.data ?? 'Revisa los datos introducidos.',life:5000});}
   finally{saving.value=false;}
 };

@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 
 // Exportamos estos valores fuera de la función para que sean GLOBALES
@@ -8,7 +9,6 @@ export const onReconnected = ref(0);
 // Disabled deliberately: do not perform an isolated startup check without recovery polling.
 export function useConnectionMonitor(enabled = false) {
     const connectionLost = computed(() => enabled && !isOnline.value);
-    const baseUrl = import.meta.env.VITE_API_URL;
     let intervalId: any = null;
 
     const checkConnection = async () => {
@@ -16,7 +16,7 @@ export function useConnectionMonitor(enabled = false) {
         const timeoutId = setTimeout(() => controller.abort(), 800);
         try {
             
-            const response = await fetch(`${baseUrl}/WebPing`, { 
+            const response = await fetch(backendUrl(`/WebPing`), {
                 method: 'GET',
                 signal: controller.signal 
             });

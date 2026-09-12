@@ -65,7 +65,7 @@
 
 
 <script setup>
-
+import { backendUrl } from '@/services/backendUrl';
 import Frm_SalexTaxForm from './Frm_SalesTaxForm.vue';
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router';
@@ -158,7 +158,7 @@ const deleteTax = () => {
         accept: async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteSalesTax?id=${selectedTax.value.pkid}`,
+                    backendUrl(`/WebDeleteSalesTax?id=${selectedTax.value.pkid}`),
                     {
                         method: 'DELETE',
                         headers: {

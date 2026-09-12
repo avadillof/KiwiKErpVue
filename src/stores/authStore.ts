@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import { defineStore } from 'pinia';
 
 // Definimos la estructura del usuario para que TypeScript sea feliz
@@ -32,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
     logout() {
       const token=this.portalSession;
       this.portalSession='';
-      if(token) void fetch(`${import.meta.env.VITE_API_URL}/WebLogoutPortalSession`, {method:'POST',headers:{'X-Portal-Session':token}}).catch(()=>{});
+      if(token) void fetch(backendUrl(`/WebLogoutPortalSession`), {method:'POST',headers:{'X-Portal-Session':token}}).catch(()=>{});
       this.user = null;
       this.isAuthenticated = false;
     },

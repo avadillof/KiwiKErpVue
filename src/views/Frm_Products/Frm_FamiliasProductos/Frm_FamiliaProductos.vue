@@ -168,7 +168,7 @@
 
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref } from 'vue';
 
 import axios from 'axios';
@@ -383,7 +383,7 @@ const open = async (pkid: number | null) => {
     try {
 
         const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/WebGetProductFamily`,
+            backendUrl(`/WebGetProductFamily`),
             {
                 params: {
                     pkid: pkid
@@ -431,7 +431,7 @@ const save = async () => {
     try {
 
         const response = await axios.post(
-            `${import.meta.env.VITE_API_URL}/WebSaveProductFamily`,
+            backendUrl(`/WebSaveProductFamily`),
             payload
         );
 
@@ -466,10 +466,9 @@ const save = async () => {
 
 const generateCode = async () => {
 
-    const baseUrl = import.meta.env.VITE_API_URL;
 
     const res = await axios.get(
-        `${baseUrl}/WebGenerateProductFamilyCode`
+        backendUrl(`/WebGenerateProductFamilyCode`)
     );
 
     productFamily.value.code = res.data;

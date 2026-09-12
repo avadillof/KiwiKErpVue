@@ -57,6 +57,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {computed,nextTick,onMounted,reactive,ref,watch} from 'vue';
 import {useRouter} from 'vue-router';
 import axios from 'axios';
@@ -84,12 +85,12 @@ const hasUnsavedChanges=computed(()=>!!form.id && JSON.stringify(form)!==savedFo
 const scopes=[{label:'Familia',value:'FAMILY'},{label:'Producto',value:'PRODUCT'},{label:'Todos',value:'ALL'}],calculations=[{label:'Precio fijo',value:'FIXED'},{label:'Descuento',value:'DISCOUNT'}];
 const ruleCount=computed(()=>(catalog.value?.rates||[]).reduce((n:number,r:any)=>n+Number(r.ruleCount),0));
 function accept(data:any){catalog.value=data;Object.assign(settings,data.settings);baseConfigured.value=data.settings.baseCurrencyId!=null;if(!baseConfigured.value)configExpanded.value=true;}
-async function load(){loading.value=true;error.value='';try{const {data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebSalesPricingCatalog`,auth.portalRequestConfig());accept(data)}catch(e){error.value=pricingErrorMessage(e)}finally{loading.value=false}}
-async function saveSettings(){savingSettings.value=true;error.value='';try{const{data}=await axios.post(`${import.meta.env.VITE_API_URL}/WebSalesPricingSettings`,settings,auth.portalRequestConfig());accept(data);toast.add({severity:'success',summary:'Configuración guardada',life:3000})}catch(e){error.value=pricingErrorMessage(e)}finally{savingSettings.value=false}}
+async function load(){loading.value=true;error.value='';try{const {data}=await axios.get(backendUrl(`/WebSalesPricingCatalog`),auth.portalRequestConfig());accept(data)}catch(e){error.value=pricingErrorMessage(e)}finally{loading.value=false}}
+async function saveSettings(){savingSettings.value=true;error.value='';try{const{data}=await axios.post(backendUrl(`/WebSalesPricingSettings`),settings,auth.portalRequestConfig());accept(data);toast.add({severity:'success',summary:'Configuración guardada',life:3000})}catch(e){error.value=pricingErrorMessage(e)}finally{savingSettings.value=false}}
 function create(){Object.assign(form,blank(),{currencyId:settings.baseCurrencyId});savedForm.value=JSON.stringify(form);editError.value='';previewResult.value=null;dialog.value=true;}
-async function edit(id:number){loading.value=true;error.value='';try{const{data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebSalesPriceList/${id}`,auth.portalRequestConfig());Object.assign(form,data);savedForm.value=JSON.stringify(form);editError.value='';previewProductId.value=null;previewLabel.value='';previewResult.value=null;dialog.value=true}catch(e){error.value=pricingErrorMessage(e)}finally{loading.value=false}}
+async function edit(id:number){loading.value=true;error.value='';try{const{data}=await axios.get(backendUrl(`/WebSalesPriceList/${id}`),auth.portalRequestConfig());Object.assign(form,data);savedForm.value=JSON.stringify(form);editError.value='';previewProductId.value=null;previewLabel.value='';previewResult.value=null;dialog.value=true}catch(e){error.value=pricingErrorMessage(e)}finally{loading.value=false}}
 async function addRule(){form.rules.push({scope:'PRODUCT',productId:null,familyId:null,productLabel:'',calculation:'FIXED',value:0,minQuantity:1});await nextTick();const rows=rulesTable.value?.$el?.querySelectorAll('tbody tr');const row=rows?.[rows.length-1];row?.scrollIntoView({block:'nearest'});row?.querySelector('input,[tabindex="0"]')?.focus();}
-async function save(){saving.value=true;editError.value='';try{const{data}=await axios.post(`${import.meta.env.VITE_API_URL}/WebSalesPriceList`,form,auth.portalRequestConfig());Object.assign(form,data);savedForm.value=JSON.stringify(form);previewResult.value=null;toast.add({severity:'success',summary:'Tarifa guardada',detail:'Los documentos existentes conservan sus importes.',life:4000});await refresh()}catch(e){editError.value=pricingErrorMessage(e)}finally{saving.value=false}}
+async function save(){saving.value=true;editError.value='';try{const{data}=await axios.post(backendUrl(`/WebSalesPriceList`),form,auth.portalRequestConfig());Object.assign(form,data);savedForm.value=JSON.stringify(form);previewResult.value=null;toast.add({severity:'success',summary:'Tarifa guardada',detail:'Los documentos existentes conservan sus importes.',life:4000});await refresh()}catch(e){editError.value=pricingErrorMessage(e)}finally{saving.value=false}}
 const previewQuantity=ref(1);
 const previewProductId=ref<number|null>(null),previewLabel=ref(''),previewResult=ref<any>(null),previewBusy=ref(false);
 let previewRevision=0;
@@ -99,7 +100,7 @@ async function preview(){
   const revision=++previewRevision;
   const quantity=previewQuantity.value;
   previewBusy.value=true;previewResult.value=null;editError.value='';
-  try{const {data:result}=await axios.post(`${import.meta.env.VITE_API_URL}/WebPreviewSalesPrice`,{tarifa:JSON.parse(JSON.stringify(form)),productId:previewProductId.value,quantity},{...auth.portalRequestConfig(),timeout:15000});if(revision===previewRevision)previewResult.value={...result,quantityRequested:quantity};}
+  try{const {data:result}=await axios.post(backendUrl(`/WebPreviewSalesPrice`),{tarifa:JSON.parse(JSON.stringify(form)),productId:previewProductId.value,quantity},{...auth.portalRequestConfig(),timeout:15000});if(revision===previewRevision)previewResult.value={...result,quantityRequested:quantity};}
   catch(e){if(revision===previewRevision)editError.value=pricingErrorMessage(e);}
   finally{previewBusy.value=false;}
 }

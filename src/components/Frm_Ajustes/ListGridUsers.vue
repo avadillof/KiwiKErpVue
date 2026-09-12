@@ -100,7 +100,7 @@
 
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import { useRouter, } from 'vue-router';
 import { useCompanyStore } from '../../stores/companyStore.ts';
 import Menu from 'primevue/menu';
@@ -295,7 +295,7 @@ const getProfilePhotoUrl = (pkid: number) => {
   // aunque en una tabla con muchos registros, a veces es mejor omitirlo para que el navegador cachee bien.
 
   const timestamp = new Date().getTime();
-  return `${import.meta.env.VITE_API_URL.replace('/api', '')}/gestdoc/users/${pkid}/photoPerfil.jpg?t=${timestamp}`;
+  return backendUrl(`/gestdoc/users/${pkid}/photoPerfil.jpg?t=${timestamp}`);
 };
 
 const deleteUser = () => {
@@ -316,7 +316,7 @@ const deleteUser = () => {
     accept: async () => {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/WebDeleteUser`,
+          backendUrl(`/WebDeleteUser`),
           {
             method: 'POST',
             headers: {

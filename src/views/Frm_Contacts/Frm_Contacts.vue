@@ -132,7 +132,7 @@
 
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref, watch, nextTick, computed } from 'vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue'
@@ -335,7 +335,7 @@ const deleteContact = () => {
         accept: async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteContact`,
+                    backendUrl(`/WebDeleteContact`),
                     {
                         method: 'POST',
                         headers: {

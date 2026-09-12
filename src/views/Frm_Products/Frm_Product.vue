@@ -608,6 +608,7 @@
 
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import ProductPricePreview from '@/components/shared/ProductPricePreview.vue';
 
 import { ref, watch, computed } from 'vue';
@@ -934,7 +935,7 @@ const loadProduct = async (pkid: number) => {
     try {
 
         const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/WebGetProduct/${pkid}`
+            backendUrl(`/WebGetProduct/${pkid}`)
         );
 
         const data = response.data;
@@ -988,7 +989,7 @@ const loadCatalogs = async () => {
     try {
 
         const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/WebLoadProductCatalog`
+            backendUrl(`/WebLoadProductCatalog`)
         );
 
         const data = response.data || {};
@@ -1028,7 +1029,7 @@ const save = async () => {
     try {
 
         await axios.post(
-            `${import.meta.env.VITE_API_URL}/WebSaveProduct`,
+            backendUrl(`/WebSaveProduct`),
             product.value
         );
 
@@ -1063,8 +1064,7 @@ const save = async () => {
 
 const generateCode = async () => {
     try {
-        const baseUrl = import.meta.env.VITE_API_URL;
-        const res = await axios.get(`${baseUrl}/WebGenerateProductCode`);
+        const res = await axios.get(backendUrl(`/WebGenerateProductCode`));
         // Asignamos el código generado al modelo
         product.value.code = res.data;
     } catch (error) {

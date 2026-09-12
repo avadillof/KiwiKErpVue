@@ -32,6 +32,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {computed,reactive,ref,watch} from 'vue';
 import {useRouter} from 'vue-router';
 import {useToast} from 'primevue/usetoast';
@@ -58,12 +59,12 @@ async function save(){
  if(!form.description.trim()){formError.value='Descripción: obligatoria.';return;}
  if(!validIban.value){formError.value='IBAN: introduce una cuenta con formato y dígitos de control correctos.';return;}
  saving.value=true;
- try{await axios.post(import.meta.env.VITE_API_URL+'/WebBankAccounts',{...form,description:form.description.trim(),sucursal:form.sucursal.trim(),ibam:normalizedIban.value},auth.portalRequestConfig());visible.value=false;toast.add({severity:'success',summary:'Cuenta bancaria guardada',life:3000});await table.value?.refresh();}
+ try{await axios.post(backendUrl('/WebBankAccounts'),{...form,description:form.description.trim(),sucursal:form.sucursal.trim(),ibam:normalizedIban.value},auth.portalRequestConfig());visible.value=false;toast.add({severity:'success',summary:'Cuenta bancaria guardada',life:3000});await table.value?.refresh();}
  catch(e){formError.value=message(e);}finally{saving.value=false;}
 }
 async function remove(){
  if(deleting.value||!selected.value?.id)return;deleting.value=true;deleteError.value='';
- try{await axios.delete(import.meta.env.VITE_API_URL+'/WebBankAccounts/'+selected.value.id,auth.portalRequestConfig());deleteVisible.value=false;toast.add({severity:'success',summary:'Cuenta eliminada',life:3000});await table.value?.refresh();}
+ try{await axios.delete(backendUrl('/WebBankAccounts/' + selected.value.id),auth.portalRequestConfig());deleteVisible.value=false;toast.add({severity:'success',summary:'Cuenta eliminada',life:3000});await table.value?.refresh();}
  catch(e){deleteError.value=message(e);}finally{deleting.value=false;}
 }
 </script>

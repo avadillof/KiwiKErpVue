@@ -326,7 +326,7 @@
 </style>
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import { useCompanyStore } from '../../stores/companyStore';
 import { useToast } from 'primevue/usetoast';
 import { ref, computed, watch } from 'vue';
@@ -483,7 +483,7 @@ function preview(file: Attachment) {
 
 
     const url =
-        `${import.meta.env.VITE_API_URL}/api/gestdoc/preview`
+        backendUrl(`/api/gestdoc/preview`)
         + `?entity=${props.moduleFolder}`
         + `&entityId=${props.entityId}`
         + `&fileName=${encodeURIComponent(file.name)}`;
@@ -514,7 +514,7 @@ async function download(file: Attachment) {
     try {
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/gestdoc/download?entity=${props.moduleFolder}&entityId=${props.entityId}&fileName=${encodeURIComponent(file.name)}`
+            backendUrl(`/api/gestdoc/download?entity=${props.moduleFolder}&entityId=${props.entityId}&fileName=${encodeURIComponent(file.name)}`)
         );
 
         if (!response.ok) {
@@ -585,7 +585,7 @@ function remove(file: Attachment) {
 
 
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/gestdoc/delete`,
+                    backendUrl(`/api/gestdoc/delete`),
                     {
                         method: 'DELETE',
                         headers: {
@@ -680,7 +680,7 @@ async function upload(event: any) {
 
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/gestdoc/upload`,
+            backendUrl(`/api/gestdoc/upload`),
             {
                 method: 'POST',
                 body: formData
@@ -750,7 +750,7 @@ async function loadDocuments() {
     try {
         console.log('loadDocuments');
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/gestdoc/list?entity=${props.moduleFolder}&entityId=${props.entityId}`
+            backendUrl(`/api/gestdoc/list?entity=${props.moduleFolder}&entityId=${props.entityId}`)
         );
 
         if (!response.ok) {

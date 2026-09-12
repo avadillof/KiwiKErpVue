@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref, nextTick } from 'vue';
 
 import Dialog from 'primevue/dialog';
@@ -129,7 +129,7 @@ const save = async () => {
         console.log('Certificado:', certificateId.value);
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/WebSaveCertificateUsers`,
+            backendUrl(`/WebSaveCertificateUsers`),
             {
                 method: 'POST',
                 headers: {

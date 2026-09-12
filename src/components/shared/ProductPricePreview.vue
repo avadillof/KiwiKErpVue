@@ -11,6 +11,7 @@
   </Dialog>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {ref} from 'vue';import axios from 'axios';
 import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';import Dialog from 'primevue/dialog';import Select from 'primevue/select';import Message from 'primevue/message';
@@ -20,6 +21,6 @@ const auth=useAuthStore();
 const quantity=ref(1);
 const props=defineProps<{productId:number|null}>();
 const visible=ref(false),busy=ref(false),rates=ref<any[]>([]),rateId=ref<number|null>(null),error=ref(''),result=ref<any>(null);
-async function open(){visible.value=true;busy.value=true;error.value='';result.value=null;try{const{data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebSalesPricingCatalog`,auth.portalRequestConfig());rates.value=data.rates;rateId.value=data.settings.defaultTarifaId}catch(e){error.value=pricingErrorMessage(e)}finally{busy.value=false}}
+async function open(){visible.value=true;busy.value=true;error.value='';result.value=null;try{const{data}=await axios.get(backendUrl(`/WebSalesPricingCatalog`),auth.portalRequestConfig());rates.value=data.rates;rateId.value=data.settings.defaultTarifaId}catch(e){error.value=pricingErrorMessage(e)}finally{busy.value=false}}
 async function calculate(){busy.value=true;error.value='';result.value=null;try{result.value=await resolveSalesPrice(rateId.value,{productId:props.productId,priceUnit:0,quantity:quantity.value})}catch(e){error.value=pricingErrorMessage(e)}finally{busy.value=false}}
 </script>

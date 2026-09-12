@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 import { ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { storeToRefs } from 'pinia'; // Importamos esto
@@ -20,7 +21,7 @@ export function Frm_Ajustes() {
     const authStore = useAuthStore();
     const { companyInfo: formData } = storeToRefs(companyStore);
 
-    const baseUrl = import.meta.env.VITE_API_URL;
+    const baseUrl = backendUrl('');
 
     
 
@@ -29,7 +30,7 @@ export function Frm_Ajustes() {
     async function loadData() {
         loading.value = true;
         try {
-            const response = await fetch(`${baseUrl}/WebGetParameters`, {
+            const response = await fetch(backendUrl(`/WebGetParameters`), {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -42,7 +43,7 @@ export function Frm_Ajustes() {
             // Actualizamos el store
             // El API usa urlLogoCompany (nombre de la columna). En la aplicación
             // mantenemos urlLogo como propiedad de presentación.
-            const resolvedLogoUrl = data.urlLogoCompany || `${baseUrl}/base/logo.png`;
+            const resolvedLogoUrl = data.urlLogoCompany || backendUrl(`/base/logo.png`);
             companyStore.setCompanyParameters({
                 ...data,
                 urlLogo: resolvedLogoUrl,
@@ -87,7 +88,7 @@ export function Frm_Ajustes() {
         loading.value = true;
         try {
             const portalHeaders = authStore.portalRequestConfig().headers;
-            const response = await fetch(`${baseUrl}/WebSaveParameters`, {
+            const response = await fetch(backendUrl(`/WebSaveParameters`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...portalHeaders },
                 body: JSON.stringify(formData.value)
@@ -129,7 +130,7 @@ export function Frm_Ajustes() {
         testingSmtp.value = true;
         try {
             const portalHeaders = authStore.portalRequestConfig().headers;
-            const response = await fetch(`${baseUrl}/WebTestSmtpConnection`, {
+            const response = await fetch(backendUrl(`/WebTestSmtpConnection`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...portalHeaders },
                 body: JSON.stringify(formData.value)
@@ -164,7 +165,7 @@ export function Frm_Ajustes() {
         formDataUpload.append('logo', file);
 
         try {
-            const response = await fetch(`${baseUrl}/WebUploadLogo`, {
+            const response = await fetch(backendUrl(`/WebUploadLogo`), {
                 method: 'POST',
                 body: formDataUpload
             });
@@ -174,7 +175,7 @@ export function Frm_Ajustes() {
             const data = await response.json();
             // Se añade el timestamp únicamente para refrescar la previsualización.
             // La URL que el backend guarda para los PDF no contiene este parámetro.
-            const newLogoUrl = `${data.urlLogoCompany || `${baseUrl}/base/logo.png`}?t=${Date.now()}`;
+            const newLogoUrl = `${data.urlLogoCompany || backendUrl(`/base/logo.png`)}?t=${Date.now()}`;
             formData.value.urlLogo = newLogoUrl;
             logoUrl.value = newLogoUrl;
 

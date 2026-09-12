@@ -89,6 +89,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { ref, watch } from 'vue'
 
 const props = defineProps({
@@ -115,7 +116,7 @@ watch(
         const user = JSON.parse(sessionStorage.getItem("temp_user")!)
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/WebGetSecurityCategoriesUser`,
+            backendUrl(`/WebGetSecurityCategoriesUser`),
             {
                 method: "POST",
                 headers: {

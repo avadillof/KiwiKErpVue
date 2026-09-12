@@ -111,8 +111,7 @@
 
 
 <script setup lang='ts'>
-
-
+import { backendUrl } from '@/services/backendUrl';
 import { ref } from 'vue';
 import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
@@ -226,7 +225,7 @@ const loadTypes = async () => {
 
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/WebGetCertificateTypes`
+            backendUrl(`/WebGetCertificateTypes`)
         );
 
 
@@ -369,7 +368,7 @@ const save = async () => {
 
         const response = await fetch(
 
-            `${import.meta.env.VITE_API_URL}/api/certificates/UploadCertificateWithValidaTePassword`,
+            backendUrl(`/api/certificates/UploadCertificateWithValidaTePassword`),
 
             {
                 method: 'POST',
@@ -415,7 +414,7 @@ const save = async () => {
 const loadCertificate = async (id: number) => {
 
     const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/WebGetCertificateById?id=${id}`
+        backendUrl(`/WebGetCertificateById?id=${id}`)
     );
 
     if (!response.ok)

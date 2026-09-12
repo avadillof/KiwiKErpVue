@@ -594,6 +594,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { computed, onMounted, ref, watch } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
@@ -708,7 +709,7 @@ const tableMenuItems = [
 const isDraftQuote = (quote: any) =>
   quote?.state === "Para Aprobar / To Approved Estimation";
 const getCreatorPhotoUrl = (userId: number) =>
-  `${import.meta.env.VITE_API_URL.replace("/api", "")}/gestdoc/users/${userId}/photoPerfil.jpg`;
+  backendUrl(`/gestdoc/users/${userId}/photoPerfil.jpg`);
 const handleCreatorPhotoError = (userId: number) => {
   creatorPhotoErrors.value[userId] = true;
 };
@@ -880,7 +881,7 @@ const openQuotePdf = (regenerate = false) => {
   if (!selectedQuote.value?.pkid) return;
   const query = regenerate ? "?regenerate=true" : "";
   window.open(
-    `${import.meta.env.VITE_API_URL}/WebGetSalesQuotePdf/${selectedQuote.value.pkid}${query}`,
+    backendUrl(`/WebGetSalesQuotePdf/${selectedQuote.value.pkid}${query}`),
     "_blank",
     "noopener",
   );
@@ -889,7 +890,7 @@ const loadQuoteStatistics = async () => {
   loadingStatistics.value = true;
   try {
     const { data } = await axios.get(
-      `${import.meta.env.VITE_API_URL}/WebGetSalesQuoteStatistics`,
+      backendUrl(`/WebGetSalesQuoteStatistics`),
       { params: { year: selectedStatisticsYear.value } },
     );
     statistics.value = { ...statistics.value, ...data };
@@ -919,7 +920,7 @@ const openSendDialog = async () => {
   showSendDialog.value = true;
   try {
     const { data } = await axios.get(
-      `${import.meta.env.VITE_API_URL}/WebGetSalesQuoteEmailContacts/${selectedQuote.value.pkid}`,
+      backendUrl(`/WebGetSalesQuoteEmailContacts/${selectedQuote.value.pkid}`),
     );
     emailRecipients.value = data ?? [];
     selectedRecipientId.value =
@@ -943,7 +944,7 @@ const sendQuoteByEmail = async () => {
   sendingQuote.value = true;
   try {
     await axios.post(
-      `${import.meta.env.VITE_API_URL}/WebSendSalesQuote/${selectedQuote.value.pkid}`,
+      backendUrl(`/WebSendSalesQuote/${selectedQuote.value.pkid}`),
       null,
       { params: { contactId: selectedRecipientId.value } },
     );
@@ -1002,7 +1003,7 @@ const requestQuoteAction = (action: "accept" | "cancel" | "reopen") => {
             ? "WebReopenSalesQuote"
             : "WebCancelSalesQuote";
         const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL}/${endpoint}/${selectedQuote.value.pkid}`,
+          backendUrl(`/${endpoint}/${selectedQuote.value.pkid}`),
         );
         const detail = accepting
           ? `Pedido ${data.salesOrder?.code ?? ""} creado en borrador.`

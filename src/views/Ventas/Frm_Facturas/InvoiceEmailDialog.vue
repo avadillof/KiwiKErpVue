@@ -53,6 +53,7 @@
   </Dialog>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {computed,ref} from 'vue';
 import axios from 'axios';
 import Dialog from 'primevue/dialog';import Button from 'primevue/button';import Message from 'primevue/message';import MultiSelect from 'primevue/multiselect';import InputText from 'primevue/inputtext';import Textarea from 'primevue/textarea';import DataTable from 'primevue/datatable';import Column from 'primevue/column';import Tag from 'primevue/tag';
@@ -71,7 +72,7 @@ const statusLabel=(status:string)=>({SENT:'Enviado',CLAIMED:'En curso / sin conf
 let revision=0;
 async function load(target:number,initial:boolean){
   const request=++revision;loading.value=true;error.value='';
-  try{const response=await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesInvoiceEmail/${invoice.value.pkid}`,{...auth.portalRequestConfig(),params:{page:target}});if(request!==revision)return;data.value=response.data;data.value.contacts=(data.value.contacts||[]).map((c:any)=>({...c,label:`${c.name||'Sin nombre'} · ${c.email}${c.defaultContact?' (Principal)':''}`}));page.value=data.value.page;loaded.value=true;
+  try{const response=await axios.get(backendUrl(`/WebGetSalesInvoiceEmail/${invoice.value.pkid}`),{...auth.portalRequestConfig(),params:{page:target}});if(request!==revision)return;data.value=response.data;data.value.contacts=(data.value.contacts||[]).map((c:any)=>({...c,label:`${c.name||'Sin nombre'} · ${c.email}${c.defaultContact?' (Principal)':''}`}));page.value=data.value.page;loaded.value=true;
     if(initial){const primary=data.value.contacts.find((c:any)=>c.defaultContact);selectedIds.value=primary?[primary.pkid]:[];subject.value=data.value.subject;message.value=data.value.message;}
     else selectedIds.value=selectedIds.value.filter(id=>data.value.contacts.some((c:any)=>c.pkid===id));
   }catch(e:any){if(request!==revision)return;loaded.value=false;error.value=!auth.portalSession||e.response?.status===401?'Vuelve a iniciar sesión en el portal.':typeof e.response?.data==='string'?e.response.data:'No se pudo cargar el correo de factura. Comprueba el backend y la migración V21.';}
@@ -79,12 +80,12 @@ async function load(target:number,initial:boolean){
 }
 function open(item:any,view:'compose'|'history'='compose'){if(!item?.pkid||sending.value)return;mode.value=view;hasDraft.value=view==='compose';invoice.value=item;source.value=null;pendingRequest.value=null;uncertain.value=false;notice.value='';loaded.value=false;confirmVisible.value=false;visible.value=true;void load(0,true);}
 function prepareResend(row:any){mode.value='compose';hasDraft.value=true;source.value=row;uncertain.value=false;pendingRequest.value=null;subject.value=row.subject;message.value=row.message;const old=recipients(row);selectedIds.value=data.value.contacts.filter((c:any)=>old.some(r=>r.pkid===c.pkid)).map((c:any)=>c.pkid);noticeSeverity.value='warn';notice.value='Reenvío preparado. Revisa los contactos y correos actuales, el asunto y el mensaje antes de confirmar.';}
-function viewPdf(){window.open(`${import.meta.env.VITE_API_URL}/WebGetSalesInvoicePdf/${invoice.value.pkid}`,'_blank','noopener');}
+function viewPdf(){window.open(backendUrl(`/WebGetSalesInvoicePdf/${invoice.value.pkid}`),'_blank','noopener');}
 async function send(){if(!canCompose.value)return;pendingRequest.value={operationKey:crypto.randomUUID(),contactIds:[...selectedIds.value],expectedEmails:Object.fromEntries(selectedContacts.value.map(c=>[c.pkid,c.email])),subject:subject.value,message:message.value,resendOfId:source.value?.id??null,confirmed:true};await dispatch();}
 async function retrySameRequest(){if(!pendingRequest.value||sending.value)return;await dispatch();}
 async function dispatch(){
   sending.value=true;error.value='';notice.value='';
-  try{const response=await axios.post(`${import.meta.env.VITE_API_URL}/WebSendSalesInvoiceEmail/${invoice.value.pkid}`,pendingRequest.value,auth.portalRequestConfig());const row=response.data;uncertain.value=row.status==='CLAIMED';noticeSeverity.value=row.status==='SENT'?'success':'warn';notice.value=row.status==='SENT'?'El servidor de correo ha aceptado el envío.':row.status==='CLAIMED'?'La solicitud sigue en curso o sin confirmar. No se ha repetido el envío.':'Resultado incierto: el correo puede haberse enviado. No se reintentará automáticamente.';confirmVisible.value=false;source.value=row;await load(0,false);emit('sent');}
+  try{const response=await axios.post(backendUrl(`/WebSendSalesInvoiceEmail/${invoice.value.pkid}`),pendingRequest.value,auth.portalRequestConfig());const row=response.data;uncertain.value=row.status==='CLAIMED';noticeSeverity.value=row.status==='SENT'?'success':'warn';notice.value=row.status==='SENT'?'El servidor de correo ha aceptado el envío.':row.status==='CLAIMED'?'La solicitud sigue en curso o sin confirmar. No se ha repetido el envío.':'Resultado incierto: el correo puede haberse enviado. No se reintentará automáticamente.';confirmVisible.value=false;source.value=row;await load(0,false);emit('sent');}
   catch(e:any){confirmVisible.value=false;const rejected=[400,401,403,404,409,422].includes(e.response?.status)||!auth.portalSession;uncertain.value=!rejected;error.value=!auth.portalSession?'Vuelve a iniciar sesión en el portal.':rejected&&typeof e.response?.data==='string'?e.response.data:'Resultado no confirmado. Actualiza el historial o reintenta la misma solicitud antes de preparar otro envío. No cambies los datos ni repitas el envío a ciegas.';}
   finally{sending.value=false;}
 }

@@ -594,6 +594,7 @@
 
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { nextTick } from 'vue';
 import { ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
@@ -1015,7 +1016,7 @@ const open = async (pkid?: number) => {
 ========================= */
 const loadEntity = async (pkid: number) => {
     const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/WebGetClient`,
+        backendUrl(`/WebGetClient`),
         { params: { pkid } }
     );
 
@@ -1057,9 +1058,8 @@ const loadEntity = async (pkid: number) => {
 
 
 const loadSalesCatalogs = async () => {
-    const base = import.meta.env.VITE_API_URL;
 
-    const res = await axios.get(`${base}/loadSalesCatalog`);
+    const res = await axios.get(backendUrl(`/loadSalesCatalog`));
     const data = res.data || {};
 
     tarifas.value = data.tarifas || [];
@@ -1083,7 +1083,7 @@ const save = async () => {
     try {
         
         await axios.post(
-            `${import.meta.env.VITE_API_URL}/WebSaveClient`,
+            backendUrl(`/WebSaveClient`),
             payload
         );
 
@@ -1123,8 +1123,7 @@ const openEmail = () => {
 
 const generateCode = async () => {
     try {
-        const baseUrl = import.meta.env.VITE_API_URL;
-        const res = await axios.get(`${baseUrl}/WebGenerateEntitieCode`);
+        const res = await axios.get(backendUrl(`/WebGenerateEntitieCode`));
         // Asignamos el código generado al modelo
         entity.value.code = res.data;
     } catch (error) {

@@ -129,6 +129,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import PaymentTermsSettings from "./PaymentTermsSettings.vue";
 import InvoiceReminderSettings from "./InvoiceReminderSettings.vue";
 import { formatCalendarDate } from '@/libs/HelperDates';
@@ -177,7 +178,7 @@ const runReminder=async(preview:boolean)=>{
   reminderBusy.value=preview?'preview':'send';reminderError.value='';reminderResult.value=null;
   try {
     const request=authStore.portalRequestConfig();
-    const url=`${import.meta.env.VITE_API_URL}/${preview?'WebPreviewSalesDeliveryReminders':'WebSendSalesDeliveryReminders'}`;
+    const url=backendUrl(`/${preview?'WebPreviewSalesDeliveryReminders':'WebSendSalesDeliveryReminders'}`);
     reminderResult.value=(preview?await axios.get(url,request):await axios.post(url,{confirmed:true},request)).data;
   } catch(e:any) {
     reminderError.value=e.response?.status===401||!authStore.portalSession?'La sesión ha caducado o es anterior a esta actualización. Vuelve a iniciar sesión en el portal.':preview?'No se pudo obtener la prueba. Comprueba el servidor y la sesión.':'No se pudo confirmar el resultado. Puede haber correos enviados: utiliza Probar para consultar el registro antes de volver a enviar. No se repetirán los ya reservados hoy.';
@@ -190,8 +191,8 @@ const deliveryError=computed(()=>{
   return '';
 });
 const normalizeInvoiceSeries=(value:string|undefined)=>{form.invoiceSeriesPrefix=String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10)};
-const load=async()=>{loading.value=true;loaded.value=false;try{Object.assign(form,(await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesSettings`)).data);savedReminder.value=reminderSnapshot();savedQuotes.value=quoteSnapshot();loaded.value=true}catch(e:any){toast.add({severity:'error',summary:'No se pudieron cargar los ajustes',detail:e.response?.data||'Comprueba que la migración de base de datos está aplicada.',life:5000})}finally{loading.value=false}};
-const save=async()=>{if(saving.value||loading.value||!loaded.value||deliveryError.value||reminderBusy.value||quoteBusy.value||quoteError.value)return;saving.value=true;try{Object.assign(form,(await axios.post(`${import.meta.env.VITE_API_URL}/WebSaveSalesSettings`,form)).data);savedReminder.value=reminderSnapshot();savedQuotes.value=quoteSnapshot();reminderResult.value=null;toast.add({severity:'success',summary:'Ajustes guardados',detail:'La configuración de Ventas y VeriFactu ya está actualizada.',life:3500})}catch(e:any){toast.add({severity:'error',summary:'No se pudieron guardar',detail:e.response?.data||'Revisa los valores introducidos.',life:5000})}finally{saving.value=false}};
+const load=async()=>{loading.value=true;loaded.value=false;try{Object.assign(form,(await axios.get(backendUrl(`/WebGetSalesSettings`))).data);savedReminder.value=reminderSnapshot();savedQuotes.value=quoteSnapshot();loaded.value=true}catch(e:any){toast.add({severity:'error',summary:'No se pudieron cargar los ajustes',detail:e.response?.data||'Comprueba que la migración de base de datos está aplicada.',life:5000})}finally{loading.value=false}};
+const save=async()=>{if(saving.value||loading.value||!loaded.value||deliveryError.value||reminderBusy.value||quoteBusy.value||quoteError.value)return;saving.value=true;try{Object.assign(form,(await axios.post(backendUrl(`/WebSaveSalesSettings`),form)).data);savedReminder.value=reminderSnapshot();savedQuotes.value=quoteSnapshot();reminderResult.value=null;toast.add({severity:'success',summary:'Ajustes guardados',detail:'La configuración de Ventas y VeriFactu ya está actualizada.',life:3500})}catch(e:any){toast.add({severity:'error',summary:'No se pudieron guardar',detail:e.response?.data||'Revisa los valores introducidos.',life:5000})}finally{saving.value=false}};
 onMounted(load);
 </script>
 

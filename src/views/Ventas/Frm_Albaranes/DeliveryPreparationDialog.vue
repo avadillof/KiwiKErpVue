@@ -24,6 +24,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { computed, ref, watch } from 'vue'; import axios from 'axios';
 import Button from 'primevue/button'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import Dialog from 'primevue/dialog'; import InputNumber from 'primevue/inputnumber'; import Message from 'primevue/message';
 import { useToast } from 'primevue/usetoast'; import { useAuthStore } from '@/stores/authStore';
@@ -38,8 +39,8 @@ const invalidLines = computed(() => lines.value.filter(exceedsPending));
 const validateDeliveryInput = (line: any, value: string | number | undefined) => {
     line.quantityToDeliver = value === undefined || value === '' ? null : Number(value);
 };
-const addOrderLines = async (orderId: number) => { if (selectedOrderIds.value.includes(orderId)) return; const result = await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesOrderDeliveryLines/${orderId}`); if (!data.value.orderCode) data.value = result.data; selectedOrderIds.value.push(orderId); lines.value.push(...(result.data.lines ?? []).map((line: any) => ({ ...line, quantityToDeliver: Number(line.quantityToDeliver ?? 0) }))); };
-const open = async (orderId: number) => { visible.value = true; loading.value = true; lines.value = []; selectedOrderIds.value = []; data.value = {}; compatibleOrders.value = []; compatibleSelection.value = []; try { await addOrderLines(orderId); const result = await axios.get(`${import.meta.env.VITE_API_URL}/WebGetCompatibleSalesOrders/${orderId}`); compatibleOrders.value = result.data ?? []; } finally { loading.value = false; } };
+const addOrderLines = async (orderId: number) => { if (selectedOrderIds.value.includes(orderId)) return; const result = await axios.get(backendUrl(`/WebGetSalesOrderDeliveryLines/${orderId}`)); if (!data.value.orderCode) data.value = result.data; selectedOrderIds.value.push(orderId); lines.value.push(...(result.data.lines ?? []).map((line: any) => ({ ...line, quantityToDeliver: Number(line.quantityToDeliver ?? 0) }))); };
+const open = async (orderId: number) => { visible.value = true; loading.value = true; lines.value = []; selectedOrderIds.value = []; data.value = {}; compatibleOrders.value = []; compatibleSelection.value = []; try { await addOrderLines(orderId); const result = await axios.get(backendUrl(`/WebGetCompatibleSalesOrders/${orderId}`)); compatibleOrders.value = result.data ?? []; } finally { loading.value = false; } };
 const addCompatible = async () => { loading.value=true; try { for (const order of compatibleSelection.value) await addOrderLines(order.pkid); compatibleVisible.value=false; } finally { loading.value=false; } };
 const generateDelivery = async () => {
     if (!hasQuantities.value || generating.value) return;
@@ -50,7 +51,7 @@ const generateDelivery = async () => {
     }
     generating.value = true;
     try {
-        const result = await axios.post(`${import.meta.env.VITE_API_URL}/WebCreateSalesDelivery`, {
+        const result = await axios.post(backendUrl(`/WebCreateSalesDelivery`), {
             userId: authStore.user?.pkid ?? null,
             lines: selectedLines.value.map(line => ({ lineId: line.lineId, quantity: Number(line.quantityToDeliver) }))
         });

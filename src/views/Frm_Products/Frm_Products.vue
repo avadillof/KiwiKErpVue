@@ -170,7 +170,7 @@
 
 
 <script setup lang="ts">
-
+import { backendUrl } from '@/services/backendUrl';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue'
 import type { ProductsDTO } from '../../models/ProductsDTO.ts';
 import { ref, computed, watch, onMounted } from 'vue';
@@ -217,7 +217,7 @@ const loadStatistics = async (productId?: number | null) => {
     loadingStatistics.value = true;
     try {
         const suffix = productId ? `?productId=${productId}` : '';
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/WebGetProductStatistics${suffix}`);
+        const response = await fetch(backendUrl(`/WebGetProductStatistics${suffix}`));
         if (!response.ok) throw new Error(await response.text());
         const data = await response.json();
         productStatistics.value = { global: data.global ?? productStatistics.value.global, selected: data.selected ?? null };
@@ -381,7 +381,7 @@ function deleteProduct() {
         accept: async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/WebDeleteProduct`,
+                    backendUrl(`/WebDeleteProduct`),
                     {
                         method: 'POST',
                         headers: {

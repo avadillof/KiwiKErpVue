@@ -44,6 +44,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {computed,ref} from 'vue';
 import InvoiceDuesTable from './InvoiceDuesTable.vue';
 
@@ -80,7 +81,7 @@ const money=(v:any)=>new Intl.NumberFormat('es-ES',{style:'currency',currency:in
 const dateString=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const formatDate=(v:any)=>{if(!v)return '—';const s=Array.isArray(v)?`${v[0]}-${String(v[1]).padStart(2,'0')}-${String(v[2]).padStart(2,'0')}`:String(v);return s.slice(0,10).split('-').reverse().join('/')};
 const valid=computed(()=>form.value.date instanceof Date && !isNaN(form.value.date.getTime()) && Number(form.value.amount)>0 && Number(form.value.amount)<=Number(data.value?.pendingAmount) && !!form.value.method && (!manualAllocation.value || (allocationRows().length>0 && Math.round(allocationRows().reduce((sum,a)=>sum+a.amount,0)*100)===Math.round(Number(form.value.amount)*100))));
-const api=(path:string)=>`${import.meta.env.VITE_API_URL}/${path}/${invoice.value.pkid}`;
+const api=(path:string)=>backendUrl(`/${path}/${invoice.value.pkid}`);
 const message=(e:any)=>typeof e.response?.data==='string'?e.response.data:e.response?.data?.message||e.response?.data?.detail||e.message||'No se pudo completar la operación. Comprueba la conexión.';
 async function load(){loading.value=true;error.value='';try{data.value=(await axios.get(api('WebGetSalesInvoicePayments'),{params:{userCode:connectedUserCode()}})).data;}catch(e){error.value=message(e)}finally{loading.value=false}}
 async function open(item:any){if(retryRequest.value){visible.value=true;return}invoice.value=item;data.value=null;error.value='';reversal.value=null;form.value={date:new Date(),amount:null,method:'TRANSFER',reference:'',notes:''};visible.value=true;manualAllocation.value=false;allocations.value={};await load();form.value.amount=Number(data.value?.dues?.find((d:any)=>Number(d.pendingAmount)>0)?.pendingAmount)||null}

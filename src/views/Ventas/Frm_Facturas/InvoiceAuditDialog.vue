@@ -21,6 +21,7 @@
   </Dialog>
 </template>
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import {computed,ref} from 'vue';
 import axios from 'axios';
 import Dialog from 'primevue/dialog';
@@ -42,7 +43,7 @@ const dateTime=(value:string)=>{if(!value)return '—';const date=new Date(value
 let requestId=0;
 async function load(target:number){
   const current=++requestId;loading.value=true;error.value='';rows.value=[];hasMore.value=false;checkedAt.value='';currentStatus.value='';
-  try{const {data}=await axios.get(`${import.meta.env.VITE_API_URL}/WebGetSalesInvoiceAudit/${invoice.value.pkid}`,{...auth.portalRequestConfig(),params:{page:target}});if(current!==requestId)return;rows.value=data.items;page.value=data.page;hasMore.value=data.hasMore;currentStatus.value=data.currentVeriFactuStatus||'';checkedAt.value=data.statusCheckedAt||'';}
+  try{const {data}=await axios.get(backendUrl(`/WebGetSalesInvoiceAudit/${invoice.value.pkid}`),{...auth.portalRequestConfig(),params:{page:target}});if(current!==requestId)return;rows.value=data.items;page.value=data.page;hasMore.value=data.hasMore;currentStatus.value=data.currentVeriFactuStatus||'';checkedAt.value=data.statusCheckedAt||'';}
   catch(e:any){if(current!==requestId)return;error.value=e.response?.status===401||!auth.portalSession?'Vuelve a iniciar sesión en el portal.':'No se pudo cargar la auditoría. Comprueba el backend y la migración V20.';}
   finally{if(current===requestId)loading.value=false;}
 }

@@ -400,6 +400,7 @@
 </template>
 
 <script setup lang="ts">
+import { backendUrl } from '@/services/backendUrl';
 import { computed, nextTick, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
@@ -520,7 +521,7 @@ const dateTime = (value: string) =>
 const linkedOrdersText = (quote: any) =>
   quote.linkedOrders?.map((order: any) => order.code).join(", ") ||
   "Sin pedido";
-const endpoint = `${import.meta.env.VITE_API_URL}/WebQuoteAssistant`;
+const endpoint = backendUrl(`/WebQuoteAssistant`);
 let sequence = 0;
 watch(
   visible,

@@ -1,3 +1,4 @@
+import { backendUrl } from '@/services/backendUrl';
 export type InstallationStatus =
     | 'NEW'
     | 'DATABASE_EXISTS'
@@ -48,10 +49,9 @@ export interface InstallationCheckResult {
     requiresRecreation?: boolean;
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || '';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(`${apiBaseUrl}/api/installation${path}`, options);
+    const response = await fetch(backendUrl(`/api/installation${path}`), options);
 
     if (!response.ok) {
         const detail = await response.text();
@@ -63,7 +63,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export async function getInstallationState(): Promise<InstallationState> {
     try {
-        const response = await fetch(`${apiBaseUrl}/api/installation/status`, {
+        const response = await fetch(backendUrl(`/api/installation/status`), {
             headers: { Accept: 'application/json' }
         });
 
