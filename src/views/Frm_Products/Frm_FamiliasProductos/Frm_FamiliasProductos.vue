@@ -13,7 +13,7 @@
 
 
         <GenericDataTable class="maintenance-table" ref="tableRef" dataKey="pkid" selectionMode="single" :endpoint="apiUrl"
-            :showPaginator="true" :filterable="true" :showActions="true" @row-select="handleRowSelect">
+            :showPaginator="true" :pageSize="10" :pageSizeOptions="[10, 25, 50]" :filterable="true" :showActions="true" @row-select="handleRowSelect">
 
 
             <template #headerActions>

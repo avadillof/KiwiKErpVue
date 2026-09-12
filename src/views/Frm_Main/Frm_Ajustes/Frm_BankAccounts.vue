@@ -4,7 +4,7 @@
     <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
     <section class="list-card">
       <Toolbar class="list-toolbar"><template #start><div class="workspace-heading"><span>Catálogo de cuentas bancarias</span><small>Consulta y gestiona las cuentas disponibles.</small></div></template><template #end><Button label="Nueva cuenta" icon="pi pi-plus" size="small" @click="edit()" /></template></Toolbar>
-      <GenericDataTable ref="table" class="maintenance-table" endpoint="WebBankAccounts" :requestConfig="auth.portalRequestConfig" :showPaginator="true" :filterable="true" :showActions="true" @load-error="error=message($event)" @data-loaded="error=''">
+      <GenericDataTable ref="table" class="maintenance-table" endpoint="WebBankAccounts" :pageSize="10" :pageSizeOptions="[10, 25, 50]" :requestConfig="auth.portalRequestConfig" :showPaginator="true" :filterable="true" :showActions="true" @load-error="error=message($event)" @data-loaded="error=''">
         <template #headerActions><Button icon="pi pi-refresh" text rounded aria-label="Actualizar cuentas" @click="table?.refresh()" /></template>
         <Column field="description" header="Descripción" sortable />
         <Column field="sucursal" header="Sucursal" sortable />

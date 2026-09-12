@@ -55,7 +55,7 @@
       </div>
 
       <Paginator v-if="showPaginator !== false" class="p-paginator-sm" :first="first" :rows="rows"
-        :totalRecords="totalRecords" :pageLinkSize="0" @page="onPage">
+        :rowsPerPageOptions="rowsPerPageOptions" :totalRecords="totalRecords" :pageLinkSize="0" @page="onPage">
         <template #start>
           <div class="flex align-items-center gap-2">
             <label class="text-xs font-semibold text-gray-500">Ir a:</label>
@@ -101,6 +101,8 @@ const props = defineProps<
     showActions?: boolean;
     params?: Record<string, any>;
     requestConfig?: () => AxiosRequestConfig;
+    pageSize?: number;
+    pageSizeOptions?: number[];
   }>();
 
 
@@ -127,7 +129,8 @@ const first = ref(0);
 const sortField = ref<string | null>(null);
 const sortOrder = ref<number | null>(null);
 
-const rows = ref(props.showPaginator === false ? 999999999 : (companyStore.companyInfo.paginationTable || 500));
+const rowsPerPageOptions = computed(() => props.pageSizeOptions ?? [10, 25, 50, 100]);
+const rows = ref(props.showPaginator === false ? 999999999 : (props.pageSize || companyStore.companyInfo.paginationTable || 50));
 
 const currentPage = computed(() => Math.floor(first.value / rows.value) + 1);
 const totalPages = computed(() => Math.ceil(totalRecords.value / rows.value) || 1);
@@ -154,6 +157,7 @@ async function fetchData(page: number, size: number) {
   
 
   loading.value = true;
+  tableData.value = [];
   try {
     // 1. Crear params base
     const params: any = { page, size,...props.params };
