@@ -23,15 +23,22 @@ for (const base of ['', '/api', '/api/', 'http://servidor:8083', 'https://localh
       assert.equal(url('/' + endpoint), `${root}/${endpoint}`);
     }
     for (const endpoint of ['api/installation/status', 'api/notes/load', 'api/notes/save', 'api/gestdoc/list']) {
-      const expected = root.endsWith('/api') ? root + '/' + endpoint.slice(4) : root + '/' + endpoint;
+      const expected = root + '/' + endpoint;
       assert.equal(url(endpoint), expected);
       assert.equal(url('/' + endpoint), expected);
-      assert.ok(!url(endpoint).includes('/api/api/'));
+      // El proxy elimina la base; el endpoint nativo conserva su propio /api.
     }
     assert.equal(url('/WebGetClient?name=A%2FB&pkid=42#detail'), `${root}/WebGetClient?name=A%2FB&pkid=42#detail`);
     for (const external of ['https://other/file.pdf', '//other/file.pdf', 'blob:https://host/id', 'data:image/png;base64,abc']) assert.equal(url(external), external);
   });
 }
+
+test('Docker retira solo el prefijo público y conserva las rutas Spring', () => {
+  const url = helper('/api');
+  for (const endpoint of ['/api/gestdoc/list', '/api/gestdoc/upload', '/api/gestdoc/preview', '/api/gestdoc/download', '/api/gestdoc/delete', '/gestdoc/users/28/photoPerfil.jpg', '/WebBankAccounts']) {
+    assert.equal(url(endpoint).replace(/^\/api/, ''), endpoint);
+  }
+});
 
 test('axios común resuelve URLs sin duplicar base ni modificar la petición', async () => {
   const apiSource = fs.readFileSync(new URL('../src/services/api.ts', import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '').replace('export { api };', 'globalThis.api = api;');

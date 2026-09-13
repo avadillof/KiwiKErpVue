@@ -6,11 +6,8 @@ export function backendUrl(path: string, base: string = import.meta.env.VITE_API
   const normalizedBase = base.trim().replace(/\/+$/, '');
   let normalizedPath = '/' + path.replace(/^\/+/, '');
 
-  // /api es el acceso público en Cloud y también parte de los endpoints nativos.
-  // Traefik debe conservarlo para estos últimos y quitarlo sólo para legacy.
-  if (/(?:^|\/)api$/.test(normalizedBase) && /^\/api(?:\/|[?#]|$)/.test(normalizedPath)) {
-    normalizedPath = normalizedPath.slice(4);
-  }
+  // La base es el prefijo del proxy: Docker lo elimina antes de llegar a Spring.
+  // Conservar /api en los endpoints nativos; /gestdoc (fotos) es una ruta legacy.
 
   return normalizedBase + normalizedPath;
 }
