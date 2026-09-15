@@ -1,0 +1,68 @@
+Accede al despliegue de pruebas de KiwiKERP:
+
+https://gocu-5b950bf3acaf4ef4bc61f5bf9b2d7794.freelandsite.es
+
+Realiza pruebas funcionales exclusivamente sobre:
+
+Módulo de Ventas → Articulos y Servicios
+
+Objetivos:
+
+Crear varios registros de pruebas unos 50 con datos ficticios y coherentes que posteriormente puedan conservarse como datos de demostración.
+Comprobar el alta normal de un articulo.
+    
+
+Acuerdate de Estas politicas
+
+        Artículos y flujo de venta
+        En Ventas y Compras, el selector Unidad de medida agrupa las opciones por categoría, sin un campo adicional. 
+        Al seleccionar un artículo en un documento se consulta su configuración actual para rellenar la nueva línea. 
+        Las líneas ya guardadas no se actualizan automáticamente.
+
+        El artículo proporciona descripción, precio, impuesto y unidad de medida. Su configuración también decide si necesita entrega física y desde dónde se factura. Revísela antes de utilizarlo en una venta.
+
+Configurar el recorrido del artículo
+Abra el artículo desde Ventas → Artículos y revise sus datos comerciales.
+Seleccione el tipo logístico: Almacenable, Consumible o Servicio. Un consumible puede requerir albarán aunque no tenga control estricto de existencias.
+Revise el tipo comercial compatible. Su configuración propone el flujo de venta.
+En Flujo de venta, mantenga la herencia del tipo comercial salvo que exista una excepción. Active Personalizar para este producto únicamente para definir una regla propia.
+Compruebe Requiere albarán y la política de facturación. Si no requiere albarán, la facturación se basa en cantidades pedidas.
+Configuración de la línea	Dónde se factura	Qué queda por completar
+Sin albarán, cantidades pedidas	Desde el pedido confirmado	Facturar la cantidad no cancelada
+Con albarán, cantidades pedidas	Desde el pedido confirmado	Entregar y facturar; son controles separados
+Con albarán, cantidades entregadas	Desde el albarán confirmado	Entregar y después facturar lo disponible
+Cambiar un artículo no debe reinterpretar una operación anterior: cada línea conserva su política. En un pedido mixto, consulte el comportamiento de cada línea antes de decidir desde dónde facturar.
+
+
+
+
+Comprobar campos obligatorios.
+Comprobar validación existentes.
+Intentar introducir datos incorrectos.
+Comprobar comportamiento con registros duplicados.
+Modificar registros existentes.
+Activar y desactivar registros, si existe esa opción.
+Probar búsquedas y filtros.
+Comprobar ordenación y paginación.
+Cancelar una edición y comprobar que no se guardan los cambios.
+Probar el borrado si la aplicación lo permite.
+Salir del formulario, volver a entrar y comprobar la persistencia de los datos.
+Detectar errores visuales, funcionales, de validación o de experiencia de usuario.
+
+Puedes inventar todos los datos utilizados.
+
+Los registros que funcionen correctamente pueden permanecer en la base de datos, ya que esta instalación se utilizará posteriormente como DEMO. 
+
+Por cada incidencia detectada crea una ficha con este formato:
+
+INC-FAMILIASPRODUCTOS-XXX
+Título:
+Gravedad: Bloqueante / Alta / Media / Baja
+Pantalla:
+Pasos para reproducir:
+Resultado obtenido:
+Resultado esperado:
+Datos utilizados:
+Observaciones:
+Propuesta de corrección para Codex: Corrige en el Código del Front y el Back lo qie consideres Oportuno
+------------------------------------------------

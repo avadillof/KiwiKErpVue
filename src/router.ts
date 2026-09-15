@@ -95,6 +95,11 @@ const routes = [
         component: () => import('./views/Ventas/Frm_Facturas/Frm_Facturas.vue')
       },
       {
+        path: '/ventas/rectificativas',
+        name: 'Rectificativas',
+        component: () => import('./views/Ventas/Frm_Rectificativas/Frm_Rectificativas.vue')
+      },
+      {
         path: '/ventas/lista-precios',
         name: 'ListaPrecios',
         component: () => import('./views/Ventas/Frm_ListaPrecios.vue')

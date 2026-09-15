@@ -23,8 +23,6 @@ export function DashboardController() {
 
     const modulosVisibles = computed(function() {
         return listaModulos.filter(function(modulo) {
-            // Compras permanece oculto hasta la publicación del módulo.
-            if (modulo.id === 'compras') return false;
             // Regla de Ajustes: solo admin
             if (modulo.id === 'ajustes') {
                 return authStore.user?.admin === true;

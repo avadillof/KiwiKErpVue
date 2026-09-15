@@ -1314,3 +1314,11 @@ Si hay un error de comunicación durante la emisión, consulte la factura y su c
 ### Primera fase del asistente de Facturas: monedas
 
 El piloto consulta y explica datos sin escribir documentos ni cobros. Los importes indican la moneda; si una consulta incluye distintas divisas, se rechaza sin totales parciales ni conversión. Acote por cliente/periodo o consulte una factura concreta. No se presupone EUR cuando falta moneda. Véase [configuración y validación del piloto](../invoice-assistant-pilot.md).
+
+### Facturas rectificativas
+
+El menú de tres puntos de una rectificativa aceptada incluye **Ver / Imprimir rectificativa**. Abre el PDF archivado en el visor del navegador para imprimirlo. Los nuevos reportes usan la plantilla corporativa de Facturas, con el documento rectificado y el motivo; los PDF firmados anteriormente conservan su versión original.
+
+Se crean desde una factura emitida y permiten abonos parciales sin superar lo ya rectificado. Las líneas conservan sus valores originales y el documento registra motivo, PDF, auditoría y estado VeriFactu. Los borradores se pueden editar o cancelar; al emitir reciben numeración RFC y quedan bloqueados.
+
+También se puede seleccionar una rectificativa aceptada. Se utilizan sus propias líneas y se descuentan las cantidades reservadas por sus correcciones posteriores. El listado identifica el documento inmediatamente rectificado y el detalle conserva la factura inicial. Revertir un abono negativo genera un ajuste positivo; la corrección económica de una rectificativa calcula la diferencia frente a su importe. Los borradores se muestran con el mismo distintivo amarillo de Facturas.

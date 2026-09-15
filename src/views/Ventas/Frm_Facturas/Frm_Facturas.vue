@@ -209,7 +209,7 @@
                   isInvoiceIssuePending(data.pkid) ||
                   data.manualInvoice ||
                   data.attachmentCount ||
-                  data.hasNotes
+                  data.hasNotes || data.rectificationCount
                 "
                 class="code-indicators"
                 ><Tag
@@ -227,7 +227,7 @@
                   rounded /><i
                   v-if="data.hasNotes"
                   class="pi pi-comment notes"
-                  title="Tiene observaciones" /></span></span></template></Column
+                  title="Tiene observaciones" /><span v-if="data.rectificationCount" class="rectification-indicator" :title="rectificationTooltip(data)"><Tag :value="String(data.rectificationCount)" icon="pi pi-undo" severity="warn" rounded /></span></span></span></template></Column
         ><Column
           field="createDate"
           sortField="createDate"
@@ -1427,6 +1427,10 @@ const isDraft = (s = "") =>
       currency: currency || "EUR",
       useGrouping: true,
     }).format(Number(v) || 0),
+  rectificationTooltip = (item: any) => {
+    const rows = item?.rectifications ?? [];
+    return rows.length ? `Rectificaciones asociadas (${rows.length})\n${rows.map((row: any) => `${row.code}: ${money(row.total, item.currencyCode)}`).join("\n")}\nTotal: ${money(item.rectificationTotal, item.currencyCode)}` : "Sin rectificaciones asociadas";
+  },
   number = (v: any) =>
     new Intl.NumberFormat("es-ES", {
       maximumFractionDigits: 3,

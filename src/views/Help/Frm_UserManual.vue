@@ -1,5 +1,8 @@
 <template>
-  <main class="manual-page">
+  <main class="manual-page" :style="{ '--freeland-logo': `url(${corporateLogo})` }">
+    <button class="back-to-index" type="button" @click="backToIndex" title="Volver al índice">
+      <i class="pi pi-arrow-up" /> <span>Índice</span>
+    </button>
     <header class="manual-hero">
       <button
         type="button"
@@ -26,35 +29,34 @@
       <nav class="toc" aria-label="Índice del manual">
         <strong>Contenido</strong>
         <div class="toc-group">
-          <a class="toc-main" href="#introduccion">Introducción al sistema</a
-          ><a class="toc-sub" href="#instalacion">Puesta en marcha</a
-          ><a class="toc-sub" href="#novedades">Novedades del 1 de septiembre</a
-          ><a class="toc-sub" href="#cierre-ventas"
-            >Estado de cierre de Ventas</a
-          >
+          <a class="toc-main" href="#portal-modulos">Módulos del portal</a
+          ><a class="toc-sub" href="#circuito">Ventas</a
+          ><a class="toc-sub" href="#informes-portal">Informes</a
+          ><a class="toc-sub" href="#configuracion">Configuración</a>
         </div>
         <div class="toc-group">
-          <a class="toc-main" href="#inicio">1. Acceso y navegación</a
+          <a class="toc-main" href="#inicio">1. Primeros pasos y panel de control</a
           ><a class="toc-sub" href="#inicio-sesion">Iniciar sesión</a
           ><a class="toc-sub" href="#panel-control">Panel de control</a>
         </div>
         <div class="toc-group">
           <a class="toc-main" href="#circuito">2. Circuito comercial</a
-          ><a class="toc-sub" href="#entidades">Clientes</a
+          ><a class="toc-sub" href="#entidades">Clientes y condiciones comerciales</a
           ><a class="toc-sub" href="#articulos">Artículos y flujo de venta</a
           ><a class="toc-sub" href="#lista-precios">Lista de precios</a
+          ><a class="toc-sub toc-child" href="#lista-precios-regla">Añadir regla</a
           ><a class="toc-sub" href="#presupuestos">Presupuestos</a
-          ><a class="toc-sub" href="#presupuestos-automatizacion"
+          ><a class="toc-sub toc-child" href="#presupuestos-automatizacion"
             >Avisos y cancelación de presupuestos</a
           ><a class="toc-sub" href="#pedidos">Pedidos</a
-          ><a class="toc-sub" href="#pedidos-recordatorio"
+          ><a class="toc-sub toc-child" href="#pedidos-recordatorio"
             >Recordatorios y envío manual</a
-          ><a class="toc-sub" href="#pedidos-facturacion"
+          ><a class="toc-sub toc-child" href="#pedidos-facturacion"
             >Facturar desde pedido</a
-          >
+          ><a class="toc-sub" href="#rectificativas">Rectificativas de facturas</a>
         </div>
         <div class="toc-group">
-          <a class="toc-main" href="#albaranes">3. Albaranes y entregas</a
+          <a class="toc-main toc-child" href="#albaranes">Albaranes y entregas</a
           ><a class="toc-sub" href="#albaranes-trazabilidad">Preparación</a
           ><a class="toc-sub" href="#albaranes-correo">Envío por correo</a
           ><a class="toc-sub" href="#albaranes-recogida">Recogida</a
@@ -62,7 +64,7 @@
           ><a class="toc-sub" href="#albaranes-impresion">Impresión</a>
         </div>
         <div class="toc-group">
-          <a class="toc-main" href="#facturas">4. Facturas y cobros</a
+          <a class="toc-main" href="#facturas">4. Facturas de venta y cobros</a
           ><a class="toc-sub" href="#facturas-manuales">Nueva factura manual</a
           ><a class="toc-sub" href="#facturas-borrador">Editar borrador</a
           ><a class="toc-sub" href="#facturas-vencimiento">Vencimiento</a
@@ -78,9 +80,29 @@
             >5. Configuración y proformas</a
           ><a class="toc-main" href="#estados">6. Estados y comprobaciones</a>
         </div>
+        <div class="toc-group">
+          <a class="toc-main" href="#casos-practicos">7. Casos prácticos</a>
+        </div>
       </nav>
 
       <article class="manual-content">
+        <section id="portal-modulos" class="portal-overview">
+          <h2>Módulos del portal</h2>
+          <p>La Ayuda se organiza igual que el Panel principal de KiwiK ERP.</p>
+          <div class="portal-module-links"><a href="#circuito"><i class="pi pi-briefcase" /><b>Ventas</b><span>Circuito comercial completo</span></a><a href="#informes-portal"><i class="pi pi-chart-bar" /><b>Informes</b><span>Indicadores y estadísticas</span></a><a href="#configuracion"><i class="pi pi-cog" /><b>Configuración</b><span>Empresa, usuarios y parámetros</span></a></div>
+        </section>
+        <section class="manual-home" aria-labelledby="help-home-title">
+          <h2 id="help-home-title">¿Qué necesitas hacer?</h2>
+          <p class="home-intro">Accede directamente al área del manual que quieres consultar.</p>
+          <div class="home-grid">
+            <a href="#circuito" class="home-card"><i class="pi pi-shopping-cart" /><b>Ventas</b><span>Clientes, artículos y circuito comercial</span></a>
+            <a href="#facturas" class="home-card"><i class="pi pi-receipt" /><b>Facturas y cobros</b><span>Emisión, vencimientos y VeriFactu</span></a>
+            <a href="#rectificativas" class="home-card"><i class="pi pi-undo" /><b>Rectificativas</b><span>Abonos y correcciones de facturas</span></a>
+            <a href="#casos-practicos" class="home-card"><i class="pi pi-play-circle" /><b>Casos prácticos</b><span>Guías paso a paso y vídeos</span></a>
+            <a href="#configuracion" class="home-card"><i class="pi pi-cog" /><b>Configuración</b><span>Parámetros y puesta en marcha</span></a>
+            <a href="#estados" class="home-card"><i class="pi pi-info-circle" /><b>Estados y comprobaciones</b><span>Qué significa cada estado</span></a>
+          </div>
+        </section>
         <section id="introduccion">
           <h2>Qué es KiwiK ERP</h2>
           <p>
@@ -96,6 +118,36 @@
             puede proceder de un presupuesto; sus entregas se registran en
             albaranes; las facturas conservan las referencias correspondientes y
             los cobros se consultan en su historial.
+          </p>
+          <div class="connected-sale"><div class="connected-heading"><small>DEL PRESUPUESTO AL COBRO</small><h3>Una venta conectada de principio a fin.</h3><p>Cada paso parte del anterior, evitando repetir datos y conservando la trazabilidad.</p></div><div class="connected-steps"><article><em>01</em><i class="pi pi-pencil"/><b>Presupuesto</b><span>Prepara la propuesta con precios y condiciones.</span></article><i class="pi pi-arrow-right"/><article><em>02</em><i class="pi pi-check"/><b>Pedido</b><span>Confirma lo acordado y activa la operativa.</span></article><i class="pi pi-arrow-right"/><article><em>03</em><i class="pi pi-box"/><b>Entrega</b><span>Controla entregas completas o parciales.</span></article><i class="pi pi-arrow-right"/><article><em>04</em><i class="pi pi-receipt"/><b>Factura</b><span>Emite y gestiona su envío fiscal.</span></article><i class="pi pi-arrow-right"/><article class="final"><em>05</em><i class="pi pi-euro"/><b>Cobro</b><span>Registra pagos y consulta el saldo.</span></article></div></div>
+          <h3>FreeLandSite y la evolución de KiwiK ERP</h3>
+          <p>KiwiK ERP es el ERP modular de FreeLandSite: parte de una base estándar para la gestión habitual y puede incorporar adaptaciones específicas cuando la operativa de una empresa lo necesita. La solución puede implantarse en la nube o en el servidor de la empresa, manteniendo un núcleo común que facilita las actualizaciones y el crecimiento por etapas.</p>
+          <p>Para conocer la propuesta completa de FreeLandSite y sus opciones de implantación, visita <a href="https://www.freelandsite.es/" target="_blank" rel="noopener noreferrer">www.freelandsite.es</a>.</p>
+          <div class="freeland-diagram" aria-label="Evolución de KiwiK ERP"><div><i class="pi pi-box" /><b>Estándar</b><span>Base común para la gestión diaria</span></div><i class="pi pi-arrow-right diagram-arrow" /><div><i class="pi pi-sliders-h" /><b>A medida</b><span>Adaptaciones para cada empresa</span></div><i class="pi pi-arrow-right diagram-arrow" /><div><i class="pi pi-chart-line" /><b>Evolución</b><span>Crece por etapas con el negocio</span></div></div>
+          <div class="deployment-options"><article class="deployment-card cloud"><div class="deployment-visual"><i class="pi pi-cloud" /></div><div><small>OPCIÓN 1</small><h3>En la nube</h3><b>Nosotros nos encargamos de todo.</b><p>Acceso seguro, actualizaciones, copias de seguridad y una instancia independiente.</p></div></article><article class="deployment-card server"><div class="deployment-visual"><i class="pi pi-server" /></div><div><small>OPCIÓN 2</small><h3>En su servidor</h3><b>Usted mantiene el control.</b><p>Datos dentro de su empresa, integración con sus sistemas y actualizaciones coordinadas.</p></div></article></div>
+          <h3>Cómo se organiza el trabajo</h3>
+          <p>
+            El <b>Portal</b> es el punto de entrada y agrupa las áreas disponibles.
+            En <b>Ventas</b> se mantienen los datos maestros y se sigue el flujo
+            Presupuesto → Pedido → Albarán → Factura → Cobro. Cada documento
+            conserva su origen para que puedas revisar quién lo creó, qué
+            cantidades se entregaron y qué importes siguen pendientes.
+          </p>
+          <h3>Documentos y estados</h3>
+          <p>
+            Los documentos se preparan primero como <b>borradores</b>. Guardar un
+            borrador permite continuar más tarde, pero no lo convierte en una
+            factura emitida. Al confirmar o emitir, el sistema valida los datos,
+            asigna el código definitivo y bloquea los campos que deben conservar
+            la integridad fiscal. Las rectificaciones se crean como documentos
+            relacionados y dejan visible el importe abonado.
+          </p>
+          <h3>Información centralizada</h3>
+          <p>
+            Clientes, artículos, tarifas, condiciones, documentos y cobros se
+            reutilizan en todo el circuito. Esto reduce la duplicidad de datos,
+            facilita las búsquedas y permite consultar la trazabilidad comercial
+            desde pedidos, albaranes, facturas y rectificativas.
           </p>
           <h3>A quién va dirigido</h3>
           <ul>
@@ -746,6 +798,12 @@
             reglas guardadas. Esta función requiere las migraciones V25 y V27 y
             el backend actualizado; no incluye todavía vigencias ni fórmulas
             sobre coste.
+          </p>
+          <h3 id="lista-precios-regla">Añadir una regla de precio</h3>
+          <p>
+            Desde una lista de precios pulsa <b>Añadir regla</b> para definir el
+            producto o familia, el precio fijo o descuento y la cantidad mínima.
+            Las reglas se aplican por prioridad y no se acumulan.
           </p>
           <h3>Ejemplo: tarifa del cliente en USD</h3>
           <p>
@@ -1654,6 +1712,24 @@
           </p>
         </section>
 
+        <section id="albaranes-impresion">
+          <h2>Impresión de albaranes</h2>
+          <p>
+            Puede obtenerse un albarán <b>valorado</b> o <b>no valorado</b>. En
+            documentos confirmados se conserva la versión histórica para
+            garantizar que futuras modificaciones de artículos o precios no
+            alteren el documento emitido.
+          </p>
+          <ul>
+            <li>
+              Los borradores pueden modificarse y su impresión se actualiza.
+            </li>
+            <li>
+              Los confirmados se recuperan del histórico si ya fueron generados.
+            </li>
+            <li>Los albaranes anulados no pueden imprimirse.</li>
+          </ul>
+        </section>
         <section id="facturas" class="chapter">
           <h2>Facturas de venta</h2>
           <h3 id="facturas-asistente">
@@ -2027,8 +2103,19 @@
           </p>
           <p>
             El flujo básico termina en el cobro. El envío por correo dispone de
-            su propio historial. Rectificativas, abonos, remesas, conciliación y
-            gestión de impagados son ampliaciones pendientes.
+            su propio historial. Las rectificativas se crean desde una factura
+            emitida, admiten abonos parciales sin superar lo ya rectificado,
+            conservan los valores de sus líneas y registran motivo, PDF,
+            auditoría y estado VeriFactu. Los borradores se pueden editar o
+            cancelar; al emitir reciben numeración RFC y quedan bloqueados.
+            El menú de tres puntos permite ver e imprimir el PDF de una
+            rectificativa aceptada. Los nuevos reportes comparten la plantilla
+            corporativa de Facturas y muestran el documento rectificado y el motivo.
+            También puede seleccionarse una rectificativa aceptada: utiliza sus
+            propias líneas y descuenta las cantidades reservadas por correcciones
+            posteriores. Se conserva el documento rectificado y la factura inicial.
+            Revertir un abono negativo produce un ajuste positivo; una corrección
+            económica de la rectificativa calcula la diferencia frente a su importe.
           </p>
           <div class="warning">
             <i class="pi pi-exclamation-triangle"></i
@@ -2405,25 +2492,56 @@
           </p>
         </section>
 
-        <section id="albaranes-impresion">
-          <h2>Impresión de albaranes</h2>
-          <p>
-            Puede obtenerse un albarán <b>valorado</b> o <b>no valorado</b>. En
-            documentos confirmados se conserva la versión histórica para
-            garantizar que futuras modificaciones de artículos o precios no
-            alteren el documento emitido.
-          </p>
-          <ul>
-            <li>
-              Los borradores pueden modificarse y su impresión se actualiza.
-            </li>
-            <li>
-              Los confirmados se recuperan del histórico si ya fueron generados.
-            </li>
-            <li>Los albaranes anulados no pueden imprimirse.</li>
-          </ul>
-        </section>
 
+        <section id="rectificativas" class="chapter">
+          <h2>Rectificaciones de facturas</h2>
+          <p>
+            El módulo de Rectificativas permite registrar abonos vinculados a
+            una factura emitida y conservar el recorrido comercial del documento.
+            Una rectificativa también puede tomar como origen otra rectificativa
+            aceptada cuando se corrige un abono anterior.
+          </p>
+          <h3 id="rectificativas-origen">Documento de origen</h3>
+          <p>
+            Al pulsar <b>Nueva rectificativa</b>, busca por código o cliente y
+            selecciona una factura o rectificativa aceptada. El sistema muestra
+            las líneas y las cantidades que todavía pueden abonarse, evitando
+            superar el importe disponible.
+          </p>
+          <h3 id="rectificativas-modalidades">Modalidades e importes</h3>
+          <p>
+            En <b>Abono por cantidades</b> se conserva el precio, descuento,
+            incremento e IVA del documento de origen y se modifica la cantidad.
+            En <b>Rectificación económica</b> se puede ajustar el valor
+            económico de la línea; el documento refleja siempre la diferencia
+            frente al origen y los abonos se muestran con signo negativo.
+          </p>
+          <h3 id="rectificativas-verifactu">VeriFactu y trazabilidad</h3>
+          <p>
+            Una rectificativa emitida recibe su código definitivo, queda enlazada
+            en VeriFactu y aparece en la trazabilidad comercial de la factura y
+            del pedido. Desde el menú de acciones puedes abrir el documento,
+            descargar su PDF, consultar el correo y revisar el historial fiscal.
+          </p>
+        </section>
+ 
+        <section id="casos-practicos" class="chapter practical-cases">
+          <h2>Casos prácticos</h2>
+          <p>Recetas guiadas para completar las tareas habituales de KiwiK ERP.</p>
+          <div class="case-grid">
+            <details class="case-card" open>
+              <summary><i class="pi pi-box" /> Crear un producto</summary>
+              <ol><li>Entra en <b>Ventas → Artículos</b>.</li><li>Pulsa <b>Nuevo artículo</b> y completa descripción, precio e IVA.</li><li>Guarda y comprueba que aparece en el listado.</li></ol>
+              <p class="case-media"><i class="pi pi-video" /> Vídeo próximamente</p>
+            </details>
+            <details class="case-card">
+              <summary><i class="pi pi-shield" /> Configurar un certificado</summary>
+              <ol><li>Abre <b>Ventas → Ajustes de Ventas → Parámetros VeriFactu</b>.</li><li>Selecciona el certificado y valida la contraseña.</li><li>Guarda la configuración y revisa el estado de conexión.</li></ol>
+              <p class="case-media"><i class="pi pi-video" /> Vídeo próximamente</p>
+            </details>
+          </div>
+        </section>
+       <section id="informes-portal" class="portal-note"><h2>Informes</h2><p>Este módulo está previsto para una próxima fase. Cuando esté disponible, aquí encontrarás sus indicadores, comparativas y estadísticas.</p></section>
         <section id="configuracion">
           <h2>Configuración y proformas</h2>
           <h3>Proforma: consultar una previsión</h3>
@@ -2578,16 +2696,54 @@ import reminderPreviewScreenshot from "../../../docs/manual-usuario/imagenes/rec
 import quoteCancellationScreenshot from "../../../docs/manual-usuario/imagenes/presupuestos-confirmar-cancelacion.jpg";
 import loginScreenshot from "../../../docs/manual-usuario/imagenes/iniciar-sesion.png";
 import { useRouter } from "vue-router";
+import { onMounted, onBeforeUnmount, ref } from "vue";
 
 const router = useRouter();
+const showBackToIndex = ref(false);
+const backToIndex = () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  document.querySelector<HTMLElement>(".manual-content")?.scrollTo({ top: 0, behavior: "smooth" });
+  document.querySelector<HTMLElement>(".toc")?.scrollTo({ top: 0, behavior: "smooth" });
+};
+const updateBackToIndex = () => { showBackToIndex.value = window.scrollY > 420; };
+onMounted(() => window.addEventListener("scroll", updateBackToIndex, { passive: true }));
+onBeforeUnmount(() => window.removeEventListener("scroll", updateBackToIndex));
 
 const goBack = () => {
-  if (window.history.length > 1) {
+  if (window.history.length > 1 && !window.location.hash) {
     router.back();
   } else {
     router.push("/Frm_Main");
   }
 };
+const handleInternalLinks = (event: Event) => {
+  const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
+  if (!anchor) return;
+  const target = document.querySelector(anchor.getAttribute("href") || "");
+  if (!target) return;
+  event.preventDefault();
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+const toggleTocGroup = (event: Event) => {
+  const target = event.target as HTMLElement;
+  const main = target.closest(".toc-main");
+  if (!main) return;
+  const group = main.parentElement;
+  if (!group) return;
+  const wasCollapsed = group.classList.contains("is-collapsed");
+  group.parentElement?.querySelectorAll<HTMLElement>(":scope > .toc-group").forEach((item) => {
+    if (item !== group) item.classList.add("is-collapsed");
+  });
+  group.classList.toggle("is-collapsed", !wasCollapsed);
+};
+onMounted(() => {
+  const toc = document.querySelector(".toc");
+  toc?.querySelectorAll<HTMLElement>(".toc-group").forEach((group) => group.classList.add("is-collapsed"));
+  toc?.addEventListener("click", toggleTocGroup);
+  document.querySelector(".manual-page")?.addEventListener("click", handleInternalLinks);
+});
+onBeforeUnmount(() => document.querySelector(".toc")?.removeEventListener("click", toggleTocGroup));
+onBeforeUnmount(() => document.querySelector(".manual-page")?.removeEventListener("click", handleInternalLinks));
 </script>
 
 <style scoped>
@@ -2597,7 +2753,9 @@ const goBack = () => {
   color: #374151;
   background: #f7f8f4;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
+.back-to-index{position:fixed;right:1.4rem;bottom:5.5rem;z-index:9999;display:flex!important;align-items:center;gap:.4rem;padding:.65rem .85rem;border:1px solid #9cc10a;border-radius:999px;background:#9cc10a;color:#253000;font-weight:700;box-shadow:0 5px 16px rgba(45,65,20,.2);cursor:pointer}.back-to-index:hover{background:#8bad09}
 .manual-hero {
   position: relative;
   display: flex;
@@ -2616,11 +2774,11 @@ const goBack = () => {
   align-items: center;
   gap: 7px;
   align-self: flex-start;
-  padding: 8px 13px;
-  color: #648506;
-  background: #f4f8e8;
-  border: 1px solid #dbe8b2;
-  border-radius: 7px;
+  padding: 0.65rem 0.85rem;
+  color: #4b5563;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
   font: inherit;
   font-size: 0.88rem;
   font-weight: 700;
@@ -2628,10 +2786,13 @@ const goBack = () => {
   transition:
     background-color 0.2s,
     border-color 0.2s;
+  position: absolute;
+  top: 62px;
+  right: 34px;
 }
 .back-button:hover {
-  background: #eaf2d2;
-  border-color: #9cc10a;
+  background: #f4f8e8;
+  color: #253000;
 }
 .manual-icon {
   width: 88px;
@@ -2656,7 +2817,10 @@ h1 {
   color: #6b7280;
 }
 .version {
-  margin-left: auto;
+  margin-left: 0;
+  position: absolute;
+  top: 28px;
+  right: 34px;
   align-self: flex-start;
   padding: 7px 11px;
   white-space: nowrap;
@@ -2668,17 +2832,20 @@ h1 {
 }
 .manual-layout {
   display: grid;
-  grid-template-columns: 225px minmax(0, 1fr);
+  grid-template-columns: 285px minmax(0, 1fr);
   gap: 25px;
-  max-width: 1380px;
-  margin: 25px auto 0;
+  max-width: none;
+  margin: 25px 0 0;
+  align-items: stretch;
 }
 .toc {
   position: sticky;
   top: 20px;
   align-self: start;
   display: flex;
-  max-height: calc(100vh - 40px);
+  height: min(760px, calc(100vh - 190px)) !important;
+  min-height: 520px !important;
+  max-height: none;
   overflow-y: auto;
   flex-direction: column;
   gap: 10px;
@@ -2702,6 +2869,7 @@ h1 {
   padding-bottom: 0;
   border-bottom: 0;
 }
+.toc-group:has(+ .toc-group > a[href="#albaranes"]) { border-bottom: 0; padding-bottom: 0; }
 .toc a {
   padding: 7px 9px;
   color: #6b7280;
@@ -2709,13 +2877,17 @@ h1 {
   text-decoration: none;
 }
 .toc .toc-main {
+  position: relative;
   color: #374151;
   font-weight: 750;
 }
+.toc .toc-main::before{content:"▾";display:inline-block;width:1rem;color:#8eaa18;transition:transform .15s}.toc-group.is-collapsed .toc-main::before{transform:rotate(-90deg)}.toc-group.is-collapsed .toc-sub{display:none}
 .toc .toc-sub {
   padding: 5px 9px 5px 23px;
   font-size: 0.82rem;
 }
+.toc .toc-child { padding-left: 42px; font-size: .78rem; position: relative; }
+.toc .toc-child::before { content: "└"; position: absolute; left: 25px; color: #9cc10a; }
 .toc a:hover {
   color: #648506;
   background: #f4f8e8;
@@ -2726,8 +2898,16 @@ h1 {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
 }
+.manual-content > section > h2 { position: relative; margin: 0 0 1.1rem; padding: .65rem 4.4rem .65rem .9rem; border-radius: .55rem; background: #9cc10a; color: #253000; box-shadow: 0 3px 9px rgba(100,133,6,.12); }
+.manual-content > section > h2::after { content: ""; position: absolute; top: 50%; right: .8rem; width: 3rem; height: 1.7rem; transform: translateY(-50%); background: var(--freeland-logo) center/contain no-repeat; }
+.manual-home{margin-bottom:2rem;padding:1.4rem 1.5rem;border:1px solid #e0e7d6;border-radius:14px;background:linear-gradient(135deg,#fbfdf7,#fff)}.manual-home h2{margin:0;color:#263b1e}.home-intro{margin:.35rem 0 1rem;color:#71806c}.home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem}.home-card{display:grid;grid-template-columns:auto 1fr;column-gap:.7rem;align-items:center;padding:1rem;border:1px solid #e3e9dd;border-radius:10px;background:#fff;color:#344434;text-decoration:none;transition:transform .15s,box-shadow .15s}.home-card:hover{transform:translateY(-2px);box-shadow:0 5px 14px rgba(50,70,30,.1);border-color:#9cc10a}.home-card i{grid-row:span 2;color:#88a900;font-size:1.35rem}.home-card b{font-size:.92rem}.home-card span{font-size:.78rem;color:#7b8777}
+.portal-overview{margin-bottom:1.5rem;padding:1rem 1.2rem;border:1px solid #e0e7d6;border-radius:12px;background:#fbfdf7}.portal-overview h2{margin:0;color:#263b1e}.portal-overview p{margin:.35rem 0 .8rem;color:#71806c}.portal-module-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem}.portal-module-links a{display:grid;grid-template-columns:auto 1fr;column-gap:.5rem;padding:.7rem;border:1px solid #e3e9dd;border-radius:9px;background:#fff;color:#344434;text-decoration:none}.portal-module-links i{grid-row:span 2;color:#88a900}.portal-module-links span{font-size:.75rem;color:#7b8777}.portal-note{padding:1rem;border-left:4px solid #9cc10a;background:#fbfdf7}.case-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-top:1rem}.case-card{border:1px solid #dfe7d2;border-radius:12px;background:#fbfdf7;padding:1rem}.case-card summary{cursor:pointer;display:flex;align-items:center;gap:.55rem;color:#263b1e;font-weight:700}.case-card summary i{color:#88a900}.case-card ol{margin:.9rem 0 .7rem;padding-left:1.25rem;color:#43533f;line-height:1.7}.case-media{margin:0;padding-top:.65rem;border-top:1px solid #e5ebdf;color:#81906f;font-size:.82rem}
 .manual-content {
   min-width: 0;
+  max-width: 100%;
+  height: min(760px, calc(100vh - 190px));
+  overflow-x: hidden;
+  overflow-y: auto;
   overflow-wrap: anywhere;
 }
 .manual-figure {
@@ -2958,4 +3138,4 @@ li {
     transform: rotate(90deg);
   }
 }
-</style>
+.freeland-diagram{display:flex;align-items:center;gap:.7rem;margin:1rem 0;padding:1rem;border:1px solid #e0e7d6;border-radius:12px;background:linear-gradient(135deg,#fbfdf7,#fff)}.freeland-diagram>div{display:grid;grid-template-columns:auto 1fr;column-gap:.55rem;flex:1;padding:.75rem;border:1px solid #e3e9dd;border-radius:9px;background:#fff}.freeland-diagram div i{grid-row:span 2;align-self:center;color:#88a900;font-size:1.25rem}.freeland-diagram b{color:#263b1e}.freeland-diagram span{font-size:.75rem;color:#71806c}.diagram-arrow{color:#9cc10a}@media(max-width:700px){.freeland-diagram{align-items:stretch;flex-direction:column}.diagram-arrow{align-self:center;transform:rotate(90deg)}}.deployment-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1.2rem 0}.deployment-card{display:grid;grid-template-columns:82px 1fr;gap:1rem;align-items:center;padding:1.2rem;border:1px solid #dfe7d2;border-radius:14px;background:#fff;box-shadow:0 5px 16px rgba(40,55,25,.06)}.deployment-card.cloud{background:linear-gradient(135deg,#fbfdec,#fff)}.deployment-visual{display:grid;width:72px;height:72px;place-items:center;border-radius:50%;background:#f3f7e7;color:#83a900}.deployment-visual i{font-size:2rem}.deployment-card small{color:#83a900;font-weight:800;letter-spacing:.08em}.deployment-card h3{margin:.2rem 0 .5rem;color:#172033;font-size:1.35rem}.deployment-card b{font-size:.85rem}.deployment-card p{margin:.45rem 0 0;color:#64748b;font-size:.82rem;line-height:1.45}@media(max-width:700px){.deployment-options{grid-template-columns:1fr}}.connected-sale{margin:1.4rem 0;padding:1.2rem;border:1px solid #e0e7d6;border-radius:14px;background:linear-gradient(135deg,#fbfdf7,#fff)}.connected-heading{display:grid;grid-template-columns:1fr 1fr;gap:.25rem 1rem;align-items:end;margin-bottom:1rem}.connected-heading small{grid-column:1;color:#83a900;font-weight:800;letter-spacing:.1em}.connected-heading h3{grid-column:1;margin:0;font-size:1.45rem;color:#172033}.connected-heading p{grid-column:2;grid-row:1/3;margin:0;color:#64748b;line-height:1.5}.connected-steps{display:flex;align-items:stretch;gap:.45rem}.connected-steps>i{align-self:center;color:#9cc10a}.connected-steps article{position:relative;display:grid;flex:1;gap:.3rem;padding:.9rem;border:1px solid #e1e8d8;border-radius:11px;background:#fff}.connected-steps article.final{border-color:#9cc10a;background:#f7fbdc}.connected-steps em{position:absolute;top:.55rem;right:.65rem;color:#8b9a82;font-size:.7rem;font-style:normal;font-weight:800}.connected-steps article>i{color:#88a900}.connected-steps b{color:#263b1e}.connected-steps span{color:#71806c;font-size:.74rem;line-height:1.35}@media(max-width:900px){.connected-heading{grid-template-columns:1fr}.connected-heading p{grid-column:1;grid-row:auto}.connected-steps{display:grid;grid-template-columns:1fr 1fr}.connected-steps>i{display:none}}</style>

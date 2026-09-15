@@ -156,7 +156,7 @@ import { parseLocalizedServerDate } from "@/libs/HelperDates";
 
 interface TraceNode {
   key: string;
-  type: "QUOTE" | "ORDER" | "DELIVERY" | "INVOICE" | "PAYMENT";
+  type: "QUOTE" | "ORDER" | "DELIVERY" | "INVOICE" | "RECTIFICATION" | "PAYMENT";
   pkid: number;
   code: string;
   date?: string;
@@ -290,13 +290,14 @@ const emptyText = (type: TraceNode["type"]) =>
     ORDER: "No hay pedidos de venta relacionados.",
     DELIVERY: "No se han generado albaranes.",
     INVOICE: "Todavía no se han generado facturas.",
+    RECTIFICATION: "Todavía no hay rectificativas.",
     PAYMENT: "Todavía no hay cobros registrados.",
   })[type];
 
 const originText = (parentKeys: string[]) => {
   const labels = parentKeys.map((key) => {
     const [type, ...id] = key.split("-");
-    const label = { QUOTE: "Presupuesto", ORDER: "Pedido", DELIVERY: "Albarán", INVOICE: "Factura" }[type] ?? "Documento";
+    const label = { QUOTE: "Presupuesto", ORDER: "Pedido", DELIVERY: "Albarán", INVOICE: "Factura", RECTIFICATION: "Rectificativa" }[type] ?? "Documento";
     const parent = stages.value
       .flatMap((stage) => stage.nodes)
       .find((node) => node.key === key);
@@ -361,11 +362,12 @@ const goToDocument = async (node: TraceNode) => {
     ORDER: "Pedidos",
     DELIVERY: "Albaranes",
     INVOICE: "Facturas",
+    RECTIFICATION: "Rectificativas",
   };
   const route = routes[node.type];
   if (!route) return;
   close();
-  const query = node.type === "INVOICE" ? { invoiceId: String(node.pkid) } : undefined;
+  const query = node.type === "INVOICE" ? { invoiceId: String(node.pkid) } : node.type === "RECTIFICATION" ? { rectificationId: String(node.pkid) } : undefined;
   await router.push({ name: route, query });
 };
 

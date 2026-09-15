@@ -58,7 +58,7 @@
 
             <div class="field-group">
               <div class="password-label"><label for="pass">Contraseña</label><button type="button"
-                  @click="handleForgotPassword">¿Has olvidado tu contraseña?</button></div>
+                  @click="handleForgotPassword">¿Has has olvidado?</button></div>
               <Password inputId="pass" v-model="loginData.password" autocomplete="current-password"
                 placeholder="Tu contraseña" :feedback="false" toggleMask fluid />
             </div>
