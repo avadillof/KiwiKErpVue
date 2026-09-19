@@ -38,7 +38,30 @@
         <button type="button" @click="router.push({ name: 'Facturas' })">
           <i class="pi pi-receipt"></i><span>Factura</span>
         </button>
+        <i class="pi pi-angle-right"></i>
+        <button type="button" @click="router.push({ name: 'Rectificativas' })">
+          <i class="pi pi-undo"></i><span>Rectificaciones</span>
+        </button>
       </div>
+    </section>
+
+    <section class="kpi-row" aria-label="Indicadores de ventas">
+      <button
+        v-for="k in kpiCards"
+        :key="k.key"
+        type="button"
+        class="kpi-card"
+        @click="router.push({ name: k.route })"
+      >
+        <span class="kpi-icon" :style="{ background: k.gradient }"
+          ><i :class="k.icon" /></span
+        >
+        <span class="kpi-copy">
+          <strong>{{ k.value == null ? "—" : fmt(k.value) }}</strong>
+          <span>{{ k.label }}</span>
+          <small>{{ k.sub }}</small>
+        </span>
+      </button>
     </section>
 
     <section v-for="grupo in gruposVentas" :key="grupo.id" class="app-section">
@@ -72,7 +95,6 @@
               <span v-if="!opcion.disponible" class="soon-badge"
                 >Próximamente</span
               >
-              <span v-else class="available-badge">Disponible</span>
             </span>
             <small>{{ opcion.descripcion }}</small>
             <span v-if="opcion.funciones?.length" class="feature-list"
@@ -97,6 +119,10 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
+import { computed, onMounted, reactive } from "vue";
+import axios from "axios";
+import { backendUrl } from "@/services/backendUrl";
+import { useAuthStore } from "@/stores/authStore";
 
 interface OpcionVenta {
   id: string;
@@ -111,6 +137,93 @@ interface OpcionVenta {
 }
 
 const router = useRouter();
+const auth = useAuthStore();
+const api = axios.create();
+api.interceptors.request.use((config) => {
+  Object.assign(config.headers, auth.portalRequestConfig().headers);
+  return config;
+});
+const fmt = (n: number) =>
+  Number(n ?? 0).toLocaleString("es-ES", { maximumFractionDigits: 0 });
+const stats = reactive<Record<string, any>>({
+  quotes: null,
+  orders: null,
+  invoices: null,
+  rects: null,
+});
+const kpiCards = computed(() => {
+  const q = stats.quotes,
+    o = stats.orders,
+    i = stats.invoices,
+    r = stats.rects;
+  const rectTotal = Array.isArray(r)
+    ? r.reduce((s, x) => s + Number(x.count || 0), 0)
+    : null;
+  const rectEmitted = Array.isArray(r)
+    ? r.reduce(
+        (s, x) => s + (x.state === "Confirmada / Confirming" ? Number(x.count || 0) : 0),
+        0,
+      )
+    : null;
+  const orderPending =
+    o === null
+      ? null
+      : Number(o.deliveryPendingLines || 0) + Number(o.directInvoiceLines || 0);
+  return [
+    {
+      key: "quotes",
+      route: "Presupuestos",
+      icon: "pi pi-file-edit",
+      gradient: "linear-gradient(135deg,#8d78dc,#6250ad)",
+      label: "Presupuestos abiertos",
+      value: q === null ? null : Number(q.pendingCount || 0),
+      sub: q === null ? "Cartera" : `${fmt(q.approvedCount)} aprobados`,
+    },
+    {
+      key: "orders",
+      route: "Pedidos",
+      icon: "pi pi-shopping-cart",
+      gradient: "linear-gradient(135deg,#f3ae48,#dc7c22)",
+      label: "Pedidos pendientes",
+      value: orderPending,
+      sub:
+        o === null ? "Líneas por entregar / facturar" : `${fmt(o.completedOrders)} completados`,
+    },
+    {
+      key: "invoices",
+      route: "Facturas",
+      icon: "pi pi-receipt",
+      gradient: "linear-gradient(135deg,#e46e8e,#b74267)",
+      label: "Facturas por cobrar",
+      value: i === null ? null : Number(i.pendingCount || 0),
+      sub: i === null ? "Pendiente de cobro" : `${fmt(i.overdueCount)} vencidas`,
+    },
+    {
+      key: "rects",
+      route: "Rectificativas",
+      icon: "pi pi-undo",
+      gradient: "linear-gradient(135deg,#e56b6f,#bd3e43)",
+      label: "Rectificativas",
+      value: rectTotal,
+      sub: rectEmitted === null ? "Abonos y correcciones" : `${fmt(rectEmitted)} emitidas`,
+    },
+  ];
+});
+async function loadStats() {
+  const paths = [
+    "/WebGetSalesQuoteStatistics",
+    "/WebGetSalesOrderStatistics",
+    "/WebGetSalesInvoiceStatistics",
+    "/WebGetSalesRecInvoiceStatistics",
+  ];
+  const settled = await Promise.allSettled(paths.map((p) => api.get(backendUrl(p))));
+  const [q, o, f, r] = settled.map((s) => (s.status === "fulfilled" ? s.value.data : null));
+  stats.quotes = q;
+  stats.orders = o;
+  stats.invoices = f;
+  stats.rects = r;
+}
+onMounted(loadStats);
 
 const gruposVentas: Array<{
   id: string;
@@ -237,6 +350,27 @@ const gruposVentas: Array<{
     ],
   },
   {
+    id: "informes",
+    nombre: "Informes",
+    icono: "pi pi-chart-bar",
+    descripcion:
+      "Reportes parametrizados del circuito comercial, cada uno con su código único RPT.",
+    opciones: [
+      {
+        id: "informes-ventas",
+        nombre: "Reportes de Ventas",
+        descripcion:
+          "Lista de artículos de venta y próximos informes del circuito comercial.",
+        icono: "pi pi-chart-bar",
+        ruta: "InformesVentas",
+        color: "#ffffff",
+        fondo: "linear-gradient(135deg, #16a085, #0e7c66)",
+        disponible: true,
+        funciones: ["Código RPT único", "Filtros por informe"],
+      },
+    ],
+  },
+  {
     id: "configuracion",
     nombre: "Configuración comercial",
     icono: "pi pi-sliders-h",
@@ -335,7 +469,7 @@ function abrirOpcion(opcion: OpcionVenta): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 0.7rem;
   margin-top: 14px;
   padding: 12px 16px;
   border: 1px solid #dfe8c8;
@@ -344,7 +478,16 @@ function abrirOpcion(opcion: OpcionVenta): void {
   background: #fbfdf7;
   box-shadow: 0 4px 14px rgba(55,75,30,.05);
 }
-.app-section{margin-top:22px}.section-title{padding:0 4px 10px}.section-title h2{font-size:1rem}.section-title p{font-size:.78rem}.app-grid{gap:12px}.app-card{min-height:150px!important;border-radius:12px!important;background:#fff;box-shadow:0 4px 14px rgba(31,41,55,.045);transition:transform .16s,box-shadow .16s}.app-card:hover,.app-card:focus-visible{transform:translateY(-3px);box-shadow:0 10px 24px rgba(31,41,55,.1)}.app-card-copy small{line-height:1.35}.app-card-heading strong{font-size:1rem}.feature-list{gap:5px}.feature-list span{font-size:.72rem;padding:3px 6px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.kpi-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid #e3e8d2;border-radius:12px;background:#fff;text-align:left;cursor:pointer;box-shadow:0 4px 14px rgba(31,41,55,.05);transition:transform .16s ease,box-shadow .16s ease}
+.kpi-card:hover:not(:disabled),.kpi-card:focus-visible{transform:translateY(-3px);box-shadow:0 10px 24px rgba(31,41,55,.1)}
+.kpi-icon{display:grid;width:46px;height:46px;flex:0 0 auto;place-items:center;border-radius:12px;color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.25),0 4px 10px rgba(38,48,68,.12)}
+.kpi-icon i{font-size:1.2rem}
+.kpi-copy{display:flex;min-width:0;flex:1;flex-direction:column}
+.kpi-copy strong{font-size:1.35rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi-copy>span{font-size:.82rem;font-weight:700;color:#202939}
+.kpi-copy small{color:#7d8797;font-size:.72rem;margin-top:2px}
+.app-section{margin-top:22px}
 .flow-copy span,
 .flow-copy small {
   display: block;
@@ -362,6 +505,8 @@ function abrirOpcion(opcion: OpcionVenta): void {
 .flow-steps {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.35rem;
 }
 .flow-steps > i {
@@ -405,7 +550,7 @@ function abrirOpcion(opcion: OpcionVenta): void {
   gap: 8px;
 }
 .section-title > div > i {
-  color: #875a7b;
+  color: #9cc10a;
   font-size: 0.9rem;
 }
 .section-title h2 {
@@ -419,12 +564,11 @@ function abrirOpcion(opcion: OpcionVenta): void {
 }
 .app-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  padding: 10px;
-  overflow: visible;
+  padding: 14px;
   border: 1px solid #dfe4ea;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #f7f9f4;
   box-shadow: 0 3px 11px rgba(30, 41, 59, 0.045);
 }
@@ -432,32 +576,33 @@ function abrirOpcion(opcion: OpcionVenta): void {
   display: flex;
   align-items: center;
   gap: 15px;
-  min-height: 128px;
-  padding: 17px 20px;
-  border: 0;
-  border-right: 1px solid #edf0f3;
-  border-bottom: 1px solid #edf0f3;
+  min-height: 132px;
+  padding: 17px 18px;
+  border: 1px solid #eef1f4;
+  border-radius: 12px;
   color: inherit;
   background: #fff;
   text-align: left;
   cursor: pointer;
-  transition: background 150ms ease;
+  box-shadow: 0 4px 14px rgba(31, 41, 55, 0.05);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    background 150ms ease;
 }
-.app-card:nth-child(2n) {
-  border-right: 0;
-}
-.app-card:hover:not(:disabled) {
-  background: #faf8fa;
-}
+.app-card:hover:not(:disabled),
 .app-card:focus-visible {
-  position: relative;
   z-index: 1;
-  outline: 2px solid #875a7b;
-  outline-offset: -2px;
+  transform: translateY(-3px);
+  border-color: #dceac0;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.1);
 }
 .app-card--disabled {
   cursor: default;
   opacity: 0.58;
+  box-shadow: none;
 }
 .app-card-icon {
   display: grid;
@@ -503,16 +648,6 @@ function abrirOpcion(opcion: OpcionVenta): void {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.available-badge {
-  padding: 3px 6px;
-  border-radius: 5px;
-  color: #55730b;
-  background: #edf5d9;
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
 .feature-list {
   display: flex;
   flex-wrap: wrap;
@@ -531,12 +666,20 @@ function abrirOpcion(opcion: OpcionVenta): void {
   font-size: 0.58rem;
 }
 .card-arrow {
-  color: #875a7b;
+  color: #9cc10a;
   font-size: 0.8rem;
 }
 .card-lock {
   color: #a3aab5;
   font-size: 0.72rem;
+}
+@media (max-width: 1180px) {
+  .app-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 900px) {
   .sales-flow {
@@ -546,6 +689,9 @@ function abrirOpcion(opcion: OpcionVenta): void {
   .flow-steps {
     width: 100%;
     justify-content: center;
+  }
+  .app-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 680px) {
@@ -559,6 +705,9 @@ function abrirOpcion(opcion: OpcionVenta): void {
     opacity: 0.05;
   }
   .app-grid {
+    grid-template-columns: 1fr;
+  }
+  .kpi-row {
     grid-template-columns: 1fr;
   }
   .app-card {

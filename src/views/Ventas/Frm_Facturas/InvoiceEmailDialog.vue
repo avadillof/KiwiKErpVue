@@ -49,7 +49,7 @@
     <p><b>Destinatarios:</b></p><ul><li v-for="contact in selectedContacts" :key="contact.pkid">{{contact.name}} · {{contact.email}}</li></ul>
     <p><b>Asunto:</b> {{subject}}</p><p><b>Adjunto:</b> {{data.pdfFilename}}</p><p class="confirmation-message">{{message}}</p>
     <div class="kiwik-separator"/>
-    <template #footer><Button label="Volver" severity="secondary" text :disabled="sending" @click="confirmVisible=false"/><Button :label="isResend?'Confirmar reenvío':'Confirmar envío'" icon="pi pi-send" :loading="sending" :disabled="sending||!canCompose" @click="send"/></template>
+    <template #footer><Button label="Volver" severity="secondary" text :disabled="sending" @click="confirmVisible=false"/><Button :label="isResend?'Confirmar reenvío':'Confirmar envío'" icon="pi pi-send" v-tooltip.bottom="'Envía la factura con su PDF fiscal a los contactos del cliente seleccionados. Queda registrado en el historial.'" :loading="sending" :disabled="sending||!canCompose" @click="send"/></template>
   </Dialog>
 </template>
 <script setup lang="ts">

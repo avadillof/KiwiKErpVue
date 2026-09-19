@@ -13,7 +13,7 @@
     import CorporateLoader from './CorporateLoader.vue';
     import { activeOperation } from '../../services/composables/useOperationBlocker';
     import { useConnectionMonitor } from '../../services/composables/Sv_MonitorConnectionBack.ts';
-    const { connectionLost } = useConnectionMonitor(false);
+    const { connectionLost } = useConnectionMonitor(true);
     // PrimeVue dialogs can be teleported outside #app, so also block their keyboard shortcuts.
     const blockKeyboard = (event) => {
         if (connectionLost.value || activeOperation.value) {

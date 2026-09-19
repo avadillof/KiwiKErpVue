@@ -1,58 +1,115 @@
-import { computed, onMounted } from 'vue';
+import axios from 'axios';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { backendUrl } from '@/services/backendUrl';
 import { useAuthStore } from '../../../stores/authStore';
-import { useServerTime } from '../../../services/composables/UseServerTime';
-import { useSecurityStore } from '../../../stores/securityStore.ts'
+import { getRecentModules, type RecentModule } from '../recentModules';
+
+interface Stats {
+  quotes: any | null;
+  orders: any | null;
+  invoices: any | null;
+  rects: any | null;
+}
 
 export function DashboardController() {
     const router = useRouter();
     const authStore = useAuthStore();
-    const { startClock } = useServerTime();
-    const securityStore = useSecurityStore();
+
+    const recents = ref<RecentModule[]>(getRecentModules());
+
+    const stats = ref<Stats>({ quotes: null, orders: null, invoices: null, rects: null });
+
+    async function loadStats() {
+        const paths = [
+            "/WebGetSalesQuoteStatistics",
+            "/WebGetSalesOrderStatistics",
+            "/WebGetSalesInvoiceStatistics",
+            "/WebGetSalesRecInvoiceStatistics",
+        ];
+        const settled = await Promise.allSettled(
+            paths.map((p) => axios.get(backendUrl(p), apiConfig()))
+        );
+        const [q, o, f, r] = settled.map((s) => (s.status === "fulfilled" ? s.value.data : null));
+        stats.value = { quotes: q, orders: o, invoices: f, rects: r };
+    }
+
+    function apiConfig() {
+        const config: any = {};
+        if (authStore.isAuthenticated && authStore.portalSession) {
+            config.headers = { 'X-Portal-Session': authStore.portalSession };
+        }
+        return config;
+    }
 
     onMounted(() => {
-        startClock();
+        loadStats();
     });
 
-    const listaModulos = [
-        { id: 'ventas', nombre: 'Ventas', descripcion: 'Gestiona el circuito completo desde el presupuesto hasta el cobro, con trazabilidad, documentación e indicadores en tiempo real.', funcionalidades: ['Entidades, artículos y tarifas', 'Presupuestos', 'Pedidos de venta', 'Albaranes', 'Facturas, vencimientos y cobros','Rectificación de Facturas','Lista de Precios', 'Widgets e indicadores'], icono: 'pi pi-briefcase', ruta: 'Ventas', colorIcono: '#2875b6', bgIcono: '#e9f4fc', disponible: true },
-        { id: 'compras', nombre: 'Compras', descripcion: 'Centralizará proveedores, pedidos de compra, recepciones de mercancía y el seguimiento de gastos.', funcionalidades: ['Proveedores', 'Pedidos', 'Recepciones'], icono: 'pi pi-shopping-cart', ruta: 'Compras', colorIcono: '#e06b35', bgIcono: '#fff2e8', disponible: false },
-        { id: 'informes', nombre: 'Informes', descripcion: 'Reunirá los indicadores, comparativas y estadísticas clave para analizar la evolución del negocio.', funcionalidades: ['Indicadores', 'Comparativas', 'Estadísticas'], icono: 'pi pi-chart-bar', ruta: 'Informes', colorIcono: '#16a085', bgIcono: '#e8f8f4', disponible: false },
-        { id: 'ajustes', nombre: 'Configuración', descripcion: 'Administra los datos de empresa, usuarios, seguridad y catálogos necesarios para adaptar KiwiKERP.', funcionalidades: ['Empresa', 'Usuarios', 'Seguridad', 'Impuestos', 'Familias'], icono: 'pi pi-cog', ruta: 'Frm_Ajustes', colorIcono: '#7c5cbf', bgIcono: '#f2edfc', disponible: true }
-    ];
-
-    const modulosVisibles = computed(function() {
-        return listaModulos.filter(function(modulo) {
-            // Compras permanece oculto hasta la publicación del módulo.
-            if (modulo.id === 'compras') return false;
-            // Regla de Ajustes: solo admin
-            if (modulo.id === 'ajustes') {
-                return authStore.user?.admin === true;
-            }
-            
-            if (modulo.id === 'ventas') {
-
-                if(authStore.user?.admin==true ){
-                    return true;
-                }else{
-                    return securityStore.hasModule('SALES');
-                }
-            }
-            // Regla general: todos los demás visibles si está autenticado
-            return true;
-        });
+    const actionCards = computed(() => {
+        const q = stats.value.quotes;
+        const o = stats.value.orders;
+        const f = stats.value.invoices;
+        const r = stats.value.rects;
+        const rectTotal = Array.isArray(r)
+            ? r.filter((item: any) => item && item.state?.toLowerCase().includes('confirm')).reduce((acc: number, item: any) => acc + (item.count || 0), 0)
+            : null;
+        return [
+            {
+                key: 'quotes', icon: 'pi pi-file-edit', label: 'Presupuestos por aprobar',
+                value: q?.pendingCount ?? null,
+                sub: q ? `${fmtMoney(q.pendingAmount)} por confirmar` : 'Pendiente de carga',
+                route: 'Presupuestos',
+                gradient: 'linear-gradient(135deg,#8d78dc,#6250ad)'
+            },
+            {
+                key: 'orders', icon: 'pi pi-shopping-cart', label: 'Pedidos pendientes',
+                value: o ? (o.deliveryPendingLines ?? 0) + (o.directInvoiceLines ?? 0) : null,
+                sub: o ? `${fmt(o.deliveryPendingQuantity)} uds. a servir` : 'Pendiente de carga',
+                route: 'Pedidos',
+                gradient: 'linear-gradient(135deg,#f3ae48,#dc7c22)'
+            },
+            {
+                key: 'invoices', icon: 'pi pi-receipt', label: 'Facturas por cobrar',
+                value: f?.pendingCount ?? null,
+                sub: f ? `${fmtMoney(f.pendingAmount)} en cartera` : 'Pendiente de carga',
+                route: 'Facturas',
+                gradient: 'linear-gradient(135deg,#e46e8e,#b74267)'
+            },
+            {
+                key: 'overdue', icon: 'pi pi-exclamation-triangle', label: 'Facturas vencidas',
+                value: f?.overdueCount ?? null,
+                sub: f ? 'Requieren seguimiento' : 'Pendiente de carga',
+                route: 'Facturas',
+                gradient: 'linear-gradient(135deg,#f28b82,#c53030)'
+            },
+            {
+                key: 'rects', icon: 'pi pi-undo', label: 'Rectificativas',
+                value: rectTotal,
+                sub: r ? 'Confirmadas / emitidas' : 'Pendiente de carga',
+                route: 'Rectificativas',
+                gradient: 'linear-gradient(135deg,#e56b6f,#bd3e43)'
+            },
+        ];
     });
+
+    function fmt(value: number): string {
+        return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(Number(value ?? 0));
+    }
+
+    function fmtMoney(value: unknown): string {
+        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+    }
 
     function navegarA(nombreRuta: string, disponible = true): void {
         if (!disponible) return;
-
         router.push({ name: nombreRuta });
     }
 
     return {
-        modulosVisibles,
+        recents,
+        actionCards,
+        fmt,
         navegarA
     };
-
-   
 }

@@ -1,12 +1,12 @@
 <template>
-  <main class="settings-page">
+  <main class="settings-page ajustes-page" :class="{ 'settings-page--natural-height': activeTab === '5' }">
     <header class="settings-header">
       <div class="settings-title">
         <div class="settings-icon"><i class="pi pi-cog"></i></div>
         <div>
           <span class="breadcrumb">KiwiKERP / Administración</span>
           <h1>Configuración del sistema</h1>
-          <p>Empresa, preferencias, usuarios, inteligencia artificial y datos maestros de la plataforma.</p>
+          <p>Empresa, preferencias, usuarios, inteligencia artificial, salvaguarda de datos y datos maestros de la plataforma.</p>
         </div>
       </div>
       <Button label="Inicio" icon="pi pi-home" text severity="secondary" @click="volverAlDashboard" />
@@ -19,18 +19,18 @@
         <Tab value="2"><i class="pi pi-users"></i><span>Usuarios</span></Tab>
         <Tab value="3"><i class="pi pi-database"></i><span>Datos maestros</span></Tab>
         <Tab v-if="aiAuth.user?.admin" value="4"><i class="pi pi-sparkles"></i><span>Inteligencia artificial</span></Tab>
+        <Tab v-if="aiAuth.user?.admin" value="5"><i class="pi pi-shield"></i><span>Salvaguarda de datos</span></Tab>
       </TabList>
 
       <TabPanels>
         <TabPanel value="0">
-          <div class="grid">
-            <div class="col-12 md:col-3 pr-0 md:pr-4">
+          <div class="grid settings-company-layout">
+            <div class="col-12 lg:col-3 pr-0 lg:pr-4">
               <div
-                class="border-round border-1 surface-border p-4 flex flex-column align-items-center justify-content-center"
-                style="height: 200px;">
+                class="company-brand-card border-round border-1 surface-border p-4 flex flex-column align-items-center justify-content-center">
 
                 <img v-if="formData.urlLogo" :key="formData.urlLogo" :src="formData.urlLogo"
-                  style="max-height: 120px; object-fit: contain;" @error="handleImageError" @load="handleImageLoad" />
+                  class="company-logo" @error="handleImageError" @load="handleImageLoad" />
 
                 <i v-else class="pi pi-image text-5xl text-400 mb-3"></i>
 
@@ -46,9 +46,9 @@
               </div>
             </div>
 
-            <div class="col-12 md:col-9 mt-4 md:mt-0">
-              <div class="p-5 surface-50 border-round border-1 surface-border">
-                <div class="bg-white p-4 border-round-md shadow-sm border-1 surface-border mb-4">
+            <div class="col-12 lg:col-9 mt-4 lg:mt-0">
+              <div class="company-sections p-5 surface-50 border-round border-1 surface-border">
+                <div class="settings-form-section bg-white p-4 border-round-md shadow-sm border-1 surface-border mb-4">
                   <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
                     <i class="pi pi-building"></i> Datos Básicos
                   </h5>
@@ -84,7 +84,7 @@
                   </div>
                 </div>
 
-                <div class="bg-white p-4 border-round-md shadow-sm border-1 surface-border mb-4">
+                <div class="settings-form-section bg-white p-4 border-round-md shadow-sm border-1 surface-border mb-4">
                   <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
                     <i class="pi pi-map-marker"></i> Dirección Fiscal
                   </h5>
@@ -126,7 +126,7 @@
 
 
 
-                <div class="bg-white p-4 border-round-md shadow-sm border-1 surface-border mb-4">
+                <div class="settings-form-section bg-white p-4 border-round-md shadow-sm border-1 surface-border mb-4">
                   <div class="flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
                     <h5 class="text-primary m-0 flex align-items-center gap-2">
                       <i class="pi pi-envelope"></i> Configuración SMTP
@@ -137,7 +137,7 @@
 
 
                   <div class="grid">
-                    <div class="col-12 md:col-3 mb-">
+                    <div class="col-12 md:col-3 mb-2">
                       <FloatLabel variant="in">
                         <InputText v-model="formData.smtpServer" id="smtpServer" class="w-full" size="small" /><label
                           for="smtpServer">Servidor SMTP</label>
@@ -165,15 +165,15 @@
 
 
                     <div class="col-12 grid grid-nogutter gap-2 mb-2">
-                      <div class="col border-1 surface-border border-round px-3 flex align-items-center h-3rem">
+                      <div class="col setting-toggle border-1 surface-border border-round px-3 flex align-items-center h-3rem">
                         <Checkbox v-model="formData.smtpAuth" id="smtpAuth" binary size="small" />
                         <label for="smtpAuth" class="ml-2 font-medium text-sm">SMTP Auth</label>
                       </div>
-                      <div class="col border-1 surface-border border-round px-3 flex align-items-center h-3rem">
+                      <div class="col setting-toggle border-1 surface-border border-round px-3 flex align-items-center h-3rem">
                         <Checkbox v-model="formData.starttlsEnable" id="starttlsEnable" binary size="small" />
                         <label for="starttlsEnable" class="ml-2 font-medium text-sm">StartTLS Enable</label>
                       </div>
-                      <div class="col border-1 surface-border border-round px-3 flex align-items-center h-3rem">
+                      <div class="col setting-toggle border-1 surface-border border-round px-3 flex align-items-center h-3rem">
                         <Checkbox v-model="formData.starttlsRequired" id="starttlsRequired" binary size="small" />
                         <label for="starttlsRequired" class="ml-2 font-medium text-sm">StartTLS Required</label>
                       </div>
@@ -194,7 +194,7 @@
                   </div>
                 </div>
 
-                <div class="bg-white p-4 border-round-md shadow-sm border-1 surface-border mb-4">
+                <div class="settings-form-section bg-white settings-section-last p-4 border-round-md shadow-sm border-1 surface-border mb-4">
                   <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
                     <i class="pi pi-shield"></i> Configuración Legal (RGPD)
                   </h5>
@@ -207,81 +207,61 @@
                     </div>
                   </div>
                 </div>
-
-                <div class="flex justify-content-end mt-5 pt-4 border-top-1 surface-border">
-                  <Button label="Guardar Cambios" icon="pi pi-save" :loading="loading" @click="saveData" size="small" />
-                </div>
               </div>
             </div>
           </div>
         </TabPanel>
 
         <TabPanel value="1">
-          <div class="grid">
-            <div class="col-12 md:col-12 mt-4 md:mt-0">
-              <div class="p-5 surface-50 border-round border-1 surface-border">
-
-
-                <div class="bg-white p-4 border-round-md shadow-sm border-1 surface-border">
-
-
-                  <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
-                    <i class="pi pi-desktop"></i> Preferencias de Interfaz
-                  </h5>
-                  <div class="grid">
-                    <div class="col-2">
-                      <FloatLabel variant="in">
-                        <InputNumber v-model="formData.toastDuration" id="toastDuration" class="w-full" size="small"
-                          :step="500" suffix=" ms" />
-                        <label for="toastDuration">Tiempo duración del Toast (ms)</label>
-                      </FloatLabel>
-                    </div>
-                  </div>
-
-
-                  <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
-                    <i class="pi pi-table"></i> Persistencia / Base de datos
-                  </h5>
-
-
-                  <div class="flex flex-column gap-1">
-
-                    <div class="col-2 mt-0">
-                      <FloatLabel variant="in">
-                        <InputNumber v-model="formData.paginationTable" id="paginationTable" class="w-full" size="small"
-                          :step="500" suffix=" registros" />
-                        <label for="paginationTable">Cantidad de registros por Página</label>
-                      </FloatLabel>
-                    </div>
-                  </div>
-
-                  <template v-if="aiAuth.user?.admin">
-                    <h5 class="text-primary mt-5 mb-4 flex align-items-center gap-2">
-                      <i class="pi pi-folder-open"></i> Repositorio documental
-                    </h5>
-                    <div class="grid">
-                      <div class="col-12 md:col-8">
-                        <FloatLabel variant="in">
-                          <InputText v-model="formData.documentRoot" id="documentRoot" maxlength="1000" class="w-full"
-                            size="small" :disabled="documentRootManaged" />
-                          <label for="documentRoot">Ruta raíz de documentos</label>
-                        </FloatLabel>
-                      </div>
-                    </div>
-                    <div class="document-root-warning" :class="{ 'document-root-managed': documentRootManaged }">
-                      <i :class="documentRootManaged ? 'pi pi-cloud' : 'pi pi-exclamation-triangle'"></i>
-                      <span v-if="documentRootManaged">Esta ruta pertenece a {{ deploymentLabel }} y está administrada por la infraestructura. Se muestra como información y no puede modificarse desde KiwiKERP.</span>
-                      <span v-else>Esta ruta contiene documentos históricos, facturas, adjuntos, imágenes y logotipos. Cambiarla no mueve los archivos existentes. Después de guardarla, reinicia el servidor de KiwiKERP para que las imágenes y los documentos se publiquen desde la nueva ubicación. Conserva la ruta anterior hasta comprobar que todo funciona correctamente.</span>
-                    </div>
-                  </template>
-
-
-
+          <div class="preferences-layout">
+            <div class="settings-form-section settings-form-section--preference">
+              <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
+                <i class="pi pi-desktop"></i> Preferencias de Interfaz
+              </h5>
+              <div class="grid">
+                <div class="col-12 md:col-5 xl:col-4">
+                  <FloatLabel variant="in">
+                    <InputNumber v-model="formData.toastDuration" id="toastDuration" class="w-full" size="small"
+                      :step="500" suffix=" ms" />
+                    <label for="toastDuration">Tiempo duración del Toast (ms)</label>
+                  </FloatLabel>
                 </div>
+              </div>
+            </div>
 
-                <div class="flex justify-content-end mt-5 pt-4 border-top-1 surface-border">
-                  <Button label="Guardar Cambios" icon="pi pi-save" :loading="loading" @click="saveData" size="small" />
+            <div class="settings-form-section settings-form-section--preference">
+              <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
+                <i class="pi pi-table"></i> Persistencia / Base de datos
+              </h5>
+
+              <div class="flex flex-column gap-1">
+                <div class="col-12 md:col-5 xl:col-4 mt-0">
+                  <FloatLabel variant="in">
+                    <InputNumber v-model="formData.paginationTable" id="paginationTable" class="w-full" size="small"
+                      :step="500" suffix=" registros" />
+                    <label for="paginationTable">Cantidad de registros por Página</label>
+                  </FloatLabel>
                 </div>
+              </div>
+            </div>
+
+            <div v-if="aiAuth.user?.admin" class="settings-form-section settings-form-section--preference">
+              <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
+                <i class="pi pi-folder-open"></i> Repositorio documental
+              </h5>
+              <div class="grid">
+                <div class="col-12 md:col-8">
+                  <FloatLabel variant="in">
+                    <InputText v-model="formData.documentRoot" id="documentRoot" maxlength="1000" class="w-full"
+                      size="small" :disabled="documentRootManaged" />
+                    <label for="documentRoot">Ruta raíz de documentos</label>
+                  </FloatLabel>
+                </div>
+              </div>
+              <div class="document-root-warning" :class="{ 'document-root-managed': documentRootManaged }">
+                <i :class="documentRootManaged ? 'pi pi-cloud' : 'pi pi-exclamation-triangle'"></i>
+                <span v-if="documentRootManaged">Esta ruta pertenece a {{ deploymentLabel }} y está administrada por la infraestructura. Se muestra como información y no puede modificarse desde KiwiKERP.</span>
+                <span v-else>Esta ruta contiene documentos históricos, facturas, adjuntos, imágenes y logotipos. Cambiarla no mueve los archivos existentes. Después de guardarla, reinicia el servidor de KiwiKERP para que las imágenes y los documentos se publiquen desde la nueva ubicación. Conserva la ruta anterior hasta comprobar que todo funciona correctamente.</span>
               </div>
             </div>
           </div>
@@ -289,14 +269,9 @@
         </TabPanel>
 
         <TabPanel value="2">
-          <div class="p-5 surface-50 border-round border-1 surface-border" style="margin-bottom: 100px;">
-            <div class="flex justify-content-between align-items-center mb-4">
-              <h5 class="text-primary m-0 flex align-items-center gap-2">
-                <i class="pi pi-users"></i> Listado de Usuarios del Sistema
-              </h5>
-            </div>
+          <section class="users-tab">
             <UsuariosTabla @edit="openUserDialog" />
-          </div>
+          </section>
         </TabPanel>
 
 
@@ -343,8 +318,22 @@
         </TabPanel>
 
         <TabPanel v-if="aiAuth.user?.admin" value="4"><AiSettingsPanel v-if="activeTab === '4'"/></TabPanel>
+
+        <TabPanel v-if="aiAuth.user?.admin" value="5"><BackupPanel v-if="activeTab === '5'"/></TabPanel>
       </TabPanels>
     </Tabs>
+
+    <!-- Única botonera común de Empresa y Preferencias.
+         Está fuera de Tabs para ocupar todo el ancho del panel. -->
+    <div v-if="activeTab === '0' || activeTab === '1'" class="settings-global-actions">
+      <Button
+        label="Guardar Cambios"
+        icon="pi pi-save"
+        :loading="loading"
+        @click="saveData"
+        size="small"
+      />
+    </div>
   </main>
 
   <Frm_FamiliasProductos ref="familiasProductosRef" />
@@ -355,9 +344,18 @@
 .settings-page {
   --kiwi: #9cc10a;
   --kiwi-dark: #648506;
+  --settings-border: #e2e7ec;
+  --settings-soft: #f7f9fa;
+  --settings-text: #263144;
+  --settings-muted: #7b8595;
   width: 100%;
-  padding: 18px 16px 96px;
+  min-height: calc(100dvh - 66px);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 16px 72px;
+  box-sizing: border-box;
   color: #243044;
+  background: rgba(248, 250, 251, .62);
 }
 
 .settings-header {
@@ -409,7 +407,13 @@
 .settings-title h1 { margin: 3px 0 2px; color: #202939; font-size: 1.4rem; }
 .settings-title p { margin: 0; color: #7a8494; font-size: .92rem; }
 
-.settings-page :deep(.p-tabs) { gap: 0; }
+.settings-page :deep(.p-tabs) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 .settings-page :deep(.p-tablist) {
   overflow: hidden;
   border: 1px solid #e1e6ec;
@@ -417,21 +421,31 @@
   background: #fff;
   box-shadow: 0 4px 14px rgba(30, 41, 59, .045);
 }
-.settings-page :deep(.p-tablist-tab-list) { border: 0; background: transparent; }
+.settings-page :deep(.p-tablist-tab-list) {
+  gap: 4px;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+}
 .settings-page :deep(.p-tab) {
   display: flex;
   min-width: 155px;
   justify-content: center;
   gap: 8px;
-  padding: 15px 20px;
-  border-width: 0 0 3px;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 9px;
   color: #707b8d;
   font-size: .92rem;
   font-weight: 700;
 }
-.settings-page :deep(.p-tab:hover) { color: var(--kiwi-dark); background: #fbfdef; }
-.settings-page :deep(.p-tab-active) { color: var(--kiwi-dark); border-color: var(--kiwi); background: #f8fbe9; }
+.settings-page :deep(.p-tab:hover) { color: var(--kiwi-dark); background: #f7faed; }
+.settings-page :deep(.p-tab-active) { color: #4e6905; background: #edf5d9; box-shadow: inset 0 0 0 1px #dce8b8; }
 .settings-page :deep(.p-tabpanels) {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
   padding: 22px;
   border: 1px solid #e1e6ec;
   border-top: 0;
@@ -461,11 +475,61 @@
 }
 .settings-page :deep(.p-inputtext:focus),
 .settings-page :deep(.p-select.p-focus) { border-color: var(--kiwi); box-shadow: 0 0 0 2px rgba(156, 193, 10, .13); }
-.settings-page :deep(.p-button:not(.p-button-text)) { border-color: var(--kiwi-dark); background: var(--kiwi-dark); }
-.settings-page :deep(.p-button:not(.p-button-text):hover) { border-color: #526f04; background: #526f04; }
+/* Jerarquía común: acción principal verde, secundarias neutras y peligros intactos. */
+.settings-page :deep(.p-button) {
+  min-height: 36px;
+  border-radius: 8px;
+}
+.settings-page :deep(.p-button:not(.p-button-text):not(.p-button-outlined):not(.p-button-secondary):not(.p-button-danger):not(.p-button-warn):not(:disabled)) {
+  border-color: #9cc10a;
+  background: #9cc10a;
+  color: #253000 !important;
+}
+.settings-page :deep(.p-button:not(.p-button-text):not(.p-button-outlined):not(.p-button-secondary):not(.p-button-danger):not(.p-button-warn):not(:disabled):hover) {
+  border-color: #8bad09;
+  background: #8bad09;
+}
+.settings-page :deep(.p-button-outlined:not(.p-button-danger):not(.p-button-warn)) {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #445064 !important;
+}
+.settings-page :deep(.p-button-outlined:not(.p-button-danger):not(.p-button-warn):not(:disabled):hover) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.settings-page :deep(.p-tabpanel) {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  margin: 0;
+}
+.settings-page :deep(.p-tabpanel[data-p-active="true"]) {
+  display: flex;
+  flex-direction: column;
+}
+.settings-page :deep(.p-tabpanel > *) {
+  width: 100%;
+}
+.settings-page :deep(.backup-panel),
+.settings-page :deep(.ai-settings) {
+  max-width: none;
+}
+.settings-page :deep(.backup-card),
+.settings-page :deep(.bg-white) {
+  border: 1px solid #e1e6ec;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none !important;
+}
+.settings-page :deep(.kiwik-separator) {
+  margin-block: 20px 16px;
+}
 
 .master-data { min-height: 410px; }
-.master-data-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; padding: 22px 24px; border: 1px solid #e5ead4; border-radius: 14px; background: linear-gradient(135deg,#fff 0%,#fbfdef 100%); }
+.master-data-header { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; padding: 22px 24px 22px 28px; border: 1px solid var(--settings-border); border-radius: 14px; background: #fff; }
+.master-data-header::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--kiwi); }
 .master-eyebrow { color: var(--kiwi-dark); font-size: .76rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .master-data-header h2 { margin: 5px 0 4px; color: #263144; font-size: 1.3rem; }
 .master-data-header p { margin: 0; color: #7b8595; font-size: .92rem; }
@@ -473,8 +537,8 @@
 .master-summary i { grid-row: 1 / 3; font-size: 1.25rem; }
 .master-summary strong { font-size: 1.05rem; line-height: 1; }
 .master-summary span { color: #77805d; font-size: .73rem; }
-.master-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
-.master-card { --card-color: #648506; display: flex; min-height: 225px; flex-direction: column; align-items: flex-start; padding: 20px; border: 1px solid #e0e5eb; border-radius: 14px; color: #263144; background: #fff; text-align: left; cursor: pointer; box-shadow: 0 4px 14px rgba(30,41,59,.055); transition: transform 180ms ease,border-color 180ms ease,box-shadow 180ms ease; }
+.master-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; }
+.master-card { --card-color: #648506; display: flex; min-height: 205px; flex-direction: column; align-items: flex-start; padding: 20px; border: 1px solid #e0e5eb; border-radius: 14px; color: #263144; background: #fff; text-align: left; cursor: pointer; box-shadow: 0 4px 14px rgba(30,41,59,.055); transition: transform 180ms ease,border-color 180ms ease,box-shadow 180ms ease; }
 .master-card:hover { transform: translateY(-4px); border-color: var(--card-color); box-shadow: 0 14px 27px rgba(30,41,59,.11); }
 .master-card:focus-visible { outline: 2px solid var(--card-color); outline-offset: 2px; }
 .master-card--tax { --card-color: #dc7c22; }
@@ -507,10 +571,254 @@
   .master-grid { grid-template-columns: 1fr; }
   .master-card { min-height: 190px; }
 }
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  .master-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+
+/* =========================================================
+   AJUSTES V3
+   Un único panel blanco principal para el contenido.
+   ========================================================= */
+
+/* TabPanels es ahora el gran Card/panel blanco principal. */
+.settings-page :deep(.p-tabpanels) {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  margin-top: 18px;
+  padding: 26px;
+  border: 1px solid #e1e6ec;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(30, 41, 59, .055);
+}
+
+/* Navegación independiente del panel principal. */
+.settings-page :deep(.p-tablist) {
+  border-radius: 13px;
+}
+
+.settings-page :deep(.p-tabpanel) {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  background: transparent;
+}
+
+.settings-page :deep(.p-tabpanel[data-p-active="true"]) {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empresa: fuera el gran bloque gris interior. */
+.settings-page :deep(.p-tabpanel .surface-50) {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* Datos básicos, Dirección y SMTP pasan a ser secciones,
+   no Cards grandes anidados. */
+.settings-page :deep(.p-tabpanel .bg-white) {
+  padding: 18px 0 22px !important;
+  margin-bottom: 8px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e8ecf0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.company-brand-card {
+  position: sticky;
+  top: 16px;
+  height: 218px;
+  border-color: var(--settings-border) !important;
+  background: linear-gradient(145deg, #fafcf4, #f5f8fa) !important;
+}
+
+.company-logo {
+  width: min(100%, 210px);
+  max-height: 124px;
+  object-fit: contain;
+}
+
+.settings-form-section {
+  position: relative;
+}
+
+.settings-form-section > h5 i {
+  width: 31px;
+  height: 31px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #f0f7d5;
+}
+
+.setting-toggle {
+  min-width: 180px;
+  border-color: var(--settings-border) !important;
+  background: var(--settings-soft);
+}
+
+.preferences-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.settings-form-section--preference {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--settings-border);
+  border-radius: 13px;
+  background: #fff;
+}
+
+.settings-form-section--preference:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.users-tab {
+  min-height: 0;
+  height: 100%;
+}
+
+.settings-page :deep(.p-tabpanel .bg-white:last-child) {
+  border-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.settings-page :deep(.p-tabpanel .settings-section-last) {
+  border-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+
+
+/* Zona de logo integrada, con fondo suave. */
+.settings-page :deep(.p-tabpanel .col-12.md\:col-3 > .border-round.border-1) {
+  border-color: #e5e9ee !important;
+  background: #f8fafb;
+}
+
+/* Paneles hijos al 100%, sin un segundo gran fondo blanco. */
+.settings-page :deep(.settings-panel),
+.settings-page :deep(.backup-panel),
+.settings-page :deep(.ai-settings),
+.settings-page :deep(.document-backups) {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  background: transparent;
+}
+
+.settings-page :deep(.settings-panel > .p-card),
+.settings-page :deep(.backup-panel > .p-card),
+.settings-page :deep(.ai-settings > .p-card),
+.settings-page :deep(.document-backups > .p-card) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-page :deep(h5.text-primary) {
+  margin-bottom: 18px !important;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+@media (max-width: 760px) {
+  .settings-page :deep(.p-tabpanels) {
+    margin-top: 12px;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .company-brand-card {
+    position: static;
+    height: 190px;
+  }
+
+  .preferences-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-form-section--preference:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
+
+
+/* =========================================================
+   SALVAGUARDA
+   Esta pestaña usa altura natural: no se estira hasta ocupar
+   todo el alto disponible cuando su contenido es más corto.
+   ========================================================= */
+.settings-page--natural-height {
+  min-height: 0;
+}
+
+.settings-page--natural-height :deep(.p-tabs),
+.settings-page--natural-height :deep(.p-tabpanels),
+.settings-page--natural-height :deep(.p-tabpanel[data-p-active="true"]) {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+
+.settings-page--natural-height :deep(.p-tabpanels) {
+  display: block !important;
+}
+
+.settings-page--natural-height :deep(.p-tabpanel[data-p-active="true"]) {
+  display: block !important;
+}
+
+.settings-page--natural-height :deep(.backup-panel),
+.settings-page--natural-height :deep(.settings-panel),
+.settings-page--natural-height :deep(.settings-panel__content) {
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+
+/* Separación visual entre los paneles internos de Salvaguarda. */
+.settings-page--natural-height :deep(.backup-panel .backup-section),
+.settings-page--natural-height :deep(.backup-panel .document-backups),
+.settings-page--natural-height :deep(.backup-panel .settings-panel) {
+  margin-bottom: 20px;
+}
+
+.settings-page--natural-height :deep(.backup-panel > * + *) {
+  margin-top: 20px;
+}
+
+
+/* Única zona de guardado común a Empresa y Preferencias.
+   Fuera de Tabs: la línea ocupa de extremo a extremo. */
+.settings-global-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding: 16px 0 0;
+  border-top: 2px solid var(--kiwi);
+  box-sizing: border-box;
+}
+
 </style>
 
 <script setup lang="ts">
 import AiSettingsPanel from './AiSettingsPanel.vue';
+import BackupPanel from './BackupPanel.vue';
 import { useAuthStore } from '@/stores/authStore';
 const aiAuth=useAuthStore();
 import { onMounted, ref, watch } from 'vue';
@@ -556,8 +864,8 @@ onMounted(async () => {
 
 const updateActiveTab = function (queryTab: any): void {
   if (queryTab) {
-    const requested=String(queryTab);
-    activeTab.value=requested==='4'&&!aiAuth.user?.admin?'0':requested;
+const requested=String(queryTab);
+    activeTab.value=(!aiAuth.user?.admin&&(requested==='4'||requested==='5'))?'0':requested;
   }
 };
 
@@ -572,7 +880,7 @@ watch(
   },
   { immediate: true }
 );
-watch(() => aiAuth.user?.admin, isAdmin => { if(!isAdmin&&activeTab.value==='4')activeTab.value='0'; });
+watch(() => aiAuth.user?.admin, isAdmin => { if(!isAdmin&&(activeTab.value==='4'||activeTab.value==='5'))activeTab.value='0'; });
 
 
 function openSalesTax() {

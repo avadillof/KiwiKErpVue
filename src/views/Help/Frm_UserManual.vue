@@ -1738,15 +1738,14 @@
           <p>
             <b>Configuración:</b> los administradores disponen de
             <b>Ajustes → Inteligencia artificial</b>, también accesible desde el
-            asistente. El modelo viene propuesto por defecto
-            (<b>gpt-4.1-mini</b>). Copie y pegue la clave API en el campo de
+            asistente. Elija el proveedor (<b>Groq</b> gratuito recomendado u
+            <b>OpenAI</b>) y el modelo propuesto por defecto. Copie y pegue la clave API en el campo de
             contraseña, active la IA y guarde: se almacena cifrada en la base de
-            datos, sin selector de origen. Dejar el campo vacío conserva la
+            datos. Dejar el campo vacío conserva la
             clave existente; pegar otra la sustituye. <b>Eliminar clave</b> pide
             confirmación, borra la copia y desactiva la IA, sin revocarla en
-            OpenAI. <b>Probar conexión</b> pide confirmación y puede consumir
-            API, sin consultar ni enviar facturas. La API se paga aparte de
-            ChatGPT/Codex. Se necesita HTTPS (o conexión local de desarrollo).
+            el proveedor. <b>Probar conexión</b> pide confirmación y puede consumir
+            cuota, sin consultar ni enviar facturas. Se necesita HTTPS (o conexión local de desarrollo).
             La clave se protege con el mismo servicio de cifrado que los
             certificados, sin configurar variables ni credenciales adicionales
             en Jenkins. Los ajustes guardados se aplican sin reiniciar.
@@ -1754,14 +1753,18 @@
           <p>
             El botón <b>Asistente de Facturas</b> permite consultar facturación
             por periodo y cliente, pendientes, vencidos y el detalle de una
-            factura con sus cobros. No modifica documentos ni envía correos. Los
-            filtros guiados funcionan sin IA; si está configurada, pulse
-            <b>Interpretar pregunta</b>, revise los criterios y después
-            <b>Consultar datos</b>. Después puede usar
+            factura con sus cobros. No modifica documentos ni envía correos.
+            Escriba su consulta con sus palabras y pulse
+            <b>Interpretar pregunta</b>: si la entiende, lanza la consulta
+            automáticamente; si falta
+            algún dato, le indica qué ha entendido y qué necesita.
+            Después puede usar
             <b>Descargar respuesta en PDF</b> para conservar criterios, totales,
             documentos justificativos y, al explicar una factura, sus cobros y
-            vencimientos. Cada pregunta es independiente. La pregunta se envía a
-            OpenAI, pero no los resultados ni historiales; evite incluir
+            vencimientos. Si pide una aclaración, respóndela en el mismo cuadro
+            y la fusiona con lo ya entendido. Cada tema nuevo empieza con una
+            pregunta completa. La pregunta se envía al
+            proveedor configurado (Groq u OpenAI), pero no los resultados ni historiales; evite incluir
             información sensible innecesaria.
           </p>
           <p>

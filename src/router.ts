@@ -14,6 +14,7 @@ import Frm_Clientes from './views/Ventas/Frm_Clientes/Frm_Clientes.vue';
 import Frm_Presupuestos from './views/Ventas/Frm_Presupuestos/Frm_Presupuestos.vue';
 import Frm_Pedidos from './views/Ventas/Frm_Pedidos/Frm_Pedidos.vue';
 import Frm_Albaranes from './views/Ventas/Frm_Albaranes/Frm_Albaranes.vue';
+import Frm_Facturas from './views/Ventas/Frm_Facturas/Frm_Facturas.vue';
 import Frm_Products from './views/Frm_Products/Frm_Products.vue';
 import Frm_SalesTax from './views/Frm_SalexTax/Frm_SalesTax.vue';
 import Frm_Certificates from './views/security/Frm_Certificates/Frm_Certificates.vue';
@@ -89,10 +90,10 @@ const routes = [
         name: 'Albaranes',
         component: Frm_Albaranes
       },
-      {
+{
         path: '/ventas/facturas',
         name: 'Facturas',
-        component: () => import('./views/Ventas/Frm_Facturas/Frm_Facturas.vue')
+        component: Frm_Facturas
       },
       {
         path: '/ventas/rectificativas',
@@ -108,6 +109,11 @@ const routes = [
         path: '/ventas/ajustes',
         name: 'AjustesVentas',
         component: () => import('./views/Ventas/Frm_AjustesVentas/Frm_AjustesVentas.vue')
+      },
+      {
+        path: '/ventas/informes',
+        name: 'InformesVentas',
+        component: () => import('./views/Ventas/Frm_InformesVentas.vue')
       },
       {
         path: '/security',

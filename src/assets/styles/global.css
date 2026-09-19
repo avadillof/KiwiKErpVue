@@ -429,3 +429,16 @@ body {
   transform: none !important;
   flex-shrink: 0;
 }
+
+/* Tooltips corporativos: multilínea y legibles */
+.p-tooltip .p-tooltip-text {
+  max-width: 300px;
+  white-space: normal;
+  line-height: 1.45;
+  font-size: 0.82rem;
+  background: #243044;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 6px 18px rgba(31, 41, 55, 0.25);
+}

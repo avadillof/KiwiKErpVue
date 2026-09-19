@@ -1,12 +1,10 @@
 <template>
-  <section class="ai-settings">
-    <header>
-      <span class="ai-icon"><i class="pi pi-sparkles" /></span>
-      <div>
-        <h2>Inteligencia artificial</h2>
-        <p>Conexión común con OpenAI · Funciones específicas por módulo</p>
-      </div>
-    </header>
+  <SettingsPanelCard
+    class="ai-settings"
+    title="Inteligencia artificial"
+    subtitle="Conexión común multi-proveedor · Funciones específicas por módulo"
+    icon="pi pi-sparkles"
+  >
     <Message v-if="error" severity="error" :closable="false">{{
       error
     }}</Message>
@@ -26,8 +24,8 @@
                 : 'IA desactivada'
           "
         /><span
-          >Proveedor: OpenAI · Módulos conectados: Facturas y Presupuestos (solo
-          lectura)</span
+          >Proveedor: {{ activeProvider.label }} · Módulos conectados: Facturas,
+          Pedidos y Presupuestos (solo lectura)</span
         >
       </div>
       <Message v-if="saved.problem" severity="warn" :closable="false">{{
@@ -49,21 +47,36 @@
         </div>
         <div class="fields">
           <div>
-            <label for="ai-model">Modelo OpenAI</label
+            <label for="ai-provider">Proveedor</label
+            ><Select
+              id="ai-provider"
+              v-model="form.provider"
+              :options="providerOptions"
+              optionLabel="label"
+              optionValue="value"
+              :disabled="busy"
+              @change="changeProvider"
+            /><small>{{ activeProvider.help }}</small>
+          </div>
+          <div>
+            <label for="ai-model">Modelo {{ activeProvider.shortLabel }}</label
             ><InputText
               id="ai-model"
               v-model="form.model"
               maxlength="100"
               :disabled="busy"
-              placeholder="gpt-4.1-mini"
+              :placeholder="activeProvider.defaultModel"
             /><small
-              >KiwiKERP propone gpt-4.1-mini por defecto. No necesitas buscar un
-              modelo; cambia este campo sólo si tu administrador indica otro
-              compatible.</small
+              >KiwiKERP propone {{ activeProvider.defaultModel }} por defecto.
+              Cambia este campo sólo si tu administrador indica otro
+              compatible con {{ activeProvider.label }}. Los modelos de Groq
+              contienen `/` (p. ej. openai/gpt-oss-20b): si al guardar ves
+              "Identificador de modelo no válido", el backend aún valida solo
+              modelos OpenAI y hay que actualizarlo.</small
             >
           </div>
-          <div>
-            <label for="ai-api-key">Clave API de OpenAI</label
+          <div class="key-field">
+            <label for="ai-api-key">Clave API de {{ activeProvider.label }}</label
             ><InputText
               id="ai-api-key"
               v-model="apiKey"
@@ -84,8 +97,9 @@
             }}</small
             ><small
               >La clave se guarda cifrada en la base de datos y nunca se
-              devuelve al navegador. El consumo API se factura aparte de ChatGPT
-              y Codex.</small
+              devuelve al navegador. Consigue la clave gratis en
+              {{ activeProvider.keyUrl }}. El consumo de la API gratuita depende
+              de tu plan en {{ activeProvider.label }}.</small
             >
           </div>
         </div>
@@ -94,9 +108,10 @@
           API, o direcciones locales de desarrollo.</Message
         >
         <p class="notice">
-          Guardar no contacta con OpenAI. Probar conexión envía una pregunta
-          técnica fija, sin facturas ni datos de clientes, y puede generar un
-          pequeño consumo en tu proyecto API. La prueba utiliza la configuración
+          Guardar no contacta con el proveedor. Probar conexión envía una
+          pregunta técnica fija, sin facturas ni datos de clientes, y puede
+          generar un pequeño consumo en tu cuota gratuita de
+          {{ activeProvider.label }}. La prueba utiliza la configuración
           guardada, incluso si la IA está desactivada.
         </p>
         <div class="kiwik-separator" />
@@ -135,21 +150,6 @@
           >Guarda los cambios antes de probar la conexión.</small
         >
       </form>
-      <aside>
-        <h3>Qué permite el piloto de Ventas</h3>
-        <p>
-          En Facturas permite consultar facturación, pendientes, vencidos y
-          explicar una factura con sus cobros. En Presupuestos permite consultar
-          importes, aceptación, validez, estados, conversión y explicar un
-          documento. Los cálculos siguen en el ERP.
-        </p>
-        <p>
-          La IA no emite ni envía documentos, no registra cobros, no aprueba o
-          cancela presupuestos y no crea pedidos. Las consultas guiadas siguen
-          disponibles con la IA desactivada. Los cambios guardados se aplican a
-          nuevas peticiones sin reiniciar el servidor.
-        </p>
-      </aside>
     </template>
     <Button
       v-if="!saved && !loading"
@@ -160,13 +160,15 @@
     <Dialog
       v-model:visible="confirmTest"
       modal
-      header="Probar conexión con OpenAI"
+      :header="`Probar conexión con ${activeProvider.label}`"
       :draggable="false"
       class="kiwik-dialog"
       :style="{ width: 'min(520px,94vw)' }"
       ><p>
-        Se enviará una pregunta técnica fija al modelo guardado. Puede generar
-        consumo API. No se enviarán facturas ni datos de clientes.
+        Se enviará una pregunta técnica fija al modelo guardado
+        ({{ saved?.model || activeProvider.defaultModel }}). Puede generar
+        consumo en tu cuota gratuita. No se enviarán facturas ni datos de
+        clientes.
       </p>
       <template #footer
         ><Button
@@ -186,10 +188,10 @@
       class="kiwik-dialog"
       :style="{ width: 'min(520px,94vw)' }"
       ><p>
-        Se eliminará la copia cifrada de KiwiKERP y se desactivará la IA. Las
-        consultas guiadas seguirán disponibles. Para recuperar la conexión
+        Se eliminará la copia cifrada de KiwiKERP y se desactivará la IA, que
+        dejará de interpretar preguntas. Para recuperar la conexión
         tendrás que introducir la clave otra vez. Esto no revoca la clave en
-        OpenAI.
+        {{ activeProvider.label }}.
       </p>
       <template #footer
         ><Button
@@ -201,23 +203,61 @@
           severity="danger"
           @click="save(true)" /></template
     ></Dialog>
-  </section>
+  </SettingsPanelCard>
 </template>
 <script setup lang="ts">
+import SettingsPanelCard from './SettingsPanelCard.vue';
 import { backendUrl } from '@/services/backendUrl';
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import axios from "axios";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
+import Select from "primevue/select";
 import ToggleSwitch from "primevue/toggleswitch";
 import Message from "primevue/message";
 import Tag from "primevue/tag";
 import Dialog from "primevue/dialog";
 import { useAuthStore } from "@/stores/authStore";
 const auth = useAuthStore();
+// Catálogo de proveedores con API compatible OpenAI. Groq es el recomendado
+// gratuito inicial; OpenAI se conserva por compatibilidad con instalaciones
+// existentes. El backend debe implementar el conmutador provider/baseUrl.
+const providers: Record<
+  string,
+  { label: string; shortLabel: string; defaultModel: string; keyUrl: string; help: string }
+> = {
+  groq: {
+    label: "Groq",
+    shortLabel: "Groq",
+    defaultModel: "openai/gpt-oss-120b",
+    keyUrl: "console.groq.com",
+    help: "Gratis con cuota generosa. Crea la clave en console.groq.com y pégala abajo. Modelo grande (120B): entiende mejor el español y sigue las reglas del piloto. No usa tus datos para entrenar.",
+  },
+  openai: {
+    label: "OpenAI",
+    shortLabel: "OpenAI",
+    defaultModel: "gpt-4.1-mini",
+    keyUrl: "platform.openai.com",
+    help: "Proveedor de pago. Conservado para instalaciones que ya lo usan.",
+  },
+  ollama: {
+    label: "Ollama (local)",
+    shortLabel: "local",
+    defaultModel: "llama3.1",
+    keyUrl: "tu servidor Ollama",
+    help: "Próximamente: modelo local sin coste ni envío de datos. Requiere configurar la URL base en el backend.",
+  },
+};
+const providerOptions = Object.entries(providers).map(([value, p]) => ({
+  label: p.label,
+  value,
+}));
 const saved = ref<any>(null),
-  form = ref({ enabled: false, model: "" }),
+  form = ref({ enabled: false, provider: "groq", model: "" }),
   apiKey = ref("");
+const activeProvider = computed(
+  () => providers[form.value.provider] || providers.groq,
+);
 const loading = ref(false),
   saving = ref(false),
   testing = ref(false),
@@ -231,6 +271,7 @@ const dirty = computed(
     !!saved.value &&
     (apiKey.value.length > 0 ||
       form.value.enabled !== saved.value.enabled ||
+      form.value.provider !== (saved.value.provider || "openai") ||
       form.value.model !== saved.value.model),
 );
 const endpoint = backendUrl(`/WebAiSettings`);
@@ -248,7 +289,7 @@ const secureTransport = (() => {
 })();
 let sequence = 0;
 watch(
-  [() => form.value.enabled, () => form.value.model, apiKey],
+  [() => form.value.enabled, () => form.value.provider, () => form.value.model, apiKey],
   () => {
     success.value = "";
     error.value = "";
@@ -265,8 +306,22 @@ const safeError = (e: any) =>
         : "No se pudo completar la operación. Comprueba el backend y la migración V26.";
 function accept(data: any) {
   saved.value = data;
-  form.value = { enabled: data.enabled, model: data.model };
+  // Compatibilidad: el backend antiguo no devuelve provider (era solo OpenAI).
+  const provider = data.provider || "openai";
+  form.value = {
+    enabled: data.enabled,
+    provider: providers[provider] ? provider : "groq",
+    model: data.model || providers[provider]?.defaultModel || "",
+  };
   apiKey.value = "";
+}
+function changeProvider(event: any) {
+  // Al cambiar de proveedor se propone siempre su modelo por defecto: un
+  // identificador de otro proveedor no sería válido para el nuevo.
+  // Se usa el valor del evento (no form.provider) porque v-model puede aún
+  // no estar sincronizado cuando se procesa el cambio.
+  const next = event?.value ?? form.value.provider;
+  form.value.model = (providers[next] || providers.groq).defaultModel;
 }
 async function load() {
   const current = ++sequence;
@@ -305,7 +360,7 @@ async function save(removeKey = false) {
     if (current === sequence) {
       accept(data);
       success.value = removeKey
-        ? "Clave eliminada e IA desactivada. Las consultas guiadas siguen disponibles."
+        ? "Clave eliminada e IA desactivada."
         : "Ajustes guardados. Se aplicarán a las nuevas consultas.";
     }
   } catch (e: any) {
@@ -355,26 +410,10 @@ onUnmounted(() => {
 </script>
 <style scoped>
 .ai-settings {
-  max-width: 1100px;
-  margin: auto;
-  background: white;
-  padding: 20px;
-}
-.ai-settings header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-.ai-icon {
-  background: #eef5dc;
-  color: #648506;
-  padding: 16px;
-  border-radius: 12px;
-}
-.ai-settings h2 {
-  margin: 0;
-  font-size: 1.3rem;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 .ai-settings p,
 .ai-settings small {
@@ -401,6 +440,16 @@ onUnmounted(() => {
 .fields > div {
   display: grid;
   gap: 8px;
+  align-content: start;
+}
+.fields label {
+  display: block;
+  margin: 0;
+}
+.fields .p-select,
+.fields .p-inputtext {
+  width: 100%;
+  margin: 0;
 }
 .fields label,
 .enable label {
@@ -409,8 +458,7 @@ onUnmounted(() => {
 .key-field {
   grid-column: 1/-1;
 }
-.notice,
-aside {
+.notice {
   background: #f8faf5;
   border: 1px solid #e1e8d7;
   border-radius: 10px;
@@ -423,18 +471,10 @@ aside {
   flex-wrap: wrap;
   margin: 18px 0;
 }
-aside {
-  margin-top: 25px;
-}
-aside h3 {
-  margin-top: 0;
-}
 @media (max-width: 700px) {
   .fields {
     grid-template-columns: 1fr;
   }
-  .ai-settings {
-    padding: 12px;
-  }
+
 }
 </style>

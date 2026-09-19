@@ -99,7 +99,7 @@
         </label>
       </div>
       <label class="valued-option"><Checkbox v-model="sendValued" binary /><span><b>Enviar albarán valorado</b><small>Incluye precios e importes en el PDF adjunto.</small></span></label>
-      <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-actions"><Button label="Cancelar" severity="secondary" text :disabled="sendingDelivery" @click="showSendDialog=false" /><Button label="Enviar albarán" icon="pi pi-send" :loading="sendingDelivery" :disabled="!selectedRecipientId||!emailRecipients.length" @click="sendDeliveryByEmail" /></div></div></template>
+      <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-actions"><Button label="Cancelar" severity="secondary" text :disabled="sendingDelivery" @click="showSendDialog=false" /><Button label="Enviar albarán" icon="pi pi-send" v-tooltip.bottom="'Envía el PDF al contacto del cliente seleccionado. Queda registrado el envío.'" :loading="sendingDelivery" :disabled="!selectedRecipientId||!emailRecipients.length" @click="sendDeliveryByEmail" /></div></div></template>
     </Dialog>
     <ManualDeliveryDialog ref="manualDeliveryRef" @saved="refresh" />
     <DeliveryReceiptDialog ref="deliveryReceiptRef" @saved="onReceiptSaved" />
@@ -126,7 +126,7 @@
 <script setup lang="ts">
 import { backendUrl } from '@/services/backendUrl';
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import Button from 'primevue/button'; import Chart from 'primevue/chart'; import Checkbox from 'primevue/checkbox'; import Column from 'primevue/column'; import ConfirmDialog from 'primevue/confirmdialog'; import DataTable from 'primevue/datatable'; import DatePicker from 'primevue/datepicker'; import Dialog from 'primevue/dialog'; import InputNumber from 'primevue/inputnumber'; import Menu from 'primevue/menu'; import Message from 'primevue/message'; import RadioButton from 'primevue/radiobutton'; import Select from 'primevue/select'; import Tag from 'primevue/tag'; import Textarea from 'primevue/textarea'; import Toolbar from 'primevue/toolbar';
 import { useConfirm } from 'primevue/useconfirm'; import { useToast } from 'primevue/usetoast';
@@ -136,7 +136,7 @@ import DeliveryReceiptDialog from './DeliveryReceiptDialog.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue';
 import SalesTraceabilityDialog from '../SalesTraceabilityDialog.vue';
-const router=useRouter(), toast=useToast(), confirm=useConfirm();
+const router=useRouter(), route=useRoute(), toast=useToast(), confirm=useConfirm();
 const traceabilityRef=ref<any>();
 const goToSales=()=>router.push('/ventas'); const goToDashboard=()=>router.push('/Frm_Main');
 const tableRef=ref<any>(), rowMenu=ref<any>(), selected=ref<any>(), selectedState=ref<string|null>(null), selectedInvoiceStatus=ref<string|null>(null), detailVisible=ref(false), detailLoading=ref(false), detail=ref<any>({});
@@ -202,7 +202,7 @@ const createGroupedInvoice=async()=>{if(!selectedInvoiceDeliveries.value.length)
 const menuItems=computed(()=>{const groups:any[][]=[];groups.push([{label:'Abrir albarán',icon:'pi pi-eye',command:()=>openDetail(selected.value)},{label:'Trazabilidad comercial',icon:'pi pi-sitemap',command:()=>traceabilityRef.value?.open('DELIVERY',selected.value?.pkid)},{label:`Fotografías y justificantes${selected.value?.attachmentCount?` (${selected.value.attachmentCount})`:''}`,icon:'pi pi-paperclip',command:()=>openAttachments(selected.value)},{label:'Notas',icon:'pi pi-comments',command:openNotes}]);if(selected.value&&!isCancelled(selected.value.state))groups.push([{label:'Imprimir albarán',icon:'pi pi-print',command:()=>openDeliveryPdf(selected.value,false)},{label:'Imprimir albarán valorado',icon:'pi pi-file-pdf',command:()=>openDeliveryPdf(selected.value,true)}]);if(isConfirmed(selected.value?.state)){const flow:any[]=[];if(Number(selected.value?.pendingInvoiceQuantity||0)>0)flow.push({label:selected.value?.invoiced?'Facturar cantidad pendiente':'Generar factura',icon:'pi pi-receipt',command:openInvoiceDialog});flow.push({label:selected.value?.receiverName?'Editar recogida':'Registrar recogida del transportista',icon:'pi pi-user-edit',command:()=>deliveryReceiptRef.value?.open(selected.value)},{label:'Enviar por correo',icon:'pi pi-send',command:()=>openSendDialog(selected.value)});groups.push(flow);}if(selected.value&&!isCancelled(selected.value.state))groups.push([{label:'Anular albarán',icon:'pi pi-ban',command:()=>cancelDelivery(selected.value)}]);return groups.filter(group=>group.length).flatMap((group,index)=>index?[{separator:true},...group]:group);});
 const openMenu=(event:Event,item:any)=>{selected.value=item;rowMenu.value?.toggle(event);};
 const applyFilters=()=>{selected.value=null;tableLoadError.value=false;tableRef.value?.refreshWithQuery('',{state:selectedState.value||undefined,invoiceStatus:selectedInvoiceStatus.value||undefined});}; watch([selectedState,selectedInvoiceStatus],applyFilters);
-watch(selectedStatisticsYear,loadStatistics);onMounted(loadStatistics);
+watch(selectedStatisticsYear,loadStatistics);onMounted(()=>{loadStatistics();if(route.query.deliveryId)openDetail({pkid:Number(route.query.deliveryId)});});
 </script>
 
 <style scoped>

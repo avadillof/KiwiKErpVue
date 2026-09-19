@@ -11,12 +11,6 @@
       </div>
       <nav class="header-actions">
         <Button
-          class="assistant-access"
-          label="Asistente de Presupuestos"
-          icon="pi pi-sparkles"
-          @click="quoteAssistantRef?.open(selectedQuote)"
-        />
-        <Button
           label="Ventas"
           icon="pi pi-arrow-left"
           severity="secondary"
@@ -500,10 +494,6 @@
     </section>
 
     <Frm_PresupuestoForm ref="quoteFormRef" @saved="onQuoteSaved" />
-    <QuoteAssistantDialog
-      ref="quoteAssistantRef"
-      @open-quote="quoteFormRef?.open($event.pkid)"
-    />
     <Dialog
       v-model:visible="showSendDialog"
       modal
@@ -564,6 +554,7 @@
         <Button
           label="Enviar presupuesto"
           icon="pi pi-send"
+          v-tooltip.bottom="'Envía el PDF al contacto del cliente seleccionado. Queda registrado el envío.'"
           :loading="sendingQuote"
           :disabled="!selectedRecipientId || !emailRecipients.length"
           @click="sendQuoteByEmail"
@@ -597,7 +588,7 @@
 import { backendUrl } from '@/services/backendUrl';
 import { computed, onMounted, ref, watch } from "vue";
 import axios from "axios";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import Button from "primevue/button";
 import Avatar from "primevue/avatar";
 import Column from "primevue/column";
@@ -619,15 +610,14 @@ import DateRangePicker from "@/components/shared/DateRangePicker.vue";
 import AttachmentsDialog from "@/components/attachments/AttachmentsDialog.vue";
 import DialogNotes from "@/components/dialogs/DialogNotes.vue";
 import Frm_PresupuestoForm from "./Frm_PresupuestoForm.vue";
-import QuoteAssistantDialog from "./QuoteAssistantDialog.vue";
 import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
 
 const router = useRouter();
+const route = useRoute();
 const confirm = useConfirm();
 const toast = useToast();
 const tableRef = ref();
 const quoteFormRef = ref();
-const quoteAssistantRef = ref();
 const traceabilityRef = ref<any>();
 const menuTable = ref();
 const quoteMenu = ref();
@@ -1088,7 +1078,10 @@ watch(
   applyDateFilters,
 );
 watch(selectedStatisticsYear, loadQuoteStatistics);
-onMounted(loadQuoteStatistics);
+onMounted(() => {
+  loadQuoteStatistics();
+  if (route.query.quoteId) quoteFormRef.value?.open(Number(route.query.quoteId));
+});
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return value;
@@ -1256,18 +1249,6 @@ const stateSeverity = (state = "") => {
   display: flex;
   align-items: center;
   gap: 3px;
-}
-.header-actions :deep(.assistant-access) {
-  border: 1px solid #c4b5fd;
-  background: #ede9fe;
-  color: #513c8c;
-  font-weight: 700;
-  box-shadow: none;
-}
-.header-actions :deep(.assistant-access:hover) {
-  border-color: #a78bfa;
-  background: #ddd6fe;
-  color: #432d7a;
 }
 .list-card {
   flex: 0 0 auto;

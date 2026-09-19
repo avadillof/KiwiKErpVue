@@ -151,13 +151,14 @@ const selection = computed({
 });
 
 
-async function fetchData(page: number, size: number) {
+async function fetchData(page: number, size: number, opts: { keepData?: boolean; showLoader?: boolean } = {}) {
+  const { keepData = false, showLoader = true } = opts;
 
 
   
 
-  loading.value = true;
-  tableData.value = [];
+loading.value = showLoader;
+  if (!keepData) tableData.value = [];
   try {
     // 1. Crear params base
     const params: any = { page, size,...props.params };
@@ -189,10 +190,9 @@ async function fetchData(page: number, size: number) {
     tableData.value = response.data.content;
     totalRecords.value = response.data.totalElements;
     emit('data-loaded', tableData.value, totalRecords.value);
-  } catch (error) {
+} catch (error) {
     console.error('Error cargando datos:', error);
-    tableData.value = [];
-    totalRecords.value = 0;
+    if (!keepData) { tableData.value = []; totalRecords.value = 0; }
     emit('load-error', error);
   } finally {
     loading.value = false;
@@ -310,11 +310,11 @@ defineExpose({
 
   searchQuery,
 
-  refresh: () => {
+  refresh: (silent = true) => {
     booleanHashFiltros.value = false;
     fechaFiltros.value = null;
     const currentPageIndex = Math.floor(first.value / rows.value);
-    return  fetchData(currentPageIndex, rows.value);
+    return  fetchData(currentPageIndex, rows.value, { keepData: true, showLoader: !silent });
   },
 
 

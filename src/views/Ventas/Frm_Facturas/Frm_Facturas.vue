@@ -15,6 +15,7 @@
       </div>
       <nav>
         <Button
+          v-if="aiAssistantAvailable"
           class="assistant-access"
           label="Asistente de Facturas"
           icon="pi pi-sparkles"
@@ -46,6 +47,12 @@
           </div></template
         ><template #end
           ><SalesAutomationActions module="invoices" /><Button
+            label="Enviar pendientes"
+            icon="pi pi-send"
+            outlined
+            v-tooltip.bottom="'Envía por correo las facturas emitidas, aceptadas por VeriFactu y nunca enviadas al contacto principal del cliente (máximo 50 por tanda). Queda registrado en cada factura.'"
+            :disabled="sendingPending"
+            @click="openSendPending" /><Button
             label="Nueva factura manual"
             icon="pi pi-plus"
             @click="manualInvoiceDialog?.open()" /></template></Toolbar
@@ -181,7 +188,7 @@
             text
             rounded
             title="Refrescar"
-            @click="refresh" /><Button
+            @click="refreshTable" /><Button
             icon="pi pi-ellipsis-v"
             text
             rounded
@@ -1044,7 +1051,121 @@
               @click="confirmIssue"
             />
           </div></div></template></Dialog
-    ><InvoiceEmailDialog
+    ><Dialog
+      v-model:visible="sendPendingVisible"
+      modal
+      class="kiwik-dialog"
+      header="Enviar pendientes por correo"
+      :closable="!sendingPending"
+      :closeOnEscape="!sendingPending"
+      :style="{ width: 'min(860px,95vw)' }"
+      :contentStyle="{ maxHeight: '62vh', overflowY: 'auto', padding: '1.25rem 1.5rem' }"
+      :pt="{
+        root: { class: 'kiwik-dialog' },
+        header: { class: 'kiwik-dialog-header' },
+        content: { class: 'kiwik-dialog-content' },
+        footer: { class: 'kiwik-dialog-footer' },
+      }"
+    >
+      <template v-if="!pendingResult">
+        <p>
+          Se enviarán las facturas emitidas, aceptadas por VeriFactu y nunca
+          enviadas que tengan contacto principal con correo válido (máximo 50
+          por tanda).
+        </p>
+        <p>
+          El envío se procesa en segundo plano y cada correo queda registrado
+          en el historial de su factura. Esta ventana se cerrará al lanzar el
+          envío y te avisaremos con el resultado.
+        </p>
+        <div v-if="pendingPreviewLoading" class="flex justify-content-center py-3">
+          <i class="pi pi-spin pi-spinner" />&nbsp;Cargando pendientes…
+        </div>
+        <Message v-else-if="pendingPreviewError" severity="error" :closable="false">{{
+          pendingPreviewError
+        }}</Message>
+        <template v-else-if="pendingPreview">
+          <p>
+            <b>{{ pendingPreview.count }} facturas</b> en
+            <b>{{ pendingPreview.groups?.length ?? 0 }} clientes</b
+            >{{ pendingPreview.truncated ? " (máximo 50, se continúa después)" : "" }}:
+          </p>
+          <Message
+            v-if="!pendingPreview.groups?.length"
+            severity="info"
+            :closable="false"
+            >No hay pendientes que cumplan los criterios.</Message
+          >
+          <details v-for="group in pendingPreview.groups" :key="group.client" class="pending-group">
+            <summary>
+              <span class="pending-client"
+                ><b>{{ group.client || "Sin cliente" }}</b
+                ><small>{{ group.contactName || "sin contacto" }} · {{ group.email || "sin correo" }}</small></span
+              ><span class="pending-totals"
+                >{{ group.invoices?.length ?? 0 }} facturas · {{ money(group.total) }}</span
+              >
+            </summary>
+            <Message v-if="group.warning" severity="warn" :closable="false">{{
+              group.warning
+            }}</Message>
+            <ul>
+              <li v-for="item in group.invoices" :key="item.code">
+                {{ item.code }} · {{ money(item.total) }}
+              </li>
+            </ul>
+          </details>
+        </template>
+      </template>
+      <template v-else>
+        <Message severity="info" :closable="false"
+          >Enviadas: {{ pendingResult.sentCount }} · Omitidas:
+          {{ pendingResult.skippedCount }} · Fallidas:
+          {{ pendingResult.failedCount }}</Message
+        >
+        <p v-if="pendingResult.truncated">
+          Se alcanzó el máximo de 50: repite la operación para continuar con
+          el resto.
+        </p>
+        <details v-if="pendingResult.failed?.length">
+          <summary>Fallidas ({{ pendingResult.failed.length }})</summary>
+          <ul>
+            <li v-for="item in pendingResult.failed" :key="item.pkid">
+              {{ item.code }} · {{ item.reason }}
+            </li>
+          </ul>
+        </details>
+        <details v-if="pendingResult.skipped?.length">
+          <summary>Omitidas ({{ pendingResult.skipped.length }})</summary>
+          <ul>
+            <li v-for="item in pendingResult.skipped" :key="item.pkid">
+              {{ item.code }} · {{ item.reason }}
+            </li>
+          </ul>
+        </details>
+      </template>
+      <template #footer>
+        <div style="width: 100%; padding-top: 0.25rem">
+          <div class="kiwik-separator" style="margin-bottom: 1rem" />
+          <div class="flex justify-content-end align-items-center gap-2">
+            <Button
+              label="Cerrar"
+              text
+              severity="secondary"
+              :disabled="sendingPending"
+              @click="sendPendingVisible = false"
+            /><Button
+              v-if="!pendingResult"
+              label="Enviar pendientes"
+              icon="pi pi-send"
+              style="white-space: nowrap; min-width: 190px"
+              v-tooltip.bottom="'Confirma el envío en segundo plano a los contactos principales de los clientes.'"
+              :loading="sendingPending"
+              @click="sendPending"
+            />
+          </div>
+        </div>
+      </template>
+    </Dialog><InvoiceEmailDialog
       ref="invoiceEmailDialog"
       @sent="refresh"
     /><InvoiceAuditDialog ref="invoiceAuditDialog" /><ManualInvoiceDialog
@@ -1121,8 +1242,8 @@
           :disabled="!correctionReason.trim() || !correctionPassword"
           @click="submitCorrection" /></template
     ></Dialog>
-    <VeriFactuQueuePanel @open-invoice="openDetail" />
-    <VeriFactuChainPanel />
+    <VeriFactuQueuePanel @open-invoice="openDetail" @processed="onQueueProcessed" />
+    <VeriFactuChainPanel ref="chainPanel" />
     <AeatCasesDialog ref="aeatCasesRef" />
     <SalesTraceabilityDialog ref="traceabilityRef" />
   </main>
@@ -1132,6 +1253,19 @@ import { backendUrl } from '@/services/backendUrl';
 import InvoiceAssistantDialog from "./InvoiceAssistantDialog.vue";
 import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
 const invoiceAssistant = ref<any>();
+// El acceso al asistente solo se muestra si la IA está activada y configurada.
+const aiAssistantAvailable = ref(false);
+async function checkAiStatus() {
+  try {
+    const { data } = await axios.get(
+      backendUrl(`/WebInvoiceAssistant/status`),
+      auth.portalRequestConfig(),
+    );
+    aiAssistantAvailable.value = data?.aiAvailable === true;
+  } catch {
+    aiAssistantAvailable.value = false;
+  }
+}
 const traceabilityRef = ref<any>();
 import SalesAutomationActions from "../SalesAutomationActions.vue";
 import InvoiceDuesDialog from "./InvoiceDuesDialog.vue";
@@ -1346,6 +1480,7 @@ const router = useRouter(),
   toast = useToast(),
   confirm = useConfirm(),
   tableRef = ref<any>(),
+  chainPanel = ref<any>(),
   invoiceLinesTable = ref<any>(),
   tableMenu = ref<any>(),
   rowMenu = ref<any>(),
@@ -1744,6 +1879,116 @@ const loadStats = async () => {
     await tableRef.value?.refresh();
     await loadStats();
   },
+  refreshTable = async () => {
+    await tableRef.value?.refresh(false);
+    await loadStats();
+  },
+  onQueueProcessed = async () => {
+    await refreshTable();
+    chainPanel.value?.refresh();
+  },
+  sendPendingVisible = ref(false),
+  sendingPending = ref(false),
+  pendingResult = ref<any>(null),
+  pendingPreview = ref<any>(null),
+  pendingPreviewLoading = ref(false),
+  pendingPreviewError = ref(""),
+  openSendPending = () => {
+    pendingResult.value = null;
+    pendingPreview.value = null;
+    pendingPreviewError.value = "";
+    sendPendingVisible.value = true;
+    void loadPendingPreview();
+  },
+  loadPendingPreview = async () => {
+    pendingPreviewLoading.value = true;
+    pendingPreviewError.value = "";
+    try {
+      const { data } = await axios.get(
+        backendUrl("/WebPreviewPendingSalesInvoiceEmails"),
+        auth.portalRequestConfig(),
+      );
+      pendingPreview.value = data;
+    } catch (e: any) {
+      pendingPreviewError.value =
+        typeof e.response?.data === "string"
+          ? e.response.data
+          : "No se pudo cargar lo pendiente de envío.";
+    } finally {
+      pendingPreviewLoading.value = false;
+    }
+  },
+  sendPendingJobId = ref<string | null>(null),
+  sendPending = async () => {
+    if (sendingPending.value) return;
+    sendingPending.value = true;
+    pendingResult.value = null;
+    try {
+      const { data } = await axios.post(
+        backendUrl("/WebSendPendingSalesInvoiceEmails"),
+        {},
+        auth.portalRequestConfig(),
+      );
+      sendPendingJobId.value = data.jobId;
+      sendPendingVisible.value = false;
+      pendingTimer = window.setInterval(pollSendPending, 3000);
+    } catch (e: any) {
+      sendingPending.value = false;
+      toast.add({
+        severity: "error",
+        summary: "No se pudo iniciar el envío",
+        detail:
+          typeof e.response?.data === "string"
+            ? e.response.data
+            : e.message || "Revisa la conexión con el servidor.",
+        life: 6000,
+      });
+    }
+  },
+  pollSendPending = async () => {
+    if (!sendPendingJobId.value) return;
+    try {
+      const { data } = await axios.get(
+        backendUrl(
+          `/WebSendPendingSalesInvoiceEmails/${sendPendingJobId.value}`,
+        ),
+        auth.portalRequestConfig(),
+      );
+      if (data.status === "RUNNING") return;
+      if (pendingTimer) window.clearInterval(pendingTimer);
+      sendingPending.value = false;
+      if (data.status === "FINISHED" && data.result) {
+        const result = data.result;
+        pendingResult.value = result;
+        sendPendingVisible.value = true;
+        toast.add({
+          severity: result.failedCount ? "warn" : "success",
+          summary: "Envío de pendientes",
+          detail: `Enviadas: ${result.sentCount} · Omitidas: ${result.skippedCount} · Fallidas: ${result.failedCount}`,
+          life: 6000,
+        });
+        await refreshTable();
+      } else {
+        toast.add({
+          severity: "error",
+          summary: "Falló el envío en segundo plano",
+          detail: data.error || "Consulta el historial de las facturas.",
+          life: 6000,
+        });
+      }
+    } catch (e: any) {
+      if (pendingTimer) window.clearInterval(pendingTimer);
+      sendingPending.value = false;
+      toast.add({
+        severity: "error",
+        summary: "Se perdió el seguimiento del envío",
+        detail:
+          e.message ||
+          "Es posible que continúe en el servidor; revisa el historial.",
+        life: 6000,
+      });
+    }
+  },
   filter = () => {
     selected.value = null;
     tableRef.value?.refreshWithQuery(
@@ -2122,7 +2367,7 @@ const noteRequest = {
     },
   ]),
   tableItems = [
-    { label: "Refrescar", icon: "pi pi-refresh", command: refresh },
+    { label: "Refrescar", icon: "pi pi-refresh", command: refreshTable },
     { separator: true },
     {
       label: "Exportar Excel",
@@ -2223,14 +2468,17 @@ watch(
 );
 watch(year, loadStats);
 let statusTimer: number | undefined;
+let pendingTimer: number | undefined;
 onMounted(() => {
   if (route.query.invoiceId)
     openDetail({ pkid: Number(route.query.invoiceId) });
   loadStats();
+  checkAiStatus();
   statusTimer = window.setInterval(() => tableRef.value?.refresh(), 10000);
 });
 onUnmounted(() => {
   if (statusTimer) window.clearInterval(statusTimer);
+  if (pendingTimer) window.clearInterval(pendingTimer);
 });
 const cancelDraft = (item: any) => {
   if (invoiceProtected(item) || issuing.value) return;
@@ -2276,6 +2524,43 @@ const openInvoicePdf = (item: any) => {
 };
 </script>
 <style scoped>
+.pending-group summary {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  cursor: pointer;
+  padding: 0.35rem 0;
+  list-style: none;
+}
+.pending-group summary::-webkit-details-marker {
+  display: none;
+}
+.pending-group summary::before {
+  content: "▸";
+  flex: 0 0 auto;
+  color: #648506;
+  font-size: 0.85rem;
+  transition: transform 0.15s ease;
+}
+.pending-group[open] > summary::before {
+  transform: rotate(90deg);
+}
+.pending-client {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.pending-client small {
+  color: #7d8797;
+  font-size: 0.78rem;
+}
+.pending-totals {
+  white-space: nowrap;
+  color: #648506;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
 .invoice-date-time {
   font-size: 0.78rem;
   white-space: nowrap;
@@ -2474,6 +2759,9 @@ const openInvoicePdf = (item: any) => {
   padding: 12px 16px;
   border: 0;
   border-bottom: 1px solid #e8ecf0;
+}
+.list-card > .p-toolbar :deep(.p-toolbar-end) {
+  gap: 0.5rem;
 }
 .list-card .p-toolbar small,
 .stats header small {

@@ -1,15 +1,22 @@
 <template>
-  <div class="card" style="height: clamp(620px, calc(100dvh - 250px), 820px); min-height: 0; display: flex; flex-direction: column;">
-
-
-
-    <Toolbar class="mb-3">
+  <div class="users-workspace">
+    <Toolbar class="users-toolbar">
       <template #start>
-        <Button label="Nuevo Usuario" icon="pi pi-plus" size="small" variant="text" outlined
-          @click="userFormRef.visibleInputs = true; userFormRef.open(null)" />
+        <div class="users-heading">
+          <span class="users-heading__icon"><i class="pi pi-users"></i></span>
+          <div>
+            <h2>Usuarios del sistema</h2>
+            <p>Gestiona accesos, perfiles, roles y permisos de cada usuario.</p>
+          </div>
+        </div>
       </template>
       <template #end>
-
+        <Button
+          label="Nuevo usuario"
+          icon="pi pi-plus"
+          size="small"
+          @click="userFormRef.visibleInputs = true; userFormRef.open(null)"
+        />
       </template>
     </Toolbar>
 
@@ -366,3 +373,72 @@ const openUserSecurity = (user: User) => {
 }
 
 </script>
+
+<style scoped>
+.users-workspace {
+  height: clamp(600px, calc(100dvh - 285px), 790px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.users-toolbar {
+  flex: 0 0 auto;
+  margin-bottom: 18px;
+  padding: 0 0 18px;
+  border: 0;
+  border-bottom: 1px solid #e7ebef;
+  border-radius: 0;
+  background: transparent;
+}
+
+.users-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.users-heading__icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: #648506;
+  background: #f0f7d5;
+}
+
+.users-heading h2 {
+  margin: 0;
+  color: #263144;
+  font-size: 1.18rem;
+}
+
+.users-heading p {
+  margin: 3px 0 0;
+  color: #7b8595;
+  font-size: .9rem;
+}
+
+@media (max-width: 640px) {
+  .users-workspace {
+    height: calc(100dvh - 225px);
+    min-height: 520px;
+  }
+
+  .users-toolbar :deep(.p-toolbar) {
+    align-items: flex-start;
+  }
+
+  .users-toolbar :deep(.p-toolbar-end),
+  .users-toolbar :deep(.p-button) {
+    width: 100%;
+  }
+
+  .users-heading p {
+    display: none;
+  }
+}
+</style>

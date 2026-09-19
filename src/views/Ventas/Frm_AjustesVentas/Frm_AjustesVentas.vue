@@ -30,6 +30,13 @@
           </section>
 
           <section class="settings-card">
+            <div class="section-heading"><span><i class="pi pi-send"/></span><div><h2>Envío automático de correos</h2><p>Envía facturas y rectificativas al aceptarse por VeriFactu.</p></div></div>
+            <div class="form-grid">
+              <label class="switch-field"><ToggleSwitch v-model="form.emailAutoSend"/><span><strong>Envío automático activado</strong><small>Documentos aceptados y nunca enviados, al contacto principal. Al activarlo se envían también las pendientes acumuladas.</small></span></label>
+            </div>
+          </section>
+
+          <section class="settings-card">
             <div class="section-heading"><span><i class="pi pi-bell"/></span><div><h2>Recordatorio diario de entregas</h2><p>Un único correo por día y dirección de responsable, agrupando los pedidos que creó.</p></div></div>
             <div class="form-grid form-grid--three">
               <label class="switch-field"><ToggleSwitch v-model="form.deliveryReminderEnabled" aria-label="Activar recordatorio de entregas"/><span><strong>Recordatorio activado</strong><small>Puede pausarse sin cambiar el filtro de pedidos.</small></span></label>
@@ -79,17 +86,16 @@
         </TabPanel>
 
         <TabPanel value="verifactu">
-          <Message v-if="!form.veriFactuEnabled" severity="info" :closable="false">VeriFactu está desactivado. Sus campos están deshabilitados y no son obligatorios para guardar los ajustes de Ventas.</Message>
           <Message severity="success" :closable="false"><strong>Entorno de pruebas VeriFactu.</strong> Los envíos están limitados al portal de pruebas de la AEAT. Producción permanece bloqueada.</Message>
       <section class="settings-card">
         <div class="section-heading"><span><i class="pi pi-shield"/></span><div><h2>Funcionamiento de VeriFactu</h2><p>Controla la generación y el envío de los registros de facturación.</p></div></div>
         <div class="form-grid">
-          <label class="switch-field"><ToggleSwitch v-model="form.veriFactuEnabled"/><span><strong>VeriFactu activo</strong><small>Prepara el registro al confirmar una factura.</small></span></label>
-          <label class="switch-field"><ToggleSwitch v-model="form.veriFactuAutoSend" :disabled="!form.veriFactuEnabled"/><span><strong>Envío automático</strong><small>Procesa automáticamente la cola pendiente.</small></span></label>
+          <div class="switch-field"><Tag value="Siempre activo" severity="success" icon="pi pi-lock" rounded /><span><strong>VeriFactu obligatorio</strong><small>El flujo de Ventas exige el registro aceptado; no se puede desactivar.</small></span></div>
+          <label class="switch-field"><ToggleSwitch v-model="form.veriFactuAutoSend"/><span><strong>Envío automático</strong><small>Apagado: los registros se conservan en cola y se envían con «Procesar ahora» desde cada módulo.</small></span></label>
           <label class="field"><span>Entorno</span><Select v-model="form.veriFactuEnvironment" :options="environments" optionLabel="label" optionValue="value" disabled fluid/></label>
-          <label class="field"><span>Reintentos automáticos</span><InputNumber v-model="form.veriFactuRetries" :min="0" :max="10" fluid :disabled="!form.veriFactuEnabled"/></label>
-          <label class="field"><span>Espera entre reintentos</span><InputNumber v-model="form.veriFactuRetryMinutes" suffix=" min" :min="1" :max="1440" fluid :disabled="!form.veriFactuEnabled"/></label>
-          <label class="field"><span>Últimas aceptadas visibles</span><InputNumber v-model="form.veriFactuAcceptedVisible" suffix=" facturas" :min="1" :max="100" fluid :disabled="!form.veriFactuEnabled"/><small class="field-help">Límite de facturas correctas mostrado en el panel de la cola.</small></label>
+          <label class="field"><span>Reintentos automáticos</span><InputNumber v-model="form.veriFactuRetries" :min="0" :max="10" fluid /></label>
+          <label class="field"><span>Espera entre reintentos</span><InputNumber v-model="form.veriFactuRetryMinutes" suffix=" min" :min="1" :max="1440" fluid /></label>
+          <label class="field"><span>Últimas aceptadas visibles</span><InputNumber v-model="form.veriFactuAcceptedVisible" suffix=" facturas" :min="1" :max="100" fluid /><small class="field-help">Límite de facturas correctas mostrado en el panel de la cola.</small></label>
         </div>
       </section>
 
@@ -108,10 +114,10 @@
       <section class="settings-card">
         <div class="section-heading"><span><i class="pi pi-qrcode"/></span><div><h2>PDF y código QR</h2><p>Presentación del código VeriFactu en la factura definitiva.</p></div></div>
         <div class="form-grid form-grid--four">
-          <label class="switch-field"><ToggleSwitch v-model="form.veriFactuAddQr" :disabled="!form.veriFactuEnabled"/><span><strong>Añadir QR al PDF</strong><small>Incluye también el distintivo VeriFactu.</small></span></label>
-          <label class="field"><span>Tamaño</span><InputNumber v-model="form.veriFactuQrSize" suffix=" px" :min="40" :max="300" fluid :disabled="!form.veriFactuEnabled"/></label>
-          <label class="field"><span>Posición X</span><InputNumber v-model="form.veriFactuQrX" :min="0" fluid :disabled="!form.veriFactuEnabled"/></label>
-          <label class="field"><span>Posición Y</span><InputNumber v-model="form.veriFactuQrY" :min="0" fluid :disabled="!form.veriFactuEnabled"/></label>
+          <label class="switch-field"><ToggleSwitch v-model="form.veriFactuAddQr"/><span><strong>Añadir QR al PDF</strong><small>Incluye también el distintivo VeriFactu.</small></span></label>
+          <label class="field"><span>Tamaño</span><InputNumber v-model="form.veriFactuQrSize" suffix=" px" :min="40" :max="300" fluid /></label>
+          <label class="field"><span>Posición X</span><InputNumber v-model="form.veriFactuQrX" :min="0" fluid /></label>
+          <label class="field"><span>Posición Y</span><InputNumber v-model="form.veriFactuQrY" :min="0" fluid /></label>
         </div>
       </section>
         </TabPanel>
@@ -144,6 +150,7 @@ import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import ToggleSwitch from 'primevue/toggleswitch';
+import Tag from 'primevue/tag';
 import Select from 'primevue/select';
 import Message from 'primevue/message';
 import Textarea from 'primevue/textarea';
@@ -156,7 +163,7 @@ import TabPanel from 'primevue/tabpanel';
 const router=useRouter(),toast=useToast(),loading=ref(true),loaded=ref(false),saving=ref(false),activeTab=ref('general');
 const environments=[{label:'Pruebas · AEAT preproducción',value:'PRUEBAS'}];
 const currentYear=new Date().getFullYear();
-const form=reactive<any>({quoteReminderEnabled:true,quoteReminderTime:'08:00',quoteReminderDays:7,quoteReminderIncludeDrafts:true,quoteCancellationEnabled:true,quoteCancellationTime:'00:10',quoteCancellationIncludeDrafts:true,quoteCancellationNotifyOwner:true,quoteCancellationNotifyCustomer:true,deliveryReminderEnabled:true,deliveryReminderTime:'08:15',deliveryReminderDays:7,deliveryDeadlineShortDays:7,deliveryDeadlineLongDays:30,invoiceSeriesPrefix:'KW',defaultTerms:'',offersMailBody:'',veriFactuEnabled:true,veriFactuEnvironment:'PRUEBAS',veriFactuAutoSend:true,veriFactuSystemId:77,veriFactuSystemEntity:'',veriFactuSystemNif:'',veriFactuSystemName:'KiwiKERP',veriFactuSystemVersion:'',veriFactuInstallationNumber:1,veriFactuAddQr:true,veriFactuQrSize:95,veriFactuQrX:350,veriFactuQrY:740,veriFactuRetries:3,veriFactuRetryMinutes:10,veriFactuAcceptedVisible:20});
+const form=reactive<any>({quoteReminderEnabled:true,quoteReminderTime:'08:00',quoteReminderDays:7,quoteReminderIncludeDrafts:true,quoteCancellationEnabled:true,quoteCancellationTime:'00:10',quoteCancellationIncludeDrafts:true,quoteCancellationNotifyOwner:true,quoteCancellationNotifyCustomer:true,deliveryReminderEnabled:true,deliveryReminderTime:'08:15',deliveryReminderDays:7,deliveryDeadlineShortDays:7,deliveryDeadlineLongDays:30,invoiceSeriesPrefix:'KW',defaultTerms:'',offersMailBody:'',emailAutoSend:false,veriFactuEnabled:true,veriFactuEnvironment:'PRUEBAS',veriFactuAutoSend:true,veriFactuSystemId:77,veriFactuSystemEntity:'',veriFactuSystemNif:'',veriFactuSystemName:'KiwiKERP',veriFactuSystemVersion:'',veriFactuInstallationNumber:1,veriFactuAddQr:true,veriFactuQrSize:95,veriFactuQrX:350,veriFactuQrY:740,veriFactuRetries:3,veriFactuRetryMinutes:10,veriFactuAcceptedVisible:20});
 const quoteBusy=ref(false),savedQuotes=ref('');
 const quoteSnapshot=()=>JSON.stringify(Object.keys(form).filter(k=>k.startsWith('quote')).sort().map(k=>[k,form[k]]));
 const quoteError=computed(()=>{

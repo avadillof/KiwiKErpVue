@@ -1,5 +1,5 @@
 import { backendUrl } from '@/services/backendUrl';
-import { computed, defineComponent, ref, onMounted, onUnmounted, onActivated } from 'vue';
+import { computed, defineComponent, onMounted, onUnmounted, onActivated } from 'vue';
 import { useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'vue-router';
 import { useCompanyStore } from '../../stores/companyStore';
@@ -7,6 +7,7 @@ import { HelperString } from '../../libs/HelperString';
 import { useServerTime } from '../composables/UseServerTime';
 import Frm_UserForm from '../../views/Frm_Main/Frm_Ajustes/Frm_UserForm.vue';
 import { useSecurityStore } from '../../stores/securityStore.ts'
+import { useMessagesStore } from '../../stores/messagesStore';
 
 
 export default defineComponent({
@@ -15,17 +16,24 @@ export default defineComponent({
     setup() {
         const securityStore = useSecurityStore();
         const authStore = useAuthStore();
+        const messagesStore = useMessagesStore();
         const router = useRouter();
-        const mensajesNuevos = ref(0);
+        const mensajesNuevos = computed(() => messagesStore.unreadCount);
         const companyStore = useCompanyStore();
-        const useserverTime = useServerTime();
         const userPkid = computed(() => authStore.user?.pkid || 0);
+
+        let messagesPollId: number | null = null;
 
 
 
         // Control del margen nativo del navegador
         onMounted(async function () {
             refreshSecurity();
+            startClock();
+            if (userPkid.value > 0) {
+                messagesStore.loadMessages();
+                messagesPollId = window.setInterval(() => messagesStore.loadMessages(true), 60000);
+            }
         });
 
 
@@ -36,6 +44,10 @@ export default defineComponent({
         onUnmounted(function () {
             document.body.style.margin = '';
             document.body.style.padding = '';
+            if (messagesPollId !== null) {
+                window.clearInterval(messagesPollId);
+                messagesPollId = null;
+            }
         });
 
 
@@ -65,7 +77,7 @@ export default defineComponent({
             return 'US';
         });
 
-        const { serverTime, formatHumanDate } = useServerTime();
+        const { serverTime, formatHumanDate, startClock } = useServerTime();
 
         // Fecha actual formateada en español
         const fechaActual = computed(() => {
@@ -91,11 +103,6 @@ export default defineComponent({
             return backendUrl(`/gestdoc/users/${pkid}/photoPerfil.jpg?t=${authStore.photoTimestamp}`);
         });
 
-        function verMensajes(): void {
-            console.log("Mensajes abiertos");
-        }
-
-        // En Frm_Main.ts
         // En Frm_Main.ts
         function verPerfilUsuario(openForm: any): void {
             if (typeof openForm !== 'function') {
@@ -137,7 +144,6 @@ export default defineComponent({
             fechaActual,
             empresaNombre,
             erpInfo,
-            verMensajes,
             verPerfilUsuario,
             desconectar,
             getCompanyInfo,

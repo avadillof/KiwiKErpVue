@@ -16,7 +16,9 @@ import './assets/styles/Frm_Login/frm_login.css';
 import './assets/styles/ConnectionMonitor/connectionmonitor.css';
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
+import Tooltip from 'primevue/tooltip';
 import ConfirmPopup from 'primevue/confirmpopup';
+import { recordRecent } from './services/Frm_Main/recentModules';
 
 const app = createApp(App);
 
@@ -46,4 +48,10 @@ app.use(PrimeVue, {
 
 app.use(ToastService);
 app.use(router);
+app.directive('tooltip', Tooltip);
+
+router.afterEach((to) => {
+  if (typeof to.name === 'string') recordRecent(to.name);
+});
+
 app.mount('#app');

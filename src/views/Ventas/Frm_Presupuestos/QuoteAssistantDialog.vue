@@ -6,7 +6,7 @@
     :draggable="false"
     class="kiwik-dialog quote-assistant-dialog"
     :style="{
-      width: 'min(1250px, 96vw)',
+      width: 'min(1650px, 98vw)',
       height: '92vh',
       maxHeight: '92vh',
       overflow: 'hidden',
@@ -29,7 +29,7 @@
     <template v-if="authorized">
       <Message :severity="aiAvailable ? 'info' : 'warn'" :closable="false">{{
         aiAvailable
-          ? "La pregunta se envía a OpenAI para interpretar los filtros. No se envían los resultados ni el historial de presupuestos. No incluyas información sensible innecesaria."
+          ? `La pregunta se envía a ${providerName} para interpretar los filtros. No se envían los resultados ni el historial de presupuestos. No incluyas información sensible innecesaria.`
           : "La interpretación con IA aún no está configurada en el servidor. Las consultas guiadas funcionan con datos reales y no utilizan IA."
       }}</Message>
       <Button
@@ -40,48 +40,74 @@
         severity="secondary"
         @click="openAiSettings"
       />
-      <section class="assistant-mode-panel">
-        <button
-          type="button"
-          class="mode-heading mode-toggle"
-          :aria-expanded="activeMode === 'AI'"
-          aria-controls="quote-assistant-ai-panel"
-          @click="activeMode = 'AI'"
-        >
-          <span><i class="pi pi-sparkles" /> Pregunta con IA</span>
-          <span class="mode-toggle-status">
-            <Tag value="Utiliza saldo API" severity="warn" />
-            <i
-              class="pi"
-              :class="activeMode === 'AI' ? 'pi-chevron-up' : 'pi-chevron-down'"
+      <div class="assistant-grid">
+        <section class="assistant-card chat-card" aria-label="Conversación con la IA">
+          <div class="card-head">
+            <h3><i class="pi pi-comments" /> Conversación</h3>
+            <span class="head-actions">
+              <Tag value="Usa cuota IA" severity="warn" />
+              <Button
+                label="Nueva conversación"
+                text
+                severity="secondary"
+                size="small"
+                :disabled="busy || !thread.length"
+                @click="newConversation"
+              />
+            </span>
+          </div>
+          <div ref="threadRef" class="thread" aria-live="polite">
+            <article
+              v-for="(msg, index) in thread"
+              :key="index"
+              class="bubble"
+              :class="`bubble-${msg.role}`"
+            >
+              <p>{{ msg.text }}</p>
+              <span class="bubble-time">{{ msg.time }}</span>
+            </article>
+          </div>
+          <div class="chat-input">
+            <small class="mode-help"
+              >{{ providerName }} convierte tu mensaje en filtros y lanza la
+              búsqueda automáticamente. Si falta algún dato, te dirá qué necesita.</small
+            >
+            <label for="quote-assistant-question">Escribe tu mensaje</label>
+            <Textarea
+              id="quote-assistant-question"
+              v-model="question"
+              rows="2"
+              maxlength="1500"
+              :disabled="busy || !aiAvailable"
+              placeholder="Ejemplo: presupuestos pendientes del cliente C0001 este mes"
+              @keydown.enter.exact.prevent="trySubmit"
             />
-          </span>
-        </button>
-        <div
-          v-show="activeMode === 'AI'"
-          id="quote-assistant-ai-panel"
-          class="mode-panel-content question-section"
-        >
-          <small class="mode-help"
-            >Opcional. OpenAI convierte tu frase en los filtros inferiores. Si
-            no tienes saldo API, utiliza directamente la consulta guiada.</small
-          >
-          <label for="quote-assistant-question"
-            >¿Qué quieres consultar con tus palabras?</label
-          >
-          <Textarea
-            id="quote-assistant-question"
-            v-model="question"
-            rows="2"
-            maxlength="1500"
-            :disabled="busy || !aiAvailable"
-            placeholder="Ejemplo: presupuestos pendientes del cliente C0001 este mes"
-          />
+          <div class="examples">
+            <small>Prueba con:</small>
+            <Button
+              v-for="ex in examples"
+              :key="ex"
+              :label="ex"
+              text
+              severity="secondary"
+              size="small"
+              :disabled="busy || !aiAvailable"
+              @click="question = ex"
+            />
+          </div>
           <div class="question-actions">
             <small
-              >Cada pregunta es independiente; no se conserva una
-              conversación.</small
+              >Enter envía · Mayús+Enter salto de línea. Si te pide una
+              aclaración, respóndela aquí mismo.</small
             ><Button
+              v-if="selectedQuote?.pkid"
+              label="Explicar presupuesto seleccionado"
+              icon="pi pi-info-circle"
+              text
+              severity="secondary"
+              :disabled="busy || !aiAvailable"
+              @click="explainSelected"
+            /><Button
               label="Interpretar pregunta"
               icon="pi pi-sparkles"
               :loading="interpreting"
@@ -89,182 +115,38 @@
               @click="interpret"
             />
           </div>
-        </div>
-      </section>
-      <Message v-if="interpretation" severity="info" :closable="false">{{
-        interpretation
-      }}</Message>
-      <section class="assistant-mode-panel guided-panel">
-        <button
-          type="button"
-          class="mode-heading mode-toggle"
-          :aria-expanded="activeMode === 'GUIDED'"
-          aria-controls="quote-assistant-guided-panel"
-          @click="activeMode = 'GUIDED'"
-        >
-          <span><i class="pi pi-sliders-h" /> Consulta guiada</span>
-          <span class="mode-toggle-status">
-            <Tag value="Sin coste API" severity="success" />
-            <i
-              class="pi"
-              :class="
-                activeMode === 'GUIDED' ? 'pi-chevron-up' : 'pi-chevron-down'
-              "
-            />
-          </span>
-        </button>
-        <div
-          v-show="activeMode === 'GUIDED'"
-          id="quote-assistant-guided-panel"
-          class="mode-panel-content"
-        >
-          <small class="mode-help"
-            >Selecciona la consulta y sus filtros. KiwiKERP calcula el resultado
-            directamente, sin llamar a OpenAI.</small
+          </div>
+        </section>
+        <section class="assistant-card result-card" aria-label="Resultado de la consulta">
+          <div class="card-head">
+            <h3><i class="pi pi-file" /> Resultado</h3>
+          </div>
+          <div v-if="!result" class="result-empty">
+            <i class="pi pi-inbox" />
+            <p>El resultado aparecerá aquí cuando la IA lance una consulta.</p>
+          </div>
+          <section
+            v-else
+            ref="resultsSection"
+            class="results"
+            aria-live="polite"
           >
-          <form class="criteria" @submit.prevent="consult">
-            <div>
-              <label for="assistant-action">Consulta</label
-              ><Select
-                inputId="assistant-action"
-                v-model="guidedKind"
-                :options="actions"
-                optionLabel="label"
-                optionValue="value"
-                :disabled="busy"
-                @change="changeAction"
-              />
-            </div>
-            <div v-if="guidedKind === 'VALIDITY'">
-              <label for="assistant-validity">Situación de validez</label>
-              <Select
-                inputId="assistant-validity"
-                v-model="criteria.action"
-                :options="validityActions"
-                optionLabel="label"
-                optionValue="value"
-                :disabled="busy"
-              />
-            </div>
-            <div v-if="guidedKind === 'STATUS'">
-              <label for="assistant-status">Estado</label>
-              <Select
-                inputId="assistant-status"
-                v-model="criteria.action"
-                :options="statusActions"
-                optionLabel="label"
-                optionValue="value"
-                :disabled="busy"
-              />
-            </div>
-            <template v-if="criteria.action !== 'EXPLAIN'">
-              <div>
-                <label for="assistant-from">Fecha de presupuesto desde</label
-                ><DatePicker
-                  inputId="assistant-from"
-                  v-model="fromDate"
-                  dateFormat="dd/mm/yy"
-                  showIcon
-                  showButtonBar
-                  fluid
-                  :disabled="busy"
-                />
-              </div>
-              <div>
-                <label for="assistant-to">Fecha de presupuesto hasta</label
-                ><DatePicker
-                  inputId="assistant-to"
-                  v-model="toDate"
-                  dateFormat="dd/mm/yy"
-                  showIcon
-                  showButtonBar
-                  fluid
-                  :disabled="busy"
-                />
-              </div>
-            </template>
-            <div>
-              <label for="assistant-customer">Cliente</label>
-              <CustomerLookup id="assistant-customer" :modelValue="selectedCustomerId" :label="customerLabel" :disabled="busy" @update:modelValue="setCustomerId" @selected="selectCustomer" />
-            </div>
-            <template v-if="criteria.action === 'CONVERSION'">
-              <div>
-                <label for="assistant-compare-from">Comparar desde</label
-                ><DatePicker
-                  inputId="assistant-compare-from"
-                  v-model="compareFromDate"
-                  dateFormat="dd/mm/yy"
-                  showIcon
-                  showButtonBar
-                  fluid
-                  :disabled="busy"
-                />
-              </div>
-              <div>
-                <label for="assistant-compare-to">Comparar hasta</label
-                ><DatePicker
-                  inputId="assistant-compare-to"
-                  v-model="compareToDate"
-                  dateFormat="dd/mm/yy"
-                  showIcon
-                  showButtonBar
-                  fluid
-                  :disabled="busy"
-                />
-              </div>
-            </template>
-            <div v-if="criteria.action === 'EXPLAIN'">
-              <label for="assistant-quote">Código exacto de presupuesto</label
-              ><InputText
-                id="assistant-quote"
-                v-model="criteria.quoteCode"
-                maxlength="100"
-                :disabled="busy"
-                :placeholder="
-                  criteria.quoteId
-                    ? `Seleccionada: ${selectedQuote?.code || criteria.quoteId}`
-                    : 'Introduce el código'
-                "
-                @update:modelValue="criteria.quoteId = null"
-              />
-            </div>
-            <div class="criteria-actions">
-              <Button
-                v-if="selectedQuote?.pkid"
-                label="Usar presupuesto seleccionado"
-                text
-                severity="secondary"
-                :disabled="busy"
-                @click="useSelected"
-              /><Button
-                type="submit"
-                label="Consultar datos"
-                icon="pi pi-search"
-                :loading="loading"
-                :disabled="busy"
-              />
-            </div>
-          </form>
-          <p class="scope">
-            Revisa los criterios antes de consultar. En próximos a vencer y
-            vencidos, las fechas se aplican a la validez; en las demás
-            consultas, a la creación. Máximo 500 documentos y 366 días por
-            periodo.
-          </p>
-        </div>
-      </section>
-    </template>
-    <Message v-if="error" severity="error" :closable="false">{{
-      error
-    }}</Message>
-    <section
-      v-if="result"
-      ref="resultsSection"
-      class="results"
-      aria-live="polite"
-    >
       <div class="kiwik-separator" />
       <h3>{{ result.answer }}</h3>
+      <div v-if="spotlight" class="spotlight">
+        <i class="pi pi-star-fill" />
+        <div>
+          <b>{{ spotlight.title }}</b>
+          <p>{{ spotlight.detail }}</p>
+        </div>
+        <Button
+          v-if="spotlight.doc"
+          :label="spotlight.code"
+          icon="pi pi-external-link"
+          text
+          @click="openDocument(spotlight.doc)"
+        />
+      </div>
       <p>
         <b>Criterios de este resultado:</b> {{ resultCriteria }} · Consultado:
         {{ dateTime(result.checkedAt) }}
@@ -289,6 +171,17 @@
         <h4 v-if="result.totalsByCurrency?.length > 1">Totales en {{ currencyTotals.currencyCode }}</h4>
         <div class="summary"><article v-for="metric in metrics" :key="metric.key"><small>{{ metric.label }}</small><strong>{{ money(currencyTotals[metric.key], currencyTotals.currencyCode) }}</strong></article></div>
       </div>
+      <div class="detail-toggle">
+        <Button
+          :label="detailOpen ? 'Ocultar detalle' : 'Ver detalle'"
+          :icon="detailOpen ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+          text
+          severity="secondary"
+          size="small"
+          @click="detailOpen = !detailOpen"
+        />
+      </div>
+      <div v-show="detailOpen">
       <template v-if="result.criteria.action !== 'EXPLAIN'">
         <h3>Resumen por cliente</h3>
         <DataTable
@@ -373,7 +266,14 @@
           <template #empty>El presupuesto no contiene líneas.</template>
         </DataTable>
       </template>
-    </section>
+      </div>
+          </section>
+        </section>
+      </div>
+    </template>
+    <Message v-if="error" severity="error" :closable="false">{{
+      error
+    }}</Message>
     <template #footer>
       <div class="dialog-footer">
         <!-- Separador corporativo obligatorio antes de las acciones del diálogo. -->
@@ -381,9 +281,9 @@
         <div class="dialog-footer-actions">
           <Button
             v-if="result"
+            class="download-btn"
             label="Descargar respuesta en PDF"
             icon="pi pi-file-pdf"
-            severity="secondary"
             :loading="downloadingPdf"
             :disabled="busy"
             @click="downloadPdf"
@@ -405,17 +305,13 @@ import { computed, nextTick, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import Dialog from "primevue/dialog";
-import DatePicker from "primevue/datepicker";
 import Button from "primevue/button";
 import Message from "primevue/message";
 import Tag from "primevue/tag";
 import Textarea from "primevue/textarea";
-import InputText from "primevue/inputtext";
-import Select from "primevue/select";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import { useAuthStore } from "@/stores/authStore";
-import CustomerLookup from "@/components/shared/CustomerLookup.vue";
 
 type Criteria = {
   action: string;
@@ -437,43 +333,115 @@ function openAiSettings() {
 const visible = ref(false),
   statusLoading = ref(false),
   authorized = ref(false),
-  aiAvailable = ref(false);
+  aiAvailable = ref(false),
+  providerName = ref("la IA");
 const loading = ref(false),
   interpreting = ref(false),
   downloadingPdf = ref(false),
   question = ref(""),
-  interpretation = ref(""),
   error = ref("");
-const selectedQuote = ref<any>(null),
-  result = ref<any>(null);
-const selectedCustomerId = ref<number | null>(null);
-const customerLabel = ref("");
-const resultsSection = ref<HTMLElement | null>(null);
-// Keep the safe, no-API mode open by default and never show both modes at once.
-const activeMode = ref<"AI" | "GUIDED">("GUIDED");
-const guidedKind = ref("QUOTED");
-const criteria = ref<Criteria>(initialCriteria());
-// Keep date-only API values; UTC conversion would shift days in some time zones.
-function dateField(key: "from" | "to" | "compareFrom" | "compareTo") {
-  return computed<Date | null>({
-    get() {
-      const value = criteria.value[key];
-      if (!value) return null;
-      const [year, month, day] = value.split("-").map(Number);
-      return new Date(year, month - 1, day);
-    },
-    set(value) {
-      criteria.value[key] =
-        value && !Number.isNaN(value.getTime())
-          ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
-          : null;
-    },
+// Hilo de conversación (como un chat) y contexto para fusionar aclaraciones.
+const thread = ref<Array<{ role: "user" | "assistant"; text: string; time: string }>>([]);
+const threadRef = ref<HTMLElement | null>(null);
+// Memoria de conversación: todo el hilo viaja como contexto hasta "Nueva conversación".
+function buildContext(): string | null {
+  if (!thread.value.length) return null;
+  const lines = thread.value.map((m) =>
+    m.role === "user" ? `Usuario: ${m.text}` : `Asistente: ${m.text}`,
+  );
+  let ctx = lines.join("\n");
+  const MAX = 2000;
+  if (ctx.length > MAX) ctx = "…" + ctx.slice(-MAX);
+  return ctx;
+}
+const GREETING =
+  "Hola. Pregúntame por importe presupuestado de un periodo, pendientes, validez, estados, conversión o por un presupuesto concreto.";
+function scrollThread() {
+  void nextTick(() => {
+    const el = threadRef.value;
+    if (el) el.scrollTop = el.scrollHeight;
   });
 }
-const fromDate = dateField("from"),
-  toDate = dateField("to"),
-  compareFromDate = dateField("compareFrom"),
-  compareToDate = dateField("compareTo");
+function now(): string {
+  return new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+}
+const selectedQuote = ref<any>(null),
+  result = ref<any>(null);
+const resultsSection = ref<HTMLElement | null>(null);
+const criteria = ref<Criteria>(initialCriteria());
+// Última consulta lanzada: ancla estructurada para los seguimientos.
+const lastCriteria = ref<any>(null);
+// Resaltado de superlativo (mayor/menor importe): se calcula en el navegador
+// con los documentos ya recibidos, nunca lo inventa la IA.
+const pendingHighlight = ref<string | null>(null);
+const spotlight = ref<any>(null);
+// Detalle (tablas) plegado cuando hay respuesta directa; siempre visible si no.
+const detailOpen = ref(true);
+function computeSpotlight(kind: string, docs: any[]) {
+  if (!docs || !docs.length) return null;
+  const codeOf = (d: any) => d.code || String(d.pkid);
+  if (kind === "OLDEST" || kind === "NEWEST") {
+    // Fechas ISO (AAAA-MM-DD): el orden lexicográfico es cronológico. Sin fecha, al final.
+    const key = (d: any) => (typeof d.date === "string" && d.date ? d.date : "9999-99-99");
+    let best = docs[0];
+    for (const d of docs) {
+      if (kind === "OLDEST" ? key(d) < key(best) : key(d) > key(best)) best = d;
+    }
+    const code = codeOf(best);
+    const rawDate = typeof best.date === "string" ? best.date : "";
+    const dateEs = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate.split("-").reverse().join("/") : rawDate;
+    return {
+      doc: best,
+      code,
+      title: `${kind === "OLDEST" ? "Más antiguo" : "Más reciente"}: ${code}${dateEs ? ` (${dateEs})` : ""}`,
+      detail: `${money(best.total, best.currencyCode)} · De ${docs.length} ${docs.length === 1 ? "documento consultado." : "documentos consultados."}`,
+    };
+  }
+  const byTax = kind === "MAX_TAX" || kind === "MIN_TAX";
+  const field = byTax ? "tax" : "total";
+  const desc = kind === "MAX_TOTAL" || kind === "MAX_TAX";
+  const label = byTax ? "impuesto" : "importe";
+  let best = docs[0];
+  for (const d of docs) {
+    const v = Number(d[field] || 0);
+    const b = Number(best[field] || 0);
+    if (desc ? v > b : v < b) best = d;
+  }
+  const code = best.code || String(best.pkid);
+  return {
+    doc: best,
+    code,
+    title: `${desc ? "Mayor" : "Menor"} ${label}: ${money(best[field], best.currencyCode)} (${code})`,
+    detail: docs.length > 1 ? `De ${docs.length} documentos consultados.` : "Único documento consultado.",
+  };
+}
+function computeClients(customers: any[]) {
+  if (!customers || !customers.length) return null;
+  const names = customers
+    .slice(0, 5)
+    .map((c) => `${c.customer} (${c.count})`);
+  const rest = customers.length > 5 ? ` y ${customers.length - 5} más` : "";
+  const totalDocs = customers.reduce((n, c) => n + Number(c.count || 0), 0);
+  return {
+    doc: null,
+    code: "",
+    title: `${customers.length} ${customers.length === 1 ? "cliente ha" : "clientes han"} intervenido`,
+    detail: `${names.join(", ")}${rest} · ${totalDocs} ${totalDocs === 1 ? "documento" : "documentos"} en total.`,
+  };
+}
+function computeTopClient(customers: any[]) {
+  if (!customers || !customers.length) return null;
+  let best = customers[0];
+  for (const c of customers) {
+    if (Number(c.total || 0) > Number(best.total || 0)) best = c;
+  }
+  return {
+    doc: null,
+    code: "",
+    title: `Mayor volumen: ${best.customer} — ${money(best.total, best.currencyCode)}`,
+    detail: customers.length > 1 ? `De ${customers.length} clientes.` : "Único cliente.",
+  };
+}
 const busy = computed(
   () =>
     loading.value ||
@@ -488,6 +456,12 @@ const actions = [
   { label: "Aprobados y cancelados", value: "STATUS" },
   { label: "Conversión y comparación entre periodos", value: "CONVERSION" },
   { label: "Explicar un presupuesto concreto", value: "EXPLAIN" },
+];
+// Ejemplos que enseñan el formato que la IA entiende: qué + periodo + cliente.
+const examples = [
+  "presupuestado en agosto de 2026",
+  "pendientes de aceptación del cliente C0001",
+  "próximos a vencer",
 ];
 const validityActions = [
   { label: "Próximos a vencer", value: "EXPIRING" },
@@ -570,48 +544,22 @@ function message(e: any) {
         ? e.message
         : "No se pudo completar la consulta de presupuestos. Comprueba el backend y vuelve a intentarlo.";
 }
-function changeAction() {
-  criteria.value.action =
-    guidedKind.value === "VALIDITY"
-      ? "EXPIRING"
-      : guidedKind.value === "STATUS"
-        ? "APPROVED"
-        : guidedKind.value;
-  criteria.value.quoteId = null;
-  criteria.value.quoteCode = null;
-  const initial = initialCriteria();
-  if (criteria.value.action === "EXPLAIN") {
-    criteria.value.from = null;
-    criteria.value.to = null;
-    criteria.value.compareFrom = null;
-    criteria.value.compareTo = null;
-    return;
-  }
-  criteria.value.from = initial.from;
-  criteria.value.to = initial.to;
-  if (criteria.value.action === "CONVERSION") {
-    const year = new Date().getFullYear() - 1;
-    const month = String(new Date().getMonth() + 1).padStart(2, "0");
-    criteria.value.compareFrom = `${year}-${month}-01`;
-    criteria.value.compareTo = `${year}-${month}-${String(new Date(year, new Date().getMonth() + 1, 0).getDate()).padStart(2, "0")}`;
-  } else {
-    criteria.value.compareFrom = null;
-    criteria.value.compareTo = null;
-  }
+function explainSelected() {
+  question.value = `Explica en detalle el presupuesto seleccionado ${selectedQuote.value?.code || ""}`.trim();
+  void interpret();
 }
-function setCustomerId(value: number | null) { selectedCustomerId.value = value; if (value === null) { criteria.value.customer = null; customerLabel.value = ""; } }
-function selectCustomer(customer: any) { selectedCustomerId.value = customer.pkid; criteria.value.customer = customer.code || customer.name; customerLabel.value = `${customer.code ? customer.code + " — " : ""}${customer.name}`; }
-function useSelected() {
-  criteria.value = {
-    action: "EXPLAIN",
-    from: null,
-    to: null,
-    compareFrom: null,
-    compareTo: null,
-    customer: null,
-    quoteCode: null,
-    quoteId: selectedQuote.value.pkid,
-  };
+function newConversation() {
+  question.value = "";
+  error.value = "";
+  result.value = null;
+  lastCriteria.value = null;
+  spotlight.value = null;
+  detailOpen.value = true;
+  thread.value = [{ role: "assistant", text: GREETING, time: now() }];
+  scrollThread();
+}
+function trySubmit() {
+  if (!busy.value && aiAvailable.value && question.value.trim()) void interpret();
 }
 async function open(quote: any = null) {
   invalidate();
@@ -621,14 +569,14 @@ async function open(quote: any = null) {
   authorized.value = false;
   aiAvailable.value = false;
   selectedQuote.value = quote;
-  activeMode.value = "GUIDED";
+  providerName.value = "la IA";
   criteria.value = initialCriteria();
-  selectedCustomerId.value = null;
-  customerLabel.value = "";
   result.value = null;
+  lastCriteria.value = null;
+  spotlight.value = null;
   error.value = "";
   question.value = "";
-  interpretation.value = "";
+  thread.value = [{ role: "assistant", text: GREETING, time: now() }];
   try {
     const { data } = await axios.get(
       endpoint + "/status",
@@ -637,6 +585,11 @@ async function open(quote: any = null) {
     if (current !== sequence) return;
     authorized.value = true;
     aiAvailable.value = data.aiAvailable;
+    providerName.value =
+      data.providerLabel ||
+      ({ groq: "Groq", openai: "OpenAI" } as Record<string, string>)[data.provider] ||
+      data.provider ||
+      "la IA";
   } catch (e: any) {
     if (current === sequence) error.value = message(e);
   } finally {
@@ -644,38 +597,52 @@ async function open(quote: any = null) {
   }
 }
 async function interpret() {
+  const asked = question.value;
   const current = ++sequence;
   interpreting.value = true;
   error.value = "";
-  interpretation.value = "";
   result.value = null;
+  thread.value.push({ role: "user", text: asked, time: now() });
+  question.value = "";
+  scrollThread();
   try {
     const { data } = await axios.post(
       endpoint + "/interpret",
       {
-        question: question.value,
+        question: asked,
         selectedQuoteId: selectedQuote.value?.pkid || null,
+        context: buildContext(),
+        lastCriteria: lastCriteria.value,
       },
       { ...auth.portalRequestConfig(), timeout: 60000 },
     );
     if (current !== sequence) return;
-    interpretation.value = data.message;
     if (!data.needsClarification) {
+      pendingHighlight.value = data.highlight && data.highlight !== "NONE" ? data.highlight : null;
       criteria.value = { ...data.criteria };
-      selectedCustomerId.value = null;
-      customerLabel.value = criteria.value.customer || "";
-      guidedKind.value = ["EXPIRING", "EXPIRED"].includes(criteria.value.action)
-        ? "VALIDITY"
-        : ["APPROVED", "CANCELLED"].includes(criteria.value.action)
-          ? "STATUS"
-          : criteria.value.action;
-      interpretation.value += " Revisa los filtros y pulsa Consultar datos.";
-      activeMode.value = "GUIDED";
+      thread.value.push({
+        role: "assistant",
+        text: `${data.message} Lanzo la consulta automáticamente con estos criterios.`,
+        time: now(),
+      });
+      scrollThread();
+      await consult();
+    } else {
+      pendingHighlight.value = null;
+      // El hilo conserva la conversación; el próximo mensaje llevará todo el historial.
+      thread.value.push({ role: "assistant", text: data.message, time: now() });
+      scrollThread();
     }
   } catch (e: any) {
-    if (current === sequence) error.value = message(e);
+    if (current === sequence) {
+      error.value = message(e);
+      thread.value.push({ role: "assistant", text: `No he podido interpretar tu mensaje: ${message(e)}`, time: now() });
+      scrollThread();
+    }
   } finally {
-    if (current === sequence) interpreting.value = false;
+    // Sin guarda de secuencia: consult() la incrementa al auto-lanzar y con la
+    // guarda este flag quedaba activo y bloqueaba el siguiente envío.
+    interpreting.value = false;
   }
 }
 async function consult() {
@@ -691,6 +658,20 @@ async function consult() {
     );
     if (current === sequence) {
       result.value = data;
+      lastCriteria.value = data.criteria || null;
+      if (pendingHighlight.value === "CLIENTS") {
+        spotlight.value = computeClients(data.customers || []);
+        pendingHighlight.value = null;
+      } else if (pendingHighlight.value === "TOP_CLIENT") {
+        spotlight.value = computeTopClient(data.customers || []);
+        pendingHighlight.value = null;
+      } else if (pendingHighlight.value) {
+        spotlight.value = computeSpotlight(pendingHighlight.value, data.quotes || []);
+        pendingHighlight.value = null;
+      } else {
+        spotlight.value = null;
+      }
+      detailOpen.value = !spotlight.value;
       // Wait until Vue paints the tables, then reveal the result heading inside
       // the dialog's own scroll container without moving the page behind it.
       await nextTick();
@@ -700,7 +681,11 @@ async function consult() {
       });
     }
   } catch (e: any) {
-    if (current === sequence) error.value = message(e);
+    if (current === sequence) {
+      error.value = message(e);
+      thread.value.push({ role: "assistant", text: `No he podido completar la consulta: ${message(e)}`, time: now() });
+      scrollThread();
+    }
   } finally {
     if (current === sequence) loading.value = false;
   }
@@ -742,12 +727,12 @@ defineExpose({ open });
 
 <style scoped>
 /*
- * PrimeVue aplica el scroll al contenido, no al diálogo completo. El min-height
- * permite que este hijo flex reduzca su tamaño y que los resultados no queden
- * ocultos debajo del pie fijo.
+ * Columna flexible: la rejilla de paneles rellena hasta el separador del pie.
+ * Cada panel hace scroll interno (hilo y resultado) en lugar de alargar el diálogo.
  */
 :global(.quote-assistant-dialog.kiwik-dialog .p-dialog-content) {
-  display: block !important;
+  display: flex !important;
+  flex-direction: column !important;
   flex: 1 1 auto !important;
   height: auto !important;
   min-height: 0 !important;
@@ -773,6 +758,18 @@ defineExpose({ open });
 .dialog-footer-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+}
+.dialog-footer-actions .download-btn {
+  background: linear-gradient(135deg, #9cc10a, #648506);
+  border-color: #648506;
+  color: #ffffff;
+  font-weight: 700;
+}
+.dialog-footer-actions .download-btn:hover {
+  background: linear-gradient(135deg, #8ab209, #577505);
+  border-color: #577505;
+  color: #ffffff;
 }
 
 .assistant-heading {
@@ -859,6 +856,169 @@ defineExpose({ open });
 .question-actions small {
   margin-right: auto;
   color: #657084;
+}
+.examples {
+  display: flex;
+  align-items: center;
+  gap: 4px 8px;
+  flex-wrap: wrap;
+}
+.examples small {
+  color: #657084;
+}
+.assistant-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 16px;
+  margin: 18px 0 4px;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.assistant-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #e1e8d7;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f8faf5;
+  border-bottom: 1px solid #e1e8d7;
+}
+.card-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+}
+.head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.thread {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 8px;
+  min-height: 200px;
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+.bubble {
+  max-width: 88%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.bubble-user {
+  align-self: flex-end;
+  color: #253000;
+  background: #eef5dc;
+  border-bottom-right-radius: 4px;
+}
+.bubble-assistant {
+  align-self: flex-start;
+  color: #243044;
+  background: #f1f5f9;
+  border-bottom-left-radius: 4px;
+}
+.bubble-time {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  opacity: 0.65;
+}
+.bubble-user .bubble-time {
+  text-align: right;
+}
+.chat-input {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #eef2e7;
+}
+.result-card {
+  min-height: 0;
+}
+.result-card .results {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 16px 16px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+.result-card .results h3 {
+  font-size: 1rem;
+}
+.spotlight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid #d9e6b8;
+  border-radius: 10px;
+  background: #f8fbe9;
+}
+.spotlight > i {
+  color: #648506;
+  font-size: 1.4rem;
+}
+.spotlight b {
+  display: block;
+}
+.spotlight p {
+  margin: 2px 0 0 !important;
+  font-size: 0.85rem;
+  color: #657084;
+}
+.spotlight .p-button {
+  margin-left: auto;
+}
+.detail-toggle {
+  display: flex;
+  justify-content: flex-end;
+  margin: 6px 0 2px;
+}
+.result-empty {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 20px;
+  color: #7d8797;
+  text-align: center;
+}
+.result-empty i {
+  font-size: 1.8rem;
+  color: #b9c4a8;
+}
+@media (max-width: 900px) {
+  .assistant-grid {
+    grid-template-columns: 1fr;
+  }
+  .thread {
+    max-height: 36vh;
+  }
 }
 .criteria {
   display: grid;

@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:visible="visible" modal maximizable class="kiwik-dialog" :style="{width:'min(1200px,96vw)',maxHeight:'90vh'}" :contentStyle="{overflow:'auto'}">
+  <Dialog v-model:visible="visible" modal maximizable class="kiwik-dialog" :style="{width:'min(1200px,96vw)',height:'min(90vh,720px)'}" :contentStyle="{overflow:'auto'}">
     <template #header><div class="audit-heading"><i class="pi pi-history"/><div><b>Auditoría · {{ invoice?.code }}</b><small>Emisión, reintentos, subsanaciones y resultados VeriFactu</small></div></div></template>
     <section v-if="!error && checkedAt" class="current-status" aria-live="polite"><b>Estado actual de VeriFactu</b><Tag :value="currentStatusLabel" :severity="statusSeverity(currentStatus)"/><small>Consultado: {{ dateTime(checkedAt) }} · Pulse Actualizar para volver a comprobar.</small></section>
     <Message severity="info" :closable="false">Cada fila describe lo ocurrido en su fecha, no el estado actual. «Envío encolado» indica que se preparó el envío en ese momento; no significa que siga pendiente. El HTTP de emisión corresponde al ERP, no a la aceptación de VeriFactu.</Message>

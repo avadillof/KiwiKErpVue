@@ -20,7 +20,14 @@
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 25px;">
+<div style="display: flex; align-items: center; gap: 25px;">
+        <!-- Búsqueda global -->
+        <div role="button" title="Buscar módulos (Ctrl + K)" class="fm-search-pill" @click="searchRef?.open()">
+          <i class="pi pi-search"></i>
+          <span>Buscar</span>
+          <kbd>Ctrl K</kbd>
+        </div>
+
         <!-- Manual de usuario -->
         <div
           role="button"
@@ -31,8 +38,8 @@
           <span>Manual</span>
         </div>
 
-        <!-- Notificaciones -->
-        <div style="cursor: pointer; display: flex; align-items: center; padding: 5px;" @click="verMensajes">
+<!-- Notificaciones -->
+        <div style="cursor: pointer; display: flex; align-items: center; padding: 5px;" @click="openNotifications">
           <OverlayBadge v-if="mensajesNuevos > 0" :value="mensajesNuevos" severity="danger">
             <i class="pi pi-bell" style="font-size: 1.4rem; color: #4b5563;"></i>
           </OverlayBadge>
@@ -79,10 +86,48 @@
       </div>
     </div>
 
-    <!-- CONTENIDO DINÁMICO -->
-    <div style="flex: 1; overflow-y: auto;">
-      <router-view />
+    <!-- CUERPO: SIDEBAR + CONTENIDO -->
+    <div class="fm-body">
+      <aside class="fm-sidebar" :class="{ 'fm-sidebar--collapsed': sidebarCollapsed }">
+        <div class="fm-sidebar__head">
+          <span v-if="!sidebarCollapsed" class="fm-sidebar__title">Navegación</span>
+          <button type="button" class="fm-sidebar__toggle"
+            :title="sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'"
+            @click="sidebarCollapsed = !sidebarCollapsed">
+            <i :class="sidebarCollapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"></i>
+          </button>
+        </div>
+        <nav class="fm-sidebar__nav">
+          <button
+            v-for="m in sidebarModules"
+            :key="m.id"
+            type="button"
+            class="fm-sidebar__item"
+            :class="{
+              'fm-sidebar__item--active': isModuleActive(m),
+              'fm-sidebar__item--disabled': !m.disponible
+            }"
+            :title="sidebarCollapsed ? m.nombre : (m.disponible ? '' : 'Próximamente')"
+            @click="navTo(m)">
+            <span class="fm-sidebar__item-icon" :style="{ color: m.colorIcono, background: m.bgIcono }"><i :class="m.icono"></i></span>
+            <span v-if="!sidebarCollapsed" class="fm-sidebar__item-label">{{ m.nombre }}</span>
+            <i v-if="!sidebarCollapsed && m.disponible" class="fm-sidebar__item-arrow pi pi-angle-right"></i>
+          </button>
+        </nav>
+        <div v-if="!sidebarCollapsed" class="fm-sidebar__foot">
+          <i class="pi pi-moon"></i>
+          <span>KiwiKERP</span>
+        </div>
+      </aside>
+
+      <!-- CONTENIDO DINÁMICO -->
+      <div style="flex: 1; overflow-y: auto;">
+        <router-view />
+      </div>
     </div>
+
+    <GlobalSearch ref="searchRef" />
+    <NotificationPanel ref="notificationRef" />
 
     <!-- FOOTER CORPORATIVO -->
     <div
@@ -153,15 +198,23 @@
 
 
 <script lang="ts">
-import { computed, defineComponent, ref, defineAsyncComponent, onMounted } from 'vue';
+import { computed, defineComponent, ref, defineAsyncComponent, onMounted, watch } from 'vue';
 import Avatar from 'primevue/avatar';
 import OverlayBadge from 'primevue/overlaybadge';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Frm_Main from '../../services/Frm_Main/Frm_Main';
 import { useAuthStore } from '../../stores/authStore';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { getInstallationState, type InstallationState } from '../../services/Installation/installationService';
+import { visibleAppModules } from '../../services/Frm_Main/modules';
+import GlobalSearch from './GlobalSearch.vue';
+import NotificationPanel from './NotificationPanel.vue';
+
+const MODULE_CHILDREN: Record<string, string[]> = {
+  Ventas: ['Ventas', 'Clientes', 'Presupuestos', 'Pedidos', 'Albaranes', 'Facturas', 'Rectificativas', 'ListaPrecios', 'AjustesVentas'],
+  Frm_Ajustes: ['Frm_Ajustes', 'BankAccounts', 'Certificates', 'FamiliasProductos', 'Productos', 'Taxas', 'security']
+};
 
 export default defineComponent({
   name: 'Frm_MainLayout',
@@ -170,6 +223,8 @@ export default defineComponent({
     OverlayBadge,
     Dialog,
     Button,
+    GlobalSearch,
+    NotificationPanel,
     // Usamos Async para evitar que TS valide los tipos internos del formulario durante la compilación
     Frm_UserForm: defineAsyncComponent(() => import('../../views/Frm_Main/Frm_Ajustes/Frm_UserForm.vue'))
   },
@@ -178,10 +233,30 @@ export default defineComponent({
   setup(props, context) {
 
     const userFormRef = ref<any>(null);
+    const searchRef = ref<any>(null);
+    const notificationRef = ref<any>(null);
     const authStore = useAuthStore();
     const router = useRouter();
+    const route = useRoute();
     const configurationDialogVisible = ref(false);
     const configurationState = ref<InstallationState>({ status: 'COMPLETED' });
+
+    const sidebarCollapsed = ref(window.localStorage.getItem('kiwik.sidebarCollapsed') === '1');
+    watch(sidebarCollapsed, (value) => {
+      window.localStorage.setItem('kiwik.sidebarCollapsed', value ? '1' : '0');
+    });
+    const sidebarModules = computed(() => visibleAppModules());
+
+    function isModuleActive(m: { ruta: string }): boolean {
+      const name = String(route.name ?? '');
+      return name === m.ruta || (MODULE_CHILDREN[m.ruta] || []).includes(name);
+    }
+
+    function navTo(m: { ruta: string; disponible: boolean }) {
+      if (!m.disponible) return;
+      if (String(route.name ?? '') === m.ruta) return;
+      router.push({ name: m.ruta });
+    }
 
     const controller = Frm_Main as any;
     const setupResult = controller.setup ? controller.setup(props, context) : {};
@@ -189,6 +264,10 @@ export default defineComponent({
     const verPerfilUsuarioProfile = () => {
          userFormRef.value.visibleInputs= false;
          userFormRef.value?.open(authStore.user?.pkid);
+    };
+
+    const openNotifications = () => {
+         notificationRef.value?.open();
     };
 
     const deploymentLabel = computed(() => {
@@ -213,14 +292,21 @@ export default defineComponent({
         && authStore.user?.admin === true;
     });
 
-    return {
+return {
       ...setupResult,
       userFormRef,
+      searchRef,
+      notificationRef,
       verPerfilUsuarioProfile,
+      openNotifications,
       configurationDialogVisible,
       configurationState,
       deploymentLabel,
-      openInitialConfiguration
+      openInitialConfiguration,
+      sidebarCollapsed,
+      sidebarModules,
+      isModuleActive,
+      navTo
     };
   }
 
@@ -241,4 +327,37 @@ export default defineComponent({
 .initial-configuration-mode strong { margin-top:4px; color:#344054; font-size:.84rem; word-break:break-all; }
 .initial-configuration-help { margin:13px 2px 0; color:#758093; font-size:.82rem; line-height:1.5; }
 .initial-configuration-action { border-color:#9cc10a!important; background:#9cc10a!important; color:#253000!important; font-weight:750!important; }
+
+.fm-search-pill { display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border:1px solid #e3e7ee; border-radius:999px; background:#fbfcfd; color:#5a6472; font-size:.86rem; cursor:pointer; transition:border-color .15s, box-shadow .15s; }
+.fm-search-pill:hover { border-color:#9cc10a; box-shadow:0 4px 12px rgba(156,193,10,.18); }
+.fm-search-pill kbd { padding:1px 6px; border:1px solid #d9dfe8; border-radius:5px; background:#f1f3f6; color:#7a8392; font-size:.66rem; font-family:inherit; font-weight:700; }
+
+.fm-body { flex:1; display:flex; min-height:0; }
+
+.fm-sidebar { flex:0 0 240px; display:flex; flex-direction:column; background:#fff; border-right:1px solid #e8ebf1; box-shadow:2px 0 12px rgba(17,24,39,.04); transition:flex-basis .22s ease; }
+.fm-sidebar--collapsed { flex-basis:64px; }
+.fm-sidebar__head { display:flex; align-items:center; justify-content:space-between; padding:10px 10px 8px 20px; min-height:50px; }
+.fm-sidebar--collapsed .fm-sidebar__head { justify-content:center; padding:10px 8px; }
+.fm-sidebar__title { color:#707a88; font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.fm-sidebar__toggle { display:grid; width:30px; height:30px; place-items:center; border:none; border-radius:8px; background:#f1f3f6; color:#5a6472; cursor:pointer; font-size:.8rem; transition:background .15s, color .15s; }
+.fm-sidebar__toggle:hover { background:#e7f2cd; color:#5f7d07; }
+.fm-sidebar__nav { flex:1; display:flex; flex-direction:column; gap:6px; padding:8px 10px; overflow-y:auto; overflow-x:hidden; }
+.fm-sidebar__item { display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; border:none; border-radius:10px; background:transparent; color:#374151; font:inherit; font-weight:700; text-align:left; cursor:pointer; transition:background .15s, color .15s; }
+.fm-sidebar__item:hover { background:#f2f5ea; }
+.fm-sidebar__item--active { background:#eef5d7; color:#42560c; box-shadow:inset 2.5px 0 0 #9cc10a; }
+.fm-sidebar__item--disabled { opacity:.5; cursor:default; }
+.fm-sidebar__item--disabled:hover { background:transparent; }
+.fm-sidebar__item-icon { display:grid; width:32px; height:32px; flex:0 0 auto; place-items:center; border-radius:9px; font-size:.9rem; }
+.fm-sidebar__item-label { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fm-sidebar__item-arrow { font-size:.72rem; color:#a7afbc; flex:0 0 auto; }
+.fm-sidebar--collapsed .fm-sidebar__item { justify-content:center; padding:9px 0; }
+.fm-sidebar__foot { display:flex; align-items:center; gap:10px; padding:14px 20px; border-top:1px dashed #e5e9f0; color:#98a0ad; font-size:.76rem; font-weight:800; letter-spacing:.05em; }
+
+@media (max-width: 920px) {
+  .fm-sidebar { flex-basis:64px; }
+  .fm-sidebar__title, .fm-sidebar__item-label, .fm-sidebar__item-arrow, .fm-sidebar__foot { display:none; }
+  .fm-sidebar__head { justify-content:center; padding:10px 8px; }
+  .fm-sidebar__item { justify-content:center; padding:9px 0; }
+  .fm-search-pill kbd { display:none; }
+}
 </style>
