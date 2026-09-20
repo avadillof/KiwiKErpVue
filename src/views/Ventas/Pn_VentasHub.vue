@@ -156,12 +156,22 @@ const kpiCards = computed(() => {
     o = stats.orders,
     i = stats.invoices,
     r = stats.rects;
-  const rectTotal = Array.isArray(r)
-    ? r.reduce((s, x) => s + Number(x.count || 0), 0)
-    : null;
-  const rectEmitted = Array.isArray(r)
+  // Emitida = todo lo que no sea borrador ni cancelada (igual que el Back:
+  // cubre "Confirmada / Confirming" y estados legacy como "Realizado").
+  const isRectIssued = (x: any) =>
+    !!x &&
+    x.state !== "Borrador / Draft" &&
+    x.state !== "Para Aprobar / To Approved Invoice" &&
+    x.state !== "Cancelada / Canceled";
+  const rectPending = Array.isArray(r)
     ? r.reduce(
-        (s, x) => s + (x.state === "Confirmada / Confirming" ? Number(x.count || 0) : 0),
+        (s, x) => s + (isRectIssued(x) && x.paid !== true ? Number(x.count || 0) : 0),
+        0,
+      )
+    : null;
+  const rectPendingAmount = Array.isArray(r)
+    ? r.reduce(
+        (s, x) => s + (isRectIssued(x) && x.paid !== true ? Math.abs(Number(x.total || 0)) : 0),
         0,
       )
     : null;
@@ -203,9 +213,9 @@ const kpiCards = computed(() => {
       route: "Rectificativas",
       icon: "pi pi-undo",
       gradient: "linear-gradient(135deg,#e56b6f,#bd3e43)",
-      label: "Rectificativas",
-      value: rectTotal,
-      sub: rectEmitted === null ? "Abonos y correcciones" : `${fmt(rectEmitted)} emitidas`,
+      label: "Rectificativas pendientes de pago",
+      value: rectPending,
+      sub: rectPending === null ? "Abonos y correcciones" : `${fmt(rectPendingAmount)} € por pagar`,
     },
   ];
 });

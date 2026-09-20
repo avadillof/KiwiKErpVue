@@ -233,7 +233,9 @@
         <Column field="date" header="Fecha" /><Column
           field="customer"
           header="Cliente"
-        /><Column field="state" header="Estado" /><Column
+        /><Column field="creatorName" header="Creada por" /><Column header="Origen"
+          ><template #body="{ data }">{{ documentOrigin(data) }}</template></Column
+        ><Column field="state" header="Estado" /><Column
           field="verifactuStatus"
           header="VeriFactu"
         />
@@ -336,6 +338,16 @@
           >
           <Column field="termDescription" header="Condición" />
         </DataTable>
+        <template v-if="result.invoices?.[0]?.verifactuChain?.length">
+          <h3>Concatenación y envíos VeriFactu</h3>
+          <DataTable :value="result.invoices[0].verifactuChain" stripedRows size="small" scrollable>
+            <Column field="historicId" header="Registro" />
+            <Column header="Fecha"><template #body="{ data }">{{ dateTime(data.date) }}</template></Column>
+            <Column field="previousCode" header="Registro anterior" />
+            <Column header="Tipo"><template #body="{ data }">{{ data.firstRecord ? "Primer registro" : "Encadenado" }}</template></Column>
+            <Column header="Respuesta"><template #body="{ data }">{{ data.responseReceived ? "Recibida" : "Pendiente" }}</template></Column>
+          </DataTable>
+        </template>
       </template>
       </div>
           </section>
@@ -575,6 +587,14 @@ const money = (value: number, currencyCode?: string | null) =>
 const originCode = (invoiceId: number) =>
   result.value?.invoices?.find((i: any) => i.pkid === invoiceId)?.code ||
   String(invoiceId ?? "");
+const documentOrigin = (invoice: any) => {
+  const orders = (invoice.sourceOrders || []).map((item: any) => item.code).filter(Boolean);
+  const deliveries = (invoice.sourceDeliveries || []).map((item: any) => item.code).filter(Boolean);
+  if (orders.length)
+    return `Pedido ${orders.join(", ")}${deliveries.length ? ` · Albarán ${deliveries.join(", ")}` : ""}`;
+  if (deliveries.length) return `Albarán ${deliveries.join(", ")}`;
+  return "Sin origen enlazado";
+};
 const dateTime = (value: string) =>
   new Intl.DateTimeFormat("es-ES", {
     dateStyle: "short",
@@ -680,6 +700,8 @@ async function open(invoice: any = null) {
 }
 async function interpret() {
   const asked = question.value;
+  // El contexto sólo contiene turnos anteriores; la pregunta actual viaja una vez.
+  const priorContext = buildContext();
   const current = ++sequence;
   interpreting.value = true;
   error.value = "";
@@ -693,7 +715,7 @@ async function interpret() {
       {
         question: asked,
         selectedInvoiceId: selectedInvoice.value?.pkid || null,
-        context: buildContext(),
+        context: priorContext,
         lastCriteria: lastCriteria.value,
       },
       { ...auth.portalRequestConfig(), timeout: 60000 },
@@ -715,7 +737,8 @@ async function interpret() {
       await consult();
     } else {
       pendingHighlight.value = null;
-      // El hilo conserva la conversación; el próximo mensaje llevará todo el historial.
+      // Conserva filtros parciales ya entendidos además del texto del chat.
+      lastCriteria.value = data.draftCriteria || lastCriteria.value;
       thread.value.push({ role: "assistant", text: data.message, time: now() });
       scrollThread();
     }
@@ -765,6 +788,10 @@ async function consult() {
         data.criteria?.action === "EXPLAIN" ||
         presentation === "TABLE" ||
         presentation === "ANSWER_AND_TABLE";
+      if (data.answer) {
+        thread.value.push({ role: "assistant", text: data.answer, time: now() });
+        scrollThread();
+      }
       // Wait until Vue paints the tables, then reveal the result heading inside
       // the dialog's own scroll container without moving the page behind it.
       await nextTick();

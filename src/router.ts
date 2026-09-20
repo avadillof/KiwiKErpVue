@@ -61,11 +61,6 @@ const routes = [
         component: () => import('./views/Frm_Main/Frm_Ajustes/Frm_Ajustes.vue')
       },
       {
-        path: '/manual',
-        name: 'ManualUsuario',
-        component: () => import('./views/Help/Frm_UserManual.vue')
-      },
-      {
         path: '/ventas',
         name: 'Ventas', // Este nombre debe coincidir con el 'ruta' en tu lista
         component: Pn_VentasHub

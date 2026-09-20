@@ -16,11 +16,6 @@
 
 KiwiK ERP centraliza la gestión comercial y administrativa de la empresa. El circuito de ventas mantiene la trazabilidad entre **presupuestos, pedidos, albaranes y facturación**, incluidas las entregas parciales, agrupadas y las cantidades pendientes.
 
-## Documentación
-
-- [Manual de usuario](docs/manual-usuario/README.md)
-- El manual también está disponible para los usuarios autenticados desde la opción **Manual** de la cabecera del portal.
-
 ## Desarrollo
 
 Aplicación web desarrollada con Vue 3, TypeScript y Vite.

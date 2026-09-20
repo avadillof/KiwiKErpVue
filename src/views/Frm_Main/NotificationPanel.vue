@@ -408,8 +408,10 @@ defineExpose({ open });
 }
 
 :deep(.notification-dialog) {
-  height: clamp(500px, 76vh, 720px);
-  max-height: calc(100dvh - 24px);
+  --notification-dialog-height: min(620px, calc(100dvh - 24px));
+  height: var(--notification-dialog-height);
+  min-height: var(--notification-dialog-height);
+  max-height: var(--notification-dialog-height);
 }
 
 :deep(.notification-dialog .p-dialog-content) {
@@ -429,12 +431,6 @@ defineExpose({ open });
   overscroll-behavior: contain;
 }
 
-@media (max-height: 560px) {
-  :deep(.notification-dialog) {
-    height: calc(100dvh - 16px);
-    min-height: 0;
-  }
-}
 .notification-state > i {
   font-size: 2rem;
   color: #c3cad4;
