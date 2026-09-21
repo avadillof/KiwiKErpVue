@@ -174,6 +174,7 @@
 
     <Dialog v-model:visible="authDialog" modal header="Autorizar Google Drive" :draggable="false"
       :closable="!authWaiting" class="kiwik-dialog" :style="{ width: 'min(620px,94vw)' }">
+      <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
       <template v-if="driveAuth?.status === 'waiting'">
         <div class="auth-waiting">
           <i class="pi pi-spin pi-spinner"></i>
@@ -288,10 +289,10 @@ const authWaiting = ref(false);
 const driveAuthorized = computed(() => driveAuth.value.status === 'done');
 
 async function openDriveAuthFlow() {
-  authWaiting.value = true;
   await openDriveAuth(true, () => {
     authWaiting.value = false;
   });
+  authWaiting.value = driveAuth.value.status === 'waiting';
 }
 
 async function startDriveAuth() {
