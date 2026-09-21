@@ -70,56 +70,18 @@
     <section class="backup-card">
       <h5><i class="pi pi-cloud"></i> Configuración de las copias</h5>
       <p class="backup-note">
-        Configura una cuenta propia (Azure Blob o Google Drive) para conservar una copia fuera del
+        Configura tu cuenta de Google Drive para conservar una copia fuera del
         servidor. Cada copia generada por la infraestructura se entregará a este destino.
       </p>
       <div class="form-row destination-fields">
         <div class="form-item">
-          <label for="bk-provider">Proveedor de almacenamiento</label>
-          <Select id="bk-provider" v-model="settings.provider" :options="providerOptions" optionLabel="label"
-            optionValue="value" class="w-full" size="small" :disabled="saving || testingCloud" />
-        </div>
-        <div v-if="settings.provider === 'DRIVE'" class="form-item">
           <label for="bk-drive-folder">Carpeta de Google Drive</label>
           <InputText id="bk-drive-folder" v-model="settings.driveFolderId" placeholder="ID de la carpeta"
             class="w-full" size="small" :disabled="saving || testingCloud" />
         </div>
       </div>
 
-      <template v-if="settings.provider === 'AZURE'">
-        <div class="form-row">
-          <div class="form-item">
-            <label for="bk-az-account">Cuenta de almacenamiento</label>
-            <InputText id="bk-az-account" v-model="settings.azureAccount" placeholder="misaldas"
-              class="w-full" size="small" :disabled="saving || testingCloud" />
-          </div>
-          <div class="form-item">
-            <label for="bk-az-container">Contenedor</label>
-            <InputText id="bk-az-container" v-model="settings.azureContainer" placeholder="kiwikerp-backups"
-              class="w-full" size="small" :disabled="saving || testingCloud" />
-          </div>
-          <div class="form-item">
-            <label for="bk-az-prefix">Prefijo de ruta (opcional)</label>
-            <InputText id="bk-az-prefix" v-model="settings.azurePathPrefix" placeholder="erp/192.168.1.5"
-              class="w-full" size="small" :disabled="saving || testingCloud" />
-          </div>
-        </div>
-        <div class="form-item">
-          <label for="bk-az-cs">Cadena de conexión / SAS</label>
-          <Password id="bk-az-cs" v-model="azureConnectionString" class="w-full" size="small" toggleMask
-            :feedback="false" :disabled="saving || testingCloud"
-            :placeholder="settings.azureConfigured ? 'Pega otra cadena para sustituirla' : 'Copia y pega aquí la cadena de conexión'">
-          </Password>
-          <small class="field-hint">{{
-            settings.azureConfigured
-              ? 'Hay credenciales guardadas cifradas. Deja el campo vacío para conservarlas.'
-              : 'Todavía no hay credenciales guardadas. La cadena se guarda cifrada y nunca se devuelve al navegador.'
-          }}</small>
-        </div>
-      </template>
-
-      <template v-else-if="settings.provider === 'DRIVE'">
-        <div class="oauth-box">
+      <div class="oauth-box">
           <div class="oauth-info">
             <i class="pi" :class="driveAuthorized ? 'pi-check-circle' : 'pi-exclamation-triangle'"></i>
             <div>
@@ -131,7 +93,6 @@
             severity="secondary" outlined size="small" :loading="authPending"
             @click="startDriveAuth" />
         </div>
-      </template>
 
       <div class="backup-schedule">
         <div class="backup-schedule__heading">
@@ -233,9 +194,7 @@
 import SettingsPanelCard from './SettingsPanelCard.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import Button from 'primevue/button';
-import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
-import Password from 'primevue/password';
 import Message from 'primevue/message';
 import Tag from 'primevue/tag';
 import Dialog from 'primevue/dialog';
@@ -257,7 +216,6 @@ const {
   saving,
   testingCloud,
   settings,
-  azureConnectionString,
   notifyCandidates,
   loadingCandidates,
   error,
@@ -321,12 +279,8 @@ async function startManualBackup() {
   }
 }
 
-const providerOptions = [
-  { value: 'AZURE', label: 'Azure Blob Storage' },
-  { value: 'DRIVE', label: 'Google Drive' },
-];
-
-const providerMeta: Record<CloudProvider, { label: string; icon: string; hint: string }> = {
+const providerMeta: Record<string, { label: string; icon: string; hint: string }> = {
+  // Se conserva AZURE solo para mostrar el histórico antiguo.
   AZURE: {
     label: 'Azure Blob Storage',
     icon: 'pi pi-cloud',
@@ -352,7 +306,7 @@ const statusMeta: Record<BackupStatus, { label: string; severity: string }> = {
 };
 
 const provider = computed<CloudProvider>(() => settings.value.provider);
-const providerInfo = computed(() => providerMeta[provider.value] || providerMeta.AZURE);
+const providerInfo = computed(() => providerMeta[provider.value] || providerMeta.DRIVE);
 
 const notifyOptions = computed(() =>
   notifyCandidates.value.map((u) => ({

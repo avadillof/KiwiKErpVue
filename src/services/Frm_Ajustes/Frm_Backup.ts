@@ -4,8 +4,8 @@
  *
  * El volcado se ejecuta en la infraestructura (Docker/backups del servidor),
  * no en esta vista. El panel permite lanzar una copia manual, registrar su
- * resultado en el histórico y configurar un destino en la nube (Azure Blob o
- * Google Drive) para conservarla fuera del servidor.
+ * resultado en el histórico y configurar el destino en la nube
+ * (Google Drive) para conservarla fuera del servidor.
  *
  * Contrato de endpoints que debe exponer el backend:
  *   GET    /WebGetBackupHistory        -> page+size -> { content, totalElements }
@@ -59,7 +59,7 @@ export interface BackupCloudSettings {
 
 function defaultSettings(): BackupCloudSettings {
     return {
-        provider: 'AZURE',
+        provider: 'DRIVE',
         azureAccount: '',
         azureContainer: '',
         azurePathPrefix: '',
@@ -119,7 +119,7 @@ export function Frm_Backup() {
         error.value = '';
         const d = data || {};
         settings.value = {
-            provider: d.provider || 'AZURE',
+            provider: d.provider === 'AZURE' ? 'DRIVE' : (d.provider || 'DRIVE'),
             azureAccount: d.azureAccount || '',
             azureContainer: d.azureContainer || '',
             azurePathPrefix: d.azurePathPrefix || '',
