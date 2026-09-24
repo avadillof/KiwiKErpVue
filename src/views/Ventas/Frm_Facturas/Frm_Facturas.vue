@@ -791,9 +791,10 @@
               }}</span
               ><span v-else>—</span></template
             ></Column
-          ><Column field="sourceOrderCode" header="Pedido origen" /><Column
+          ><Column field="sourceOrderCode" header="Pedido origen" style="min-width:110px" /><Column
             field="quantity"
             header="Cantidad"
+            style="width:110px;min-width:110px"
             bodyStyle="text-align:right"
             ><template #body="{ data }"
               ><InputNumber
@@ -810,6 +811,7 @@
           ><Column
             field="priceUnit"
             header="Precio"
+            style="width:135px;min-width:135px"
             bodyStyle="text-align:right"
             ><template #body="{ data }"
               ><InputNumber
@@ -824,7 +826,7 @@
                 inputClass="invoice-number"
               /><span v-else>{{ detailMoney(data.priceUnit) }}</span></template
             ></Column
-          ><Column field="discount" header="Dto. %" bodyStyle="text-align:right"
+          ><Column field="discount" header="Dto. %" style="width:95px;min-width:95px" bodyStyle="text-align:right"
             ><template #body="{ data }"
               ><InputNumber
                 :useGrouping="true"
@@ -838,7 +840,7 @@
                 inputClass="invoice-number short"
               /><span v-else>{{ number(data.discount) }} %</span></template
             ></Column
-          ><Column field="tax" header="IVA %" bodyStyle="text-align:right"
+          ><Column field="tax" header="IVA %" style="width:95px;min-width:95px" bodyStyle="text-align:right"
             ><template #body="{ data }"
               ><InputNumber
                 :useGrouping="true"
@@ -3057,13 +3059,16 @@ const openInvoicePdf = (item: any) => {
   min-height: 230px;
   overflow: hidden;
 }
+.lines :deep(.p-inputnumber) {
+  width: 100%;
+}
 .lines :deep(.invoice-number) {
-  width: 6.8rem;
+  width: 100%;
   min-width: 0;
   text-align: right;
 }
 .lines :deep(.invoice-number.short) {
-  width: 4.8rem;
+  width: 100%;
 }
 .bottom {
   display: flex;

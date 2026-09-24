@@ -39,6 +39,11 @@ const routes = [
     meta: { installationRoute: true }
   },
   {
+    path: '/portal',
+    name: 'Portal',
+    component: () => import('./views/Portal/Frm_Portal.vue')
+  },
+  {
     path: '/service-unavailable',
     name: 'ServiceUnavailable',
     component: Frm_ServiceUnavailable,
@@ -109,6 +114,16 @@ const routes = [
         path: '/ventas/informes',
         name: 'InformesVentas',
         component: () => import('./views/Ventas/Frm_InformesVentas.vue')
+      },
+      {
+        path: '/tareas',
+        name: 'Tareas',
+        component: () => import('./views/Tasks/Frm_Tareas.vue')
+      },
+      {
+        path: '/tareas/pendientes',
+        name: 'TareasPendientes',
+        component: () => import('./views/Tasks/Frm_BillingPending.vue')
       },
       {
         path: '/security',

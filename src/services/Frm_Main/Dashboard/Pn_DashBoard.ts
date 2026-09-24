@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { backendUrl } from '@/services/backendUrl';
 import { useAuthStore } from '../../../stores/authStore';
+import { getBillingPending } from '@/services/Tasks/taskService';
 import { getRecentModules, type RecentModule } from '../recentModules';
 
 interface Stats {
@@ -10,6 +11,8 @@ interface Stats {
   orders: any | null;
   invoices: any | null;
   rects: any | null;
+  tasks: { mine: number; overdue: number } | null;
+  billing: { count: number; hours: number } | null;
 }
 
 export function DashboardController() {
@@ -18,7 +21,7 @@ export function DashboardController() {
 
     const recents = ref<RecentModule[]>(getRecentModules());
 
-    const stats = ref<Stats>({ quotes: null, orders: null, invoices: null, rects: null });
+    const stats = ref<Stats>({ quotes: null, orders: null, invoices: null, rects: null, tasks: null, billing: null });
 
     async function loadStats() {
         const paths = [
@@ -31,7 +34,24 @@ export function DashboardController() {
             paths.map((p) => axios.get(backendUrl(p), apiConfig()))
         );
         const [q, o, f, r] = settled.map((s) => (s.status === "fulfilled" ? s.value.data : null));
-        stats.value = { quotes: q, orders: o, invoices: f, rects: r };
+        let t: Stats['tasks'] = null;
+        try {
+            const { data } = await axios.get(backendUrl("/WebGetTaskStats"), {
+                ...apiConfig(),
+                params: { userPkid: authStore.user?.pkid ?? '' }
+            });
+            t = { mine: Number(data?.mine ?? 0), overdue: Number(data?.overdue ?? 0) };
+        } catch {
+            t = null;
+        }
+        let b: Stats['billing'] = null;
+        try {
+            const list = await getBillingPending(authStore.user?.admin === true ? null : (authStore.user?.pkid ?? null));
+            b = { count: list.length, hours: list.reduce((acc, x) => acc + Number(x.pendingHours ?? 0), 0) };
+        } catch {
+            b = null;
+        }
+        stats.value = { quotes: q, orders: o, invoices: f, rects: r, tasks: t, billing: b };
     }
 
     function apiConfig() {
@@ -51,10 +71,26 @@ export function DashboardController() {
         const o = stats.value.orders;
         const f = stats.value.invoices;
         const r = stats.value.rects;
+        const t = stats.value.tasks;
+        const b = stats.value.billing;
         const rectTotal = Array.isArray(r)
             ? r.filter((item: any) => item && item.state?.toLowerCase().includes('confirm')).reduce((acc: number, item: any) => acc + (item.count || 0), 0)
             : null;
         return [
+            {
+                key: 'tasks', icon: 'pi pi-clipboard', label: 'Mis tareas abiertas',
+                value: t?.mine ?? null,
+                sub: t ? (t.overdue ? `${fmt(t.overdue)} vencidas` : 'Al día') : 'Pendiente de carga',
+                route: 'Tareas',
+                gradient: 'linear-gradient(135deg,#9cc10a,#648506)'
+            },
+            {
+                key: 'tasks-billing', icon: 'pi pi-wallet', label: 'Tareas pendientes de facturar',
+                value: b?.count ?? null,
+                sub: b ? `${fmt(Math.round(b.hours * 100) / 100)} h sin facturar` : 'Pendiente de carga',
+                route: 'TareasPendientes',
+                gradient: 'linear-gradient(135deg,#e46e8e,#b74267)'
+            },
             {
                 key: 'quotes', icon: 'pi pi-file-edit', label: 'Presupuestos por aprobar',
                 value: q?.pendingCount ?? null,
@@ -110,6 +146,7 @@ export function DashboardController() {
         recents,
         actionCards,
         fmt,
-        navegarA
+        navegarA,
+        refresh: loadStats
     };
 }

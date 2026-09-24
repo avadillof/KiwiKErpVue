@@ -17,8 +17,8 @@
       <div class="lines-heading"><div><b>Artículos y servicios</b><small>El precio del artículo se propone como valor inicial; revísalo antes de guardar.</small></div><Button label="Añadir línea" icon="pi pi-plus" :disabled="locked || form.lines.length>=100" @click="addLine"/></div>
       <div class="flex gap-2 align-items-center flex-wrap"><Button label="Aplicar tarifa" icon="pi pi-tags" text :disabled="pricing.busy.value" @click="pricing.request"/><small>La tarifa propone el precio neto. El descuento de línea es adicional.</small></div><Message v-if="pricing.error.value" severity="error">{{pricing.error.value}}</Message>
       <DataTable ref="linesTable" :value="form.lines" dataKey="key" stripedRows size="small" scrollable scrollHeight="340px" class="manual-lines" :tableStyle="{minWidth:'1120px',tableLayout:'fixed'}">
-        <Column header="Artículo / servicio" style="width:200px"><template #body="{data}"><ProductLookup v-model="data.productId" :label="data.productLabel" :disabled="locked || pricing.busy.value" @selected="selectProduct(data,$event)" @cleared="clearProduct(data)"/></template></Column>
-        <Column header="Descripción" style="min-width:350px"><template #body="{data}"><InputText v-model="data.description" maxlength="165" :disabled="locked || pricing.busy.value" fluid/></template></Column>
+        <Column header="Artículo / servicio" style="width:260px"><template #body="{data}"><ProductLookup v-model="data.productId" :label="data.productLabel" :disabled="locked || pricing.busy.value" @selected="selectProduct(data,$event)" @cleared="clearProduct(data)"/></template></Column>
+        <Column header="Descripción" style="min-width:290px"><template #body="{data}"><InputText v-model="data.description" maxlength="165" :disabled="locked || pricing.busy.value" fluid/></template></Column>
         <Column header="Cantidad" style="width:100px"><template #body="{data}"><InputNumber locale="es-ES" :useGrouping="true" v-model="data.quantity" @update:modelValue="pricing.quantityChanged(data,$event)" :min="0.001" :max="1000000000" :maxFractionDigits="3" :disabled="locked || pricing.busy.value" fluid/></template></Column>
         <Column header="Precio" style="width:115px"><template #body="{data}"><InputNumber locale="es-ES" :useGrouping="true" v-model="data.priceUnit" :title="data.pricingSource || 'Precio manual'" @update:modelValue="data.pricingSource='Precio manual'" :min="0" :max="1000000000" :minFractionDigits="2" :maxFractionDigits="4" :disabled="locked || pricing.busy.value" fluid/></template></Column>
         <Column header="Dto. %" style="width:80px"><template #body="{data}"><InputNumber locale="es-ES" :useGrouping="true" v-model="data.discount" :min="0" :max="100" :maxFractionDigits="2" :disabled="locked || pricing.busy.value" fluid/></template></Column>
@@ -27,8 +27,7 @@
         <Column header="" style="width:45px"><template #body="{index}"><Button icon="pi pi-trash" text rounded severity="danger" aria-label="Eliminar línea" :disabled="locked || pricing.busy.value" @click="form.lines.splice(index,1)"/></template></Column>
         <template #empty>Añade al menos una línea para crear el borrador.</template>
       </DataTable>
-      <div class="manual-totals"><span>Base <b>{{amount(totals.net)}}</b></span><span>Impuestos <b>{{amount(totals.tax)}}</b></span><span v-if="totals.retention">Retención <b>−{{amount(totals.retention)}}</b></span><span>Total <b>{{amount(totals.total)}} {{currencyCode}}</b></span></div>
-      <div class="manual-terms"><label><span>Condiciones generales</span><Textarea v-model="form.terms" rows="6" maxlength="1000" :disabled="locked || pricing.busy.value" fluid/></label><label><span>Condiciones particulares del cliente</span><Textarea v-model="form.customerTerms" rows="6" maxlength="10000" :disabled="locked || pricing.busy.value" fluid/></label></div>
+      <div class="manual-totals"><span>Base <b>{{amount(totals.net)}}</b></span><span>Impuestos <b>{{amount(totals.tax)}}</b></span><span v-if="totals.retention">Retención <b>−{{amount(totals.retention)}}</b></span><span>Total <b>{{amount(totals.total)}} {{currencyCode}}</b></span></div>      <div class="manual-terms"><label><span>Condiciones generales</span><Textarea v-model="form.terms" rows="6" maxlength="1000" :disabled="locked || pricing.busy.value" fluid/></label><label><span>Condiciones particulares del cliente</span><Textarea v-model="form.customerTerms" rows="6" maxlength="10000" :disabled="locked || pricing.busy.value" fluid/></label></div>
     </div>
     <template #footer><div class="manual-footer"><div class="kiwik-separator"/><div class="actions"><Button label="Cancelar" text severity="secondary" :disabled="locked || pricing.busy.value" @click="visible=false"/><Button :label="retryRequest?'Reintentar misma operación':'Guardar borrador'" icon="pi pi-save" :loading="saving" :disabled="profileLoading || (!retryRequest && !valid)" @click="save"/></div></div></template>
   </Dialog>
@@ -46,6 +45,12 @@ import Button from 'primevue/button';import Column from 'primevue/column';import
 import CustomerLookup from '@/components/shared/CustomerLookup.vue';import ProductLookup from '@/components/shared/ProductLookup.vue';
 import {useAuthStore} from '@/stores/authStore';
 const emit=defineEmits<{saved:[invoice:any]}>(),auth=useAuthStore();
+export interface ManualInvoicePrefill {
+  customer?: { pkid: number; code?: string; name?: string } | null;
+  reference?: string;
+  reason?: string;
+  lines?: { description: string; quantity: number }[];
+}
 const visible=ref(false),saving=ref(false),profileLoading=ref(false),error=ref(''),selectedCustomer=ref<any>(),defaults=ref<any>(),retryRequest=ref<any>(null);
 const linesTable=ref<any>();
 const catalogId=(value:any):number|null=>value!=null&&value!==''&&Number.isInteger(Number(value))&&Number(value)>0?Number(value):null;
@@ -65,7 +70,7 @@ const totals=computed(()=>{const net=form.lines.reduce((sum,line)=>sum+lineNet(l
 const numeric=(v:number|null,min:number,max:number)=>v!=null&&Number.isFinite(v)&&v>=min&&v<=max;
 const valid=computed(()=>!pricing.invalid.value&&!!form.entityId&&!!form.salesTarifaId&&!!form.salesTermId&&!paymentTerms.value.find(term=>term.pkid===form.salesTermId)?.disabled&&!catalogLoading.value&&!!defaults.value&&!profileLoading.value&&form.date instanceof Date&&!isNaN(form.date.getTime())&&!!form.reason.trim()&&form.lines.length>0&&form.lines.length<=100&&totals.value.total>0&&totals.value.total<=1e12&&form.lines.every(l=>!!l.productId&&!!l.description.trim()&&numeric(l.quantity,.001,1e9)&&numeric(l.priceUnit,0,1e9)&&numeric(l.discount,0,100)&&numeric(l.tax,0,100)));
 const errorMessage=(e:any)=>typeof e.response?.data==='string'?e.response.data:e.response?.data?.message||e.message||'No se pudo completar la operación.';
-function open(){if(locked.value){visible.value=true;return}pricing.cancel();profileVersion++;selectedCustomer.value=null;defaults.value=null;profileLoading.value=false;error.value='';Object.assign(form,{entityId:null,salesTarifaId:null,salesTermId:null,date:new Date(),reference:'',reason:'',notes:'',terms:'',customerTerms:'',lines:[newLine()]});visible.value=true;void loadCatalog();}
+function open(prefill?: ManualInvoicePrefill){if(locked.value){visible.value=true;return}pricing.cancel();profileVersion++;selectedCustomer.value=null;defaults.value=null;profileLoading.value=false;error.value='';Object.assign(form,{entityId:null,salesTarifaId:null,salesTermId:null,date:new Date(),reference:'',reason:'',notes:'',terms:'',customerTerms:'',lines:[newLine()]});if(prefill?.reference)form.reference=prefill.reference;if(prefill?.reason)form.reason=prefill.reason;if(prefill?.lines?.length)form.lines=prefill.lines.map(l=>({...newLine(),description:l.description,quantity:l.quantity}));visible.value=true;void loadCatalog();if(prefill?.customer)void selectCustomer({pkid:prefill.customer.pkid,code:prefill.customer.code||'',name:prefill.customer.name||''});}
 function setCustomerId(id:number|null){form.entityId=id;if(id==null){profileVersion++;selectedCustomer.value=null;defaults.value=null;profileLoading.value=false;form.salesTarifaId=null;form.salesTermId=null;form.terms='';form.customerTerms='';}}
 async function selectCustomer(customer:any){
   const oldRate=form.salesTarifaId;profileLoading.value=true;selectedCustomer.value=customer;form.entityId=customer.pkid;defaults.value=null;form.salesTarifaId=null;form.salesTermId=null;profileLoading.value=true;error.value='';const version=++profileVersion;
@@ -82,7 +87,7 @@ async function addLine(){
   row?.scrollIntoView({block:'nearest',inline:'start',behavior:'smooth'});
   input?.focus({preventScroll:true});
 }
-function selectProduct(line:ManualLine,product:any){line.productId=product.pkid;line.productLabel=product.code||product.description;line.description=product.description||'';line.priceUnit=Number(product.salePrice||0);line.productTax=Number(product.taxValue||0);line.tax=defaults.value?.fixedTax??line.productTax;line.discount=0;void pricing.apply(line); }
+function selectProduct(line:ManualLine,product:any){line.productId=product.pkid;line.productLabel=product.code||product.description;if(!line.description?.trim())line.description=product.description||'';line.priceUnit=Number(product.salePrice||0);line.productTax=Number(product.taxValue||0);line.tax=defaults.value?.fixedTax??line.productTax;line.discount=0;void pricing.apply(line); }
 function clearProduct(line:ManualLine){pricing.clear(line);Object.assign(line,newLine())}
 async function save(){
   if(saving.value||(!retryRequest.value&&!valid.value))return;

@@ -57,8 +57,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, watch } from 'vue';
 import { DashboardController } from '../../../services/Frm_Main/Dashboard/Pn_DashBoard';
+import { useMessagesStore } from '@/stores/messagesStore';
 import SalesCalendar from './SalesCalendar.vue';
 import CompanySnapshot from './CompanySnapshot.vue';
 
@@ -66,7 +67,12 @@ export default defineComponent({
   name: 'Pn_DashBoard',
   components: { SalesCalendar, CompanySnapshot },
   setup() {
-    const { recents, actionCards, fmt, navegarA } = DashboardController();
+    const { recents, actionCards, fmt, navegarA, refresh } = DashboardController();
+    const messagesStore = useMessagesStore();
+    watch(
+      () => messagesStore.feedVersion,
+      () => refresh()
+    );
     return { recents, actionCards, fmt, navegarA };
   }
 });

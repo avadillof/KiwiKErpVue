@@ -62,9 +62,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export async function getInstallationState(): Promise<InstallationState> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     try {
         const response = await fetch(backendUrl(`/api/installation/status`), {
-            headers: { Accept: 'application/json' }
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+            signal: controller.signal
         });
 
         if (response.status === 404) {
@@ -78,6 +82,8 @@ export async function getInstallationState(): Promise<InstallationState> {
     } catch {
         // Una caída del servidor no debe confundirse con una instalación nueva.
         return { status: 'ERROR', message: 'No se ha podido comprobar el estado del servidor.' };
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 

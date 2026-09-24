@@ -91,6 +91,24 @@ Incidencias habituales|No puedo acceder a la aplicación|No encuentro una opció
 Comprobaciones y soporte|Interpretar avisos y errores|Revisar estados antes de repetir una operación|Preparar la información para solicitar ayuda
 Glosario|Términos comerciales|Términos de facturación y cobro|Estados y conceptos utilizados en KiwiKERP'''
 
+outline=outline.replace('Consultas e informes\n', '''Tareas y seguimiento del trabajo
+Entorno de Tareas|Acceso e indicadores del módulo|Tablero Kanban y estados|Filtros y consulta de tareas
+Creación y asignación|Nombre y descripción del trabajo|Cliente, contacto y responsable|Prioridad, fechas y horas estimadas
+Planificación y progreso|Vista Gantt|Seguimiento del avance|Finalizar o descartar una tarea
+Colaboración y documentación|Comentarios y seguimiento|Documentos adjuntos|Relación con las solicitudes del Portal CRM
+Horas y facturación|Registro del tiempo trabajado|Trabajo facturable y precio por hora|Pendientes de facturación|Consulta de facturas vinculadas
+
+Portal CRM para clientes externos
+Acceso al Portal del Cliente|Contactos y habilitación del acceso|Solicitud del enlace por correo|Inicio, caducidad y cierre de sesión
+Entorno del portal|Panel de inicio e indicadores|Menú lateral y accesos directos|Información disponible para el contacto
+Gestión de tareas del cliente|Consultar el tablero y filtrar tareas|Crear una nueva tarea|Consultar estado, prioridad y fechas
+Comunicación y documentos|Consultar y enviar comentarios|Adjuntar y descargar documentos|Gestión de documentos según permisos
+Notificaciones del portal|Consultar y filtrar avisos|Acceder a la tarea relacionada|Marcar mensajes como leídos
+
+Consultas e informes
+''')
+outline=outline.replace('Pantalla principal|Panel de inicio e indicadores|Menú de navegación y búsqueda de módulos|Perfil de usuario y notificaciones', 'Pantalla principal|Panel de inicio y Estado de la empresa|Cabecera y búsqueda de módulos|Menú lateral expandido y contraído|Perfil de usuario\nWidgets e indicadores KPI|Visión general de la actividad|Indicadores de Ventas|Indicadores específicos de cada módulo\nCalendario comercial|Eventos generados automáticamente|Categorías, colores y contadores|Consulta del detalle del día\nMensajes y notificaciones|Campana y centro de mensajes|Relación con el calendario comercial|Destinatarios y marcado de lectura')
+outline=outline.replace('Qué es KiwiKERP|Áreas de trabajo y módulos', 'Qué es KiwiKERP|Áreas de trabajo y módulos')
 body='''# 1. Introducción a KiwiKERP
 ## 1.1. Presentación del sistema
 ### 1.1.1. Qué es KiwiKERP
@@ -217,18 +235,18 @@ def footer(c,d):
     c.setFillColor(HexColor('#648506'));c.setFont('Bold',9);c.drawString(54,804,'KiwiKERP')
     c.setFillColor(HexColor('#666666'));c.setFont('Regular',8);c.drawRightString(541,804,'Manual de Usuario')
     c.setStrokeColor(HexColor('#9CC10A'));c.setLineWidth(.6);c.line(54,49,541,49)
-    c.drawString(54,34,'Edición de trabajo 0.9 · Septiembre 2026');c.drawRightString(541,34,str(d.page))
+    c.drawString(54,34,'Edición de trabajo 0.10 · Septiembre 2026');c.drawRightString(541,34,str(d.page))
     c.setFillColor(HexColor('#648506'));c.drawCentredString(393,34,'www.freelandsite.es')
     c.linkURL('https://www.freelandsite.es',(352,31,434,43),relative=0)
 inner=qa/'interior.pdf'
 SimpleDocTemplate(str(inner),pagesize=(595.276,841.89),leftMargin=54,rightMargin=54,topMargin=62,bottomMargin=64).build(story,onFirstPage=footer,onLaterPages=footer)
 writer=PdfWriter();writer.append(str(out/'KiwiKERP_Portada_Manual_Usuario_v0_3.pdf'));writer.append(str(inner))
-writer.add_metadata({'/Title':'KiwiKERP Manual de Usuario - Edición de trabajo 0.9','/Author':'FreeLandSite'})
-final=out/'KiwiKERP_Manual_Usuario_Trabajo_v0_9.pdf';writer.write(str(final))
+writer.add_metadata({'/Title':'KiwiKERP Manual de Usuario - Edición de trabajo 0.10','/Author':'FreeLandSite'})
+final=out/'KiwiKERP_Manual_Usuario_Trabajo_v0_10.pdf';writer.write(str(final))
 (out/'KiwiKERP_Manual_Usuario_Trabajo.md').write_text('\n'.join(md)+'\n\n'+body,encoding='utf-8')
 tracking='''# Seguimiento editorial y pruebas del manual
 
-Edición 0.9. La portada aprobada se conserva. Índice completo de 15 capítulos a tres niveles; no incluye paginación de apartados todavía porque la mayoría no están redactados. El cuerpo comienza con 1, 2.2 y 3.1; los huecos conservan la numeración del índice acordado.
+Edición 0.10. La portada aprobada se conserva. Índice completo de 17 capítulos a tres niveles; no incluye paginación de apartados todavía porque la mayoría no están redactados. El cuerpo comienza con 1, 2.2 y 3.1; los huecos conservan la numeración del índice acordado.
 
 ## Estado
 - Introducción: primera redacción. Revisión del usuario pendiente.

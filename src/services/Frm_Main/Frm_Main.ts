@@ -8,6 +8,7 @@ import { useServerTime } from '../composables/UseServerTime';
 import Frm_UserForm from '../../views/Frm_Main/Frm_Ajustes/Frm_UserForm.vue';
 import { useSecurityStore } from '../../stores/securityStore.ts'
 import { useMessagesStore } from '../../stores/messagesStore';
+import { useToast } from 'primevue/usetoast';
 
 
 export default defineComponent({
@@ -17,6 +18,7 @@ export default defineComponent({
         const securityStore = useSecurityStore();
         const authStore = useAuthStore();
         const messagesStore = useMessagesStore();
+        const toast = useToast();
         const router = useRouter();
         const mensajesNuevos = computed(() => messagesStore.unreadCount);
         const companyStore = useCompanyStore();
@@ -32,7 +34,18 @@ export default defineComponent({
             startClock();
             if (userPkid.value > 0) {
                 messagesStore.loadMessages();
-                messagesPollId = window.setInterval(() => messagesStore.loadMessages(true), 60000);
+                messagesPollId = window.setInterval(async () => {
+                    const before = messagesStore.feedVersion;
+                    await messagesStore.loadMessages(true);
+                    if (messagesStore.feedVersion > before) {
+                        toast.add({
+                            severity: 'info',
+                            summary: 'Nuevas notificaciones',
+                            detail: 'Tienes mensajes nuevos en la campana',
+                            life: 5000
+                        });
+                    }
+                }, 60000);
             }
         });
 

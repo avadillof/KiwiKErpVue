@@ -6,7 +6,10 @@ export const useMessagesStore = defineStore('messages', {
     state: () => ({
         messages: [] as NotificationMessage[],
         loading: false,
-        loaded: false
+        loaded: false,
+        /** Se incrementa cuando el sondeo detecta mensajes nuevos. Las vistas lo observan para refrescarse. */
+        feedVersion: 0,
+        lastSeenPkid: 0
     }),
 
     getters: {
@@ -24,6 +27,13 @@ export const useMessagesStore = defineStore('messages', {
             this.loading = true;
             try {
                 this.messages = await getMessages(authStore.user.pkid);
+                const maxPkid = this.messages.reduce((m, x) => Math.max(m, Number(x.pkid ?? 0)), 0);
+                if (this.lastSeenPkid > 0 && maxPkid > this.lastSeenPkid) {
+                    this.feedVersion++;
+                }
+                if (maxPkid > 0) {
+                    this.lastSeenPkid = Math.max(this.lastSeenPkid, maxPkid);
+                }
                 this.loaded = true;
             } catch {
                 this.loaded = this.loaded || this.messages.length > 0;
@@ -64,6 +74,8 @@ export const useMessagesStore = defineStore('messages', {
         clear() {
             this.messages = [];
             this.loaded = false;
+            this.feedVersion = 0;
+            this.lastSeenPkid = 0;
         }
     }
 });

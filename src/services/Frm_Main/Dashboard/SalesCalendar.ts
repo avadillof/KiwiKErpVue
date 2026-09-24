@@ -5,7 +5,7 @@ import { backendUrl } from '@/services/backendUrl';
 import { useAuthStore } from '@/stores/authStore';
 
 export interface SalesCalendarEvent {
-  type: 'invoice' | 'order' | 'quote' | 'delivery';
+  type: 'invoice' | 'order' | 'quote' | 'delivery' | 'task';
   pkid: number;
   code: string;
   date: string;
@@ -18,7 +18,8 @@ export const CALENDAR_TYPES: Record<string, { label: string; icon: string; color
   invoice: { label: 'Cobros', icon: 'pi pi-receipt', color: '#c0446a', route: 'Facturas' },
   order: { label: 'Entregas', icon: 'pi pi-shopping-cart', color: '#d9822b', route: 'Pedidos' },
   quote: { label: 'Presupuestos', icon: 'pi pi-file-edit', color: '#7c5cbf', route: 'Presupuestos' },
-  delivery: { label: 'Albaranes', icon: 'pi pi-box', color: '#2875b6', route: 'Albaranes' }
+  delivery: { label: 'Albaranes', icon: 'pi pi-box', color: '#2875b6', route: 'Albaranes' },
+  task: { label: 'Vencimientos', icon: 'pi pi-clipboard', color: '#648506', route: 'Tareas' }
 };
 
 export const CALENDAR_WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -27,7 +28,8 @@ const EVENT_QUERY_KEYS: Record<SalesCalendarEvent['type'], string> = {
   quote: 'quoteId',
   order: 'orderId',
   invoice: 'invoiceId',
-  delivery: 'deliveryId'
+  delivery: 'deliveryId',
+  task: 'taskId'
 };
 
 function pad(value: number): string {
@@ -131,12 +133,37 @@ export function useSalesCalendar() {
         ...auth.portalRequestConfig(),
         params: { from, to }
       });
-      events.value = Array.isArray(data?.events) ? data.events : [];
+      const sales: SalesCalendarEvent[] = Array.isArray(data?.events) ? data.events : [];
+      events.value = [...sales, ...(await loadMyTaskEvents())];
     } catch (e: any) {
       events.value = [];
       error.value = typeof e.response?.data === 'string' ? e.response.data : 'No se pudo cargar el calendario comercial.';
     } finally {
       loading.value = false;
+    }
+  }
+
+  async function loadMyTaskEvents(): Promise<SalesCalendarEvent[]> {
+    try {
+      const me = auth.user?.pkid;
+      if (!me) return [];
+      const { data } = await axios.get(backendUrl('/WebGetTasks'), {
+        params: { userPkid: me, page: 0, size: 500 }
+      });
+      const list: any[] = Array.isArray(data) ? data : (data?.content ?? []);
+      return list
+        .filter((t) => t?.dueDate && (t.state === 'PLANIFICADA' || t.state === 'EN_CURSO'))
+        .map((t) => ({
+          type: 'task' as const,
+          pkid: Number(t.pkid),
+          code: String(t.code ?? ''),
+          date: String(t.dueDate).slice(0, 10),
+          entity: String(t.name ?? ''),
+          total: null,
+          state: String(t.state ?? '')
+        }));
+    } catch {
+      return [];
     }
   }
 

@@ -73,6 +73,18 @@ export const APP_MODULES: AppModule[] = [
     dashboardLevel: true
   },
   {
+    id: 'tareas',
+    nombre: 'Tareas',
+    descripcion: 'Tablero Kanban sencillo para planificar, ejecutar y archivar el trabajo facturable por horas.',
+    funcionalidades: ['Tablero Kanban', 'Responsable interno', 'Cliente y contacto', 'Partes de horas'],
+    icono: 'pi pi-clipboard',
+    ruta: 'Tareas',
+    colorIcono: '#648506',
+    bgIcono: '#eef4d8',
+    disponible: true,
+    dashboardLevel: true
+  },
+  {
     id: 'ajustes',
     nombre: 'Configuración',
     descripcion: 'Administra los datos de empresa, usuarios, seguridad y catálogos necesarios para adaptar KiwiKERP.',
