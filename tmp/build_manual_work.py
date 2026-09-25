@@ -8,6 +8,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from pypdf import PdfReader, PdfWriter
 import pypdfium2 as pdfium
 from manual_installation import installation_pages
+from manual_company import company_page
 from manual_diagrams import ManualDiagram
 from manual_screens import pages as screen_pages, CaptureCard, calendar_page
 
@@ -149,12 +150,15 @@ Importante: si se detecta una base de datos existente y aparece una opción para
 ### 3.1.1. Iniciar sesión
 Objetivo: acceder al espacio de trabajo de tu empresa con una cuenta habilitada.
 Acceso: abre en el navegador la dirección de KiwiKERP correspondiente a tu empresa.
+[[login]]
 1. Comprueba que la pantalla de acceso corresponde a la empresa con la que deseas trabajar.
 2. Escribe tu identificador en Usuario.
 3. Introduce tu Contraseña. El control del campo permite mostrar u ocultar su contenido.
 4. Pulsa Acceder a KiwiKERP y espera la respuesta.
-Resultado esperado: se muestra el mensaje de bienvenida y se abre el panel principal.
+Resultado esperado: se accede a KiwiKERP. Si la configuración inicial está pendiente, aparece el aviso Completa la configuración inicial, explicado a continuación.
 Si dejas alguno de los dos campos vacío, aparece Campos incompletos y el mensaje Usuario y contraseña son requeridos. Completa ambos campos antes de volver a acceder.
+[[firstaccess]]
+[[company]]
 ### 3.1.2. Sesión caducada y problemas de acceso
 Si aparece Usuario o contraseña inválidos, revisa ambos datos y vuelve a intentarlo. La opción ¿Has olvidado tu contraseña? abre el formulario de recuperación.
 Si la aplicación te devuelve al inicio de sesión, vuelve a identificarte. Si muestra un problema de conexión o de disponibilidad del servicio, conserva el mensaje para comunicarlo al responsable de la instalación.
@@ -206,6 +210,25 @@ for i,block in enumerate(outline.split('\n\n'),1):
     md.append('')
 for line in body.splitlines():
     if not line:continue
+    if line=='[[company]]':
+        story.extend(company_page(out,styles))
+        continue
+    if line=='[[firstaccess]]':
+        story.append(PageBreak())
+        story.append(Paragraph('Primer acceso: completar la configuración inicial',styles['h2']))
+        story.append(Paragraph('Al iniciar sesión por primera vez con el administrador creado durante la instalación, puede aparecer el aviso Completa la configuración inicial. La instalación ya está activa; queda revisar la configuración necesaria para empezar a trabajar.',styles['text']))
+        story.extend([CaptureCard(out/'imagenes/primer-acceso-configuracion.png',caption='Primer acceso · Configuración inicial pendiente'),Spacer(1,14)])
+        for title,text in [
+            ('Revisar los parámetros generales','Pulsa Completar ahora para continuar con la configuración inicial. Revisa los datos y parámetros generales de la empresa antes de dar por terminada la puesta en marcha.'),
+            ('Confirmar el repositorio documental','GestDoc es la carpeta destinada al almacenamiento documental. En la modalidad Instalación en servidor propio, el aviso muestra la ruta configurada y permite revisarla durante la configuración. Para finalizar, la carpeta debe existir en el servidor y permitir escritura.'),
+            ('La ruta depende de cada instalación','La dirección de la captura es un ejemplo del servidor utilizado en esta prueba. No debes copiarla a otro equipo: utiliza la ruta preparada para tu instalación. Este aviso corresponde a servidor propio y no describe la gestión del almacenamiento en la nube.'),
+            ('Qué se ha comprobado','Las capturas muestran el inicio de sesión y la aparición del aviso. Todavía no muestran la finalización de los ajustes; el siguiente paso del recorrido es pulsar Completar ahora.')]:
+            story.append(Paragraph(title,styles['h3']));story.append(Paragraph(text,styles['text']))
+        story.append(PageBreak())
+        continue
+    if line=='[[login]]':
+        story.extend([CaptureCard(out/'imagenes/inicio-sesion.png',caption='Inicio de sesión · Acceso al espacio de trabajo'),Spacer(1,12)])
+        continue
     if line=='[[installation]]':
         story.append(PageBreak());story.extend(installation_pages(out,styles));continue
     if line=='[[panel]]':

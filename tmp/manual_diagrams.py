@@ -19,6 +19,10 @@ class ManualDiagram(Flowable):
             c.saveState();p=c.beginPath();p.rect(x,y,w,h);c.clipPath(p,stroke=0)
             c.drawImage(im,x-l*s,y-(ih-b)*s,iw*s,ih*s,mask='auto');c.restoreState()
         if self.kind=='adapt':
+            src='C:/Users/comer/Documents/Clientes/FreeLandSite/Documentacion/KiwiKERP Cloud/Manual de Usuario/imagenes/modalidades-suministrada.png'
+            im=ImageReader(src);iw,ih=im.getSize();h=487*ih/iw
+            c.drawImage(im,0,(self.height-h)/2,487,h,mask='auto')
+            return
             card(0,0,487,260)
             for _ in range(12):
                 c.drawImage('C:/Proyectos/KiwiKErpVue/src/assets/logos/LogTras.png',20,65,135,135,mask='auto')

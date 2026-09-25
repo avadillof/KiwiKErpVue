@@ -84,3 +84,27 @@
 .installation-danger-action { border-color:#b42318!important; background:#b42318!important; }
 @media (max-width:900px) { .installation-page{padding:82px 16px 16px}.installation-shell{grid-template-columns:1fr;min-height:auto}.installation-corporate-logo{left:22px;width:310px;max-width:68vw}.installation-brand{min-height:235px;padding:78px 30px 24px;border-radius:25px 25px 0 0}.installation-brand h1{font-size:1.8rem}.installation-brand-copy p,.installation-brand footer{display:none}.installation-progress{flex-direction:row;margin:24px 0 0}.installation-progress li{flex:1;padding:7px}.installation-progress li>span:last-child{display:none}.installation-content{border-radius:0 0 25px 25px}.installation-content-header{padding:23px 28px}.installation-form-area{padding:28px}.installation-actions{padding:16px 28px}.installation-api-error{margin:0 28px 14px} }
 @media (max-width:560px) { .installation-page{display:block;padding:72px 0 0}.installation-shell{border:0;border-radius:0;box-shadow:none}.installation-corporate-logo{left:15px;width:260px}.installation-brand{min-height:205px;border-radius:0;padding:70px 20px 18px}.installation-brand h1{font-size:1.55rem}.installation-progress{margin-top:18px}.installation-content{min-height:calc(100dvh - 205px);border-radius:0}.installation-content-header{min-height:83px;padding:18px 20px}.installation-secure{display:none}.installation-form-area{padding:22px 20px}.installation-grid{grid-template-columns:1fr}.installation-grid .span-2{grid-column:auto}.installation-logo-field{align-items:flex-start}.installation-check-list,.installation-summary-grid{grid-template-columns:1fr}.installation-actions{padding:14px 20px}.installation-api-error{margin:0 20px 12px} }
+
+/* Dialog is teleported to body: target its own class rather than the page ancestor. */
+:global(.installation-recreate-dialog) { border:1px solid #e2e8d5; border-radius:20px; overflow:hidden; box-shadow:0 24px 80px #18250933; }
+:global(.installation-recreate-dialog .p-dialog-header) { padding:24px; background:linear-gradient(110deg,#f1f7dc,#fff); border-bottom:2px solid #9cc10a; }
+:global(.installation-recreate-dialog .p-dialog-content) { padding:24px; }
+:global(.installation-recreate-dialog .p-dialog-footer) { padding:0 24px 24px; }
+.installation-recreate-heading { display:flex; align-items:center; gap:14px; }
+.installation-recreate-heading>i { display:grid; place-items:center; width:46px; height:46px; border-radius:14px; background:#9cc10a; color:#253000; font-size:1.3rem; flex-shrink:0; }
+.installation-recreate-heading span { color:#648506; font-size:.65rem; font-weight:800; letter-spacing:.1em; }
+.installation-recreate-heading h2 { margin:5px 0 0; color:#253000; font-size:1.2rem; line-height:1.3; }
+.installation-recreate-backup { display:flex; gap:12px; align-items:flex-start; margin:20px 0; color:#667085; font-size:.85rem; line-height:1.5; }
+.installation-recreate-backup>i { color:#779607; margin-top:3px; font-size:1.2rem; }
+.installation-recreate-backup strong { display:block; color:#344054; margin-bottom:3px; }
+.installation-confirm-label>span { line-height:1.6; }
+.installation-confirm-label strong { color:#465d06; background:#eff5dc; border-radius:5px; padding:3px 7px; letter-spacing:.05em; }
+.installation-confirm-label :deep(.p-inputtext) { min-height:46px; border-radius:10px; letter-spacing:.08em; }
+.installation-confirm-label :deep(.p-inputtext:enabled:focus) { border-color:#9cc10a; box-shadow:0 0 0 3px #9cc10a20; }
+.installation-recreate-footer { width:100%; }
+.installation-recreate-footer .kiwik-separator { width:100%; height:1px; background:#9cc10a; margin:0 0 18px; }
+.installation-recreate-actions { display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+.installation-recreate-actions :deep(.p-button) { min-height:42px; border-radius:10px; white-space:nowrap; }
+.installation-recreate-actions .installation-danger-action { color:#fff!important; }
+.installation-recreate-actions .installation-danger-action:disabled { background:#eef0ec!important; border-color:#dde1d8!important; color:#70786a!important; opacity:1; }
+@media (max-width:480px) { .installation-recreate-heading h2{font-size:1rem}.installation-recreate-actions{flex-direction:column-reverse}.installation-recreate-actions :deep(.p-button){width:100%} }

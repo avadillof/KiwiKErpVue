@@ -53,5 +53,22 @@ def installation_pages(out,s):
             result.append(Paragraph('Punto de control de esta edición',s['h3']))
             result.append(Paragraph('Se ha comunicado una incidencia al llegar a este punto. Su mensaje, causa y resolución quedan pendientes de documentar. No se confirma la activación, el inicio del contador de prueba ni el primer acceso.',s['text']))
         md.extend(['### '+title,before,f'![{title}](imagenes/{name}.png)',after,''])
+        if name=='instalacion-preparacion':
+            result.append(PageBreak())
+            heading='Base de datos existente: confirmar la recreación'
+            result.append(Paragraph(heading,s['h2']))
+            md.extend(['### '+heading,''])
+            sections=[
+                ('Cuándo aparece', 'Durante Preparación, KiwiKERP puede detectar una base de datos existente que requiere recreación. El asistente mantiene Continuar bloqueado y muestra el diálogo Base de datos existente. No es un paso obligatorio en todas las instalaciones.'),
+                ('Antes de decidir', 'La recreación elimina la información actual de la base y prepara una estructura limpia. Si necesitas conservar los datos para seguir trabajando con ellos, pulsa Cancelar y consulta con la persona responsable de la instalación. Cancelar no solicita la recreación.'),
+                ('Confirmación expresa', 'Lee la advertencia y escribe RECREAR en el campo de confirmación. Hasta introducir esa palabra, el botón Crear copia y recrear permanece deshabilitado. Escribirla no ejecuta la operación: debes pulsar el botón para iniciarla.'),
+                ('Copia de seguridad previa', 'KiwiKERP crea primero una copia de seguridad de la base de datos. Si la copia falla, detiene el proceso antes de borrar la información. Si termina correctamente, continúa con la recreación. Esta copia no implica una restauración automática de los datos.'),
+                ('Resultado de la operación', 'Mientras se procesa la solicitud, espera a que termine. Si se completa correctamente, el diálogo se cierra y se repiten las comprobaciones de Preparación. Si aparece un error, revisa el mensaje; no des por terminada la recreación ni continúes hasta resolverlo.'),
+                ('Volver a abrir la confirmación', 'Si cancelas el diálogo, puedes utilizar Revisar recreación de la base de datos. Al abrirlo de nuevo, el campo se vacía y debes volver a escribir RECREAR. Reintentar comprobaciones vuelve a comprobar el entorno; no confirma el borrado.'),
+            ]
+            for subtitle,description in sections:
+                result.append(Paragraph(subtitle,s['h3']))
+                result.append(Paragraph(description,s['text']))
+                md.extend(['**'+subtitle+'**',description,''])
     (out/'Instalacion_hasta_confirmacion.md').write_text('\n\n'.join(md),encoding='utf-8')
     return result

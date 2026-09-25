@@ -50,7 +50,10 @@
               </li>
             </ul>
             <Button v-if="preflightHasError" label="Reintentar comprobaciones" icon="pi pi-refresh"
-              severity="secondary" outlined class="installation-retry" :loading="preflightRunning" @click="runPreflight" />
+              severity="secondary" outlined class="installation-retry" :loading="preflightRunning"
+              :disabled="recreatingDatabase" @click="runPreflight" />
+            <Button v-if="recreationRequired" label="Revisar recreación de la base de datos" icon="pi pi-exclamation-triangle"
+              severity="warn" outlined :disabled="preflightRunning || recreatingDatabase" @click="openRecreationDialog" />
           </section>
 
           <form v-else-if="currentStep === 1" class="installation-form" @submit.prevent="nextStep">
@@ -125,22 +128,39 @@
   </main>
 
   <Dialog v-model:visible="recreateDialogVisible" modal :closable="!recreatingDatabase" :dismissableMask="false"
-    header="Base de datos existente" class="installation-recreate-dialog" :style="{ width: 'min(560px, 94vw)' }">
+    header="Base de datos existente" class="installation-recreate-dialog" :style="{ width: 'min(620px, 94vw)' }">
+    <template #header>
+      <div class="installation-recreate-heading">
+        <i class="pi pi-database" aria-hidden="true"></i>
+        <div><span>PREPARACIÓN DE KIWIKERP</span><h2>Base de datos existente</h2></div>
+      </div>
+    </template>
     <div class="installation-recreate-warning">
       <i class="pi pi-exclamation-triangle"></i>
       <div><strong>Esta operación eliminará la información actual.</strong>
         <p>Antes de recrear la base, KiwiKERP generará una copia de seguridad. Si la copia falla, no se borrará nada.</p>
       </div>
     </div>
-    <label class="installation-confirm-label">Escribe <strong>RECREAR</strong> para confirmar
-      <InputText v-model="recreationConfirmation" autocomplete="off" :disabled="recreatingDatabase" fluid />
+    <div class="installation-recreate-backup">
+      <i class="pi pi-shield" aria-hidden="true"></i>
+      <span><strong>Primero, una copia de seguridad</strong>Después se preparará una base limpia para comenzar la instalación.</span>
+    </div>
+    <label class="installation-confirm-label">
+      <span>Escribe <strong>RECREAR</strong> para confirmar</span>
+      <InputText v-model="recreationConfirmation" placeholder="RECREAR" autocomplete="off"
+        :spellcheck="false" :disabled="recreatingDatabase" fluid />
     </label>
     <template #footer>
+      <div class="installation-recreate-footer">
+      <div class="kiwik-separator"></div>
+      <div class="installation-recreate-actions">
       <Button label="Cancelar" severity="secondary" text :disabled="recreatingDatabase"
         @click="recreateDialogVisible = false" />
       <Button label="Crear copia y recrear" icon="pi pi-database" class="installation-danger-action"
         :loading="recreatingDatabase" :disabled="recreationConfirmation.trim().toUpperCase() !== 'RECREAR'"
         @click="confirmDatabaseRecreation" />
+      </div>
+      </div>
     </template>
   </Dialog>
 </template>
@@ -177,6 +197,7 @@ const installationState = ref<InstallationState>({ status: 'NEW' });
 const recreateDialogVisible = ref(false);
 const recreationConfirmation = ref('');
 const recreatingDatabase = ref(false);
+const recreationRequired = ref(false);
 type CheckStatus = 'idle' | 'checking' | 'success' | 'error';
 const preflightRunning = ref(false);
 const preflightChecks = reactive([
@@ -238,6 +259,7 @@ function setCheck(index: number, status: CheckStatus, message: string) {
 async function runPreflight() {
   if (preflightRunning.value) return;
   preflightRunning.value = true;
+  recreationRequired.value = false;
   errorMessage.value = '';
   preflightChecks.forEach((check) => { check.status = 'idle'; check.message = 'Pendiente de comprobar'; });
 
@@ -258,7 +280,8 @@ async function runPreflight() {
     const database = await checkInstallationDatabase();
     if (database.requiresRecreation) {
       setCheck(1, 'error', database.message);
-      recreateDialogVisible.value = true;
+      recreationRequired.value = true;
+      openRecreationDialog();
       return;
     }
     if (!database.ok) throw new Error(database.message);
@@ -267,6 +290,14 @@ async function runPreflight() {
     setCheck(2, 'checking', 'Protegiendo la configuración inicial…');
     if (installation.status === 'NEW') installation = await initialiseDatabase();
     installationState.value = installation;
+    if (installation.status === 'DATABASE_EXISTS') {
+      const message = installation.message || 'La base de datos contiene información existente. Revisa la recreación antes de continuar.';
+      setCheck(2, 'error', message);
+      errorMessage.value = message;
+      recreationRequired.value = true;
+      openRecreationDialog();
+      return;
+    }
     if (installation.status !== 'IN_PROGRESS') throw new Error(installation.message || 'No se pudo validar la identidad de instalación.');
     setCheck(2, 'success', 'Se ha creado una identidad segura para evitar que esta instalación pueda reiniciarse o sobrescribirse accidentalmente.');
   } catch (error) {
@@ -279,8 +310,14 @@ async function runPreflight() {
   }
 }
 
+function openRecreationDialog() {
+  if (!recreationRequired.value || recreatingDatabase.value) return;
+  recreationConfirmation.value = '';
+  recreateDialogVisible.value = true;
+}
+
 async function confirmDatabaseRecreation() {
-  if (recreationConfirmation.value.trim().toUpperCase() !== 'RECREAR' || recreatingDatabase.value) return;
+  if (!recreationRequired.value || recreationConfirmation.value.trim().toUpperCase() !== 'RECREAR' || recreatingDatabase.value) return;
   recreatingDatabase.value = true;
   errorMessage.value = '';
   try {
