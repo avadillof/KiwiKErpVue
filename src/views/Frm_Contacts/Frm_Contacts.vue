@@ -137,6 +137,7 @@ import { ref, watch, nextTick, computed } from 'vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue'
 import { useSecurityStore } from '../../stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 import Frm_ContactForm from './Frm_ContactForm.vue';
 import { useToast } from "primevue/usetoast";
 import { useCompanyStore } from '../../stores/companyStore';
@@ -248,7 +249,7 @@ const menuItems = computed(() => {
     });
 
 
-    if (securityStore.hasPermission('ENTI_CON_0001')) {
+    if (securityStore.hasPermission(PERM.ENTI_CON_EDIT)) {
         items.push({
 
 
@@ -261,7 +262,7 @@ const menuItems = computed(() => {
     }
 
 
-    if (securityStore.hasPermission('ENTI_CON_003')) {
+    if (securityStore.hasPermission(PERM.ENTI_CON_NOTES)) {
 
         if (items.length > 0) {
             items.push({
@@ -278,7 +279,7 @@ const menuItems = computed(() => {
     }
 
 
-    if (securityStore.hasPermission('ENTI_CON_004')) {
+    if (securityStore.hasPermission(PERM.ENTI_CON_DOCS)) {
 
         if (items.length > 0) {
             items.push({

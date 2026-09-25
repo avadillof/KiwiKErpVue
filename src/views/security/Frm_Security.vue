@@ -1,156 +1,373 @@
 <template>
-    <div class="p-3 h-screen flex flex-column gap-3 surface-ground" style="margin-bottom: 150px;">
-
-        <div
-            class="flex align-items-center justify-content-between p-3 surface-card border-round-md shadow-sm border-1 surface-border">
-            <div class="flex align-items-center gap-3">
-                <Button icon="pi pi-arrow-left" text rounded @click="volverAlDashboard" />
-                <i class="pi pi-shield mr-2 text-primary" style="font-size: 1.8rem"></i>
-                <div>
-                    <h2 class="m-0 text-xl font-bold text-900">Seguridad de {{ userName }}</h2>
-                    <span class="text-sm text-500">Configuración detallada de accesos y permisos</span>
-                </div>
-            </div>
-
+  <main class="security-page">
+    <header class="security-hero">
+      <div class="hero-main">
+        <Button
+          icon="pi pi-arrow-left"
+          severity="secondary"
+          text
+          rounded
+          aria-label="Volver a usuarios"
+          @click="volverAlDashboard"
+        />
+        <span class="hero-icon"><i class="pi pi-shield" /></span>
+        <div class="hero-copy">
+          <span class="eyebrow">Configuración de acceso</span>
+          <h1>Permisos de usuario</h1>
+          <p>
+            Administra los módulos, secciones y acciones disponibles para este
+            usuario.
+          </p>
         </div>
+      </div>
+      <aside class="user-summary" aria-label="Usuario seleccionado">
+        <span class="user-avatar">{{ userInitials }}</span>
+        <div>
+          <small>Usuario seleccionado</small>
+          <strong>{{ userName || "Cargando usuario…" }}</strong>
+          <span
+            >{{ enabledModules }} de {{ modules.length }} módulos
+            habilitados</span
+          >
+        </div>
+      </aside>
+    </header>
 
-        <Splitter class="flex-grow-1 border-none surface-ground" style="height: 100%;">
-
-            <SplitterPanel :size="50" class="p-2">
-                <div class="h-full surface-card border-round-md shadow-sm border-1 surface-border p-2">
-                    <h5 class="m-0 p-2 text-primary font-bold"><i class="pi pi-th-large mr-2"></i>Módulos</h5>
-                    <SecurityModulesTable class="h-full" :modules="modules" v-model:selected="selectedModule"
-                        @select="onModuleSelected" :userPk="userPk" />
-                </div>
-            </SplitterPanel>
-
-            <SplitterPanel :size="20" class="p-2">
-                <div class="h-full surface-card border-round-md shadow-sm border-1 surface-border p-2">
-                    <h5 class="m-0 p-2 text-primary font-bold"><i class="pi pi-folder mr-2"></i>Secciones</h5>
-                    <SecuritySectionsTable :module="selectedModule" :disabled="!moduleEnabled"
-                        @select="onSectionSelected" />
-                </div>
-            </SplitterPanel>
-
-            <SplitterPanel :size="30" class="p-2">
-                <div class="h-full surface-card border-round-md shadow-sm border-1 surface-border p-2">
-                    <h5 class="m-0 p-2 text-primary font-bold"><i class="pi pi-lock mr-2"></i>Permisos</h5>
-
-
-
-                    <SecurityPermissionsTable :section="selectedSection"
-                        :disabled="!selectedModule || !selectedModule.active" :userPk="userPk" />
-
-                </div>
-            </SplitterPanel>
-
-        </Splitter>
+    <div class="autosave-note">
+      <i class="pi pi-check-circle" /><span
+        >Los cambios se guardan automáticamente.</span
+      >
     </div>
+
+    <section class="security-workspace" aria-label="Configuración de permisos">
+      <article class="security-panel security-panel--modules">
+        <header class="panel-heading">
+          <span class="panel-step">1</span>
+          <div>
+            <span class="panel-kicker">Acceso principal</span>
+            <h2>Módulos</h2>
+            <p>Activa las áreas disponibles.</p>
+          </div>
+        </header>
+        <SecurityModulesTable
+          :modules="modules"
+          v-model:selected="selectedModule"
+          :userPk="userPk"
+          @select="onModuleSelected"
+        />
+      </article>
+      <article class="security-panel">
+        <header class="panel-heading">
+          <span class="panel-step">2</span>
+          <div>
+            <span class="panel-kicker">Organización</span>
+            <h2>Secciones</h2>
+            <p>Selecciona el ámbito de trabajo.</p>
+          </div>
+        </header>
+        <SecuritySectionsTable
+          :module="selectedModule"
+          :disabled="!moduleEnabled"
+          :userPk="userPk"
+          @select="onSectionSelected"
+        />
+      </article>
+      <article class="security-panel security-panel--permissions">
+        <header class="panel-heading">
+          <span class="panel-step">3</span>
+          <div>
+            <span class="panel-kicker">Acciones permitidas</span>
+            <h2>Permisos</h2>
+            <p>Define qué puede consultar o modificar.</p>
+          </div>
+        </header>
+        <SecurityPermissionsTable
+          :section="selectedSection"
+          :disabled="!selectedModule || !selectedModule.active"
+          :userPk="userPk"
+        />
+      </article>
+    </section>
+  </main>
 </template>
 
-
-<style scoped>
-:deep(.p-splitter) {
-    background: transparent !important;
-}
-
-:deep(.p-splitter-panel) {
-    background: transparent !important;
-}
-
-/* Para que las tablas siempre ocupen el 100% de la columna */
-.h-full {
-    display: flex;
-    flex-direction: column;
-}
-</style>
-
-
 <script setup lang="ts">
-import { backendUrl } from '@/services/backendUrl';
-import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { computed } from 'vue'
-import SecurityModulesTable from './components/SecurityModulesTable.vue'
-import SecuritySectionsTable from './components/SecuritySectionsTable.vue'
-import SecurityPermissionsTable from './components/SecurityPermissionsTable.vue'
+import { backendUrl } from "@/services/backendUrl";
+import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import SecurityModulesTable from "./components/SecurityModulesTable.vue";
+import SecuritySectionsTable from "./components/SecuritySectionsTable.vue";
+import SecurityPermissionsTable from "./components/SecurityPermissionsTable.vue";
 
 const userPk = ref(0);
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const userName = ref("");
+const selectedModule = ref<any>(null);
+const selectedSection = ref<any>(null);
+const modules = ref<any[]>([]);
 
-const userName = ref('')
-const selectedModule = ref<any>(null)
-const selectedSection = ref<any>(null)
-
-const modules = ref<any[]>([])
-
-onMounted(async () => {
-
-    // 1. Recuperar datos: prioridad al estado de navegación, fallback a sessionStorage
-    let userData = history.state.user;
-
-    if (!userData) {
-        const stored = sessionStorage.getItem('temp_user');
-        if (stored) {
-            userData = JSON.parse(stored);
-        }
-    }
-
-    // 2. Validación de seguridad: ¡CRÍTICO!
-    // Si no hay datos, evitamos errores y redirigimos al origen
-    if (!userData || !userData.pkid) {
-        console.warn("Acceso no autorizado o datos perdidos. Redirigiendo...");
-        router.push('/usuarios'); // Ajusta a tu ruta de listado
-        return;
-    }
-
-    // 3. Asignación con nombres de variables consistentes
-    // Nota: verifica si tu objeto usa 'name' o 'userName'
-    userName.value = String(userData.name || userData.userName || 'Usuario');
-    userPk.value = Number(userData.pkid);
-
-    try {
-        // 4. Llamada API con manejo de errores
-        const response = await fetch(backendUrl(`/WebGetSecurityModulesUser`), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pkid: Number(userData.pkid)
-            })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        modules.value = await response.json();
-    } catch (error) {
-        console.error("Error al cargar módulos de seguridad:", error);
-        // Aquí podrías añadir un toast de error si tienes uno configurado
-    }
+const moduleEnabled = computed(() => selectedModule.value?.active === true);
+const enabledModules = computed(
+  () => modules.value.filter((module) => module.active).length,
+);
+const userInitials = computed(() => {
+  const words = userName.value.trim().split(/\s+/).filter(Boolean);
+  return (
+    words
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase())
+      .join("") || "US"
+  );
 });
 
+onMounted(async () => {
+  let userData = history.state.user;
+  if (!userData) {
+    const stored = sessionStorage.getItem("temp_user");
+    if (stored) userData = JSON.parse(stored);
+  }
+  if (!userData?.pkid) {
+    console.warn("Acceso sin usuario seleccionado. Redirigiendo a usuarios.");
+    router.push("/usuarios");
+    return;
+  }
+  userName.value = String(userData.name || userData.userName || "Usuario");
+  userPk.value = Number(userData.pkid);
+  try {
+    const response = await fetch(backendUrl("/WebGetSecurityModulesUser"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pkid: userPk.value }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    modules.value = await response.json();
+  } catch (error) {
+    console.error("Error al cargar módulos de seguridad:", error);
+  }
+});
 
-
-
-
-
-const onModuleSelected = (m: any) => {
-    selectedModule.value = m
-    selectedSection.value = null
+function onModuleSelected(module: any) {
+  selectedModule.value = module;
+  selectedSection.value = null;
 }
-
-const onSectionSelected = (s: any) => {
-    selectedSection.value = s
+function onSectionSelected(section: any) {
+  selectedSection.value = section;
 }
-
-const volverAlDashboard = () => {
-    router.push({ name: 'Frm_Ajustes', query: { tab: '2' } })
+function volverAlDashboard() {
+  router.push({ name: "Frm_Ajustes", query: { tab: "2" } });
 }
-
-
-
-const moduleEnabled = computed(() => {
-    return selectedModule.value?.active === true
-})
-
 </script>
+
+<style scoped>
+.security-page {
+  width: 100%;
+  min-height: calc(100dvh - 66px);
+  padding: 18px 16px 72px;
+  box-sizing: border-box;
+  color: #243044;
+}
+.security-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 22px;
+  border: 1px solid #e1e6eb;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 3px 12px rgba(30, 41, 59, 0.04);
+}
+.hero-main,
+.user-summary,
+.panel-heading {
+  display: flex;
+  align-items: center;
+}
+.hero-main {
+  gap: 14px;
+  min-width: 0;
+}
+.hero-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: #668600;
+  background: #eef6d7;
+  font-size: 1.35rem;
+}
+.hero-copy {
+  min-width: 0;
+}
+.eyebrow,
+.panel-kicker {
+  color: #6b7a4c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.hero-copy h1 {
+  margin: 2px 0 3px;
+  font-size: 1.45rem;
+  color: #1f2937;
+}
+.hero-copy p {
+  margin: 0;
+  color: #697386;
+}
+.user-summary {
+  min-width: 280px;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.user-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #769900;
+  font-weight: 800;
+}
+.user-summary div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.user-summary small {
+  color: #7b8797;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.user-summary strong {
+  overflow: hidden;
+  color: #273142;
+  font-size: 0.96rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-summary div > span {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+.autosave-note {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 6px;
+  color: #627344;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.security-workspace {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.05fr) minmax(260px, 0.72fr) minmax(
+      390px,
+      1.12fr
+    );
+  gap: 14px;
+  height: calc(100dvh - 238px);
+  min-height: 540px;
+  max-height: 850px;
+}
+.security-panel {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dfe5eb;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 3px 11px rgba(30, 41, 59, 0.04);
+}
+.security-panel--permissions {
+  border-top: 3px solid #9cc10a;
+}
+.panel-heading {
+  gap: 11px;
+  flex: 0 0 auto;
+  min-height: 74px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #e7ebef;
+  background: #fbfcfd;
+}
+.panel-step {
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #5e7900;
+  background: #edf5d8;
+  font-weight: 800;
+}
+.panel-heading h2 {
+  margin: 1px 0;
+  color: #263244;
+  font-size: 1.05rem;
+}
+.panel-heading p {
+  margin: 0;
+  color: #7a8594;
+  font-size: 0.8rem;
+}
+@media (max-width: 1180px) {
+  .security-workspace {
+    grid-template-columns: minmax(320px, 1fr) minmax(240px, 0.75fr) minmax(
+        340px,
+        1fr
+      );
+    overflow-x: auto;
+  }
+}
+@media (max-width: 860px) {
+  .security-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .user-summary {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .security-workspace {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .security-panel {
+    min-height: 360px;
+  }
+  .security-panel--permissions {
+    min-height: 440px;
+  }
+}
+@media (max-width: 540px) {
+  .security-page {
+    padding: 10px 8px 54px;
+  }
+  .security-hero {
+    padding: 14px 12px;
+  }
+  .hero-main {
+    align-items: flex-start;
+  }
+  .hero-copy h1 {
+    font-size: 1.2rem;
+  }
+}
+</style>

@@ -33,6 +33,34 @@ def company_page(out, styles):
     ]:
         result.extend([Paragraph(heading, styles['h3']), Paragraph(text, styles['text'])])
         md.extend(['**'+heading+'**', text])
+    result.append(PageBreak())
+    title = 'Configuración Legal (RGPD): texto impreso en los documentos'
+    intro = 'El texto introducido en Configuración Legal (RGPD) se imprimirá en todos los reportes de KiwiKERP, incluidas las facturas, los albaranes y los demás documentos emitidos por la aplicación. Por tanto, este campo contiene información que recibirán los destinatarios de esos documentos.'
+    result.extend([Paragraph(title, styles['h2']), Paragraph(intro, styles['text']),
+                   CaptureCard(out/'imagenes/configuracion-rgpd.png', caption='Configuración Legal (RGPD) · Texto para los reportes'), Spacer(1, 14)])
+    md.extend(['### '+title, intro, '![Configuración Legal RGPD](imagenes/configuracion-rgpd.png)'])
+    for heading, text in [
+        ('Revisar el contenido antes de emitir documentos', 'Introduce el texto de protección de datos definido para tu empresa y revisa su redacción, identificación y datos de contacto antes de imprimir o enviar documentos.'),
+        ('Completar los datos del ejemplo', 'La captura incluye el marcador [EMAIL RGPD]. Sustitúyelo por la dirección de contacto que corresponda antes de utilizar el texto. Revisa también el nombre de la persona o empresa que figura en él; el contenido debe corresponder a tu instalación.'),
+        ('Comprobar cómo se imprime', 'Después de guardar la configuración, genera un reporte de prueba, como una factura o un albarán, y comprueba que el texto aparece completo y legible. La captura muestra la configuración del texto; la comprobación de su impresión se documentará con un reporte generado.')
+    ]:
+        result.extend([Paragraph(heading, styles['h3']), Paragraph(text, styles['text'])])
+        md.extend(['**'+heading+'**', text])
+    result.append(PageBreak())
+    title = 'Preferencias: interfaz y repositorio documental'
+    intro = 'En Configuración del sistema, selecciona Preferencias. Este panel reúne los ajustes de duración de los avisos, cantidad de registros por página y ubicación del repositorio documental.'
+    result.extend([Paragraph(title, styles['h2']), Paragraph(intro, styles['text']),
+                   CaptureCard(out/'imagenes/configuracion-preferencias.png', caption='Preferencias · Ejemplo en KiwiKERP Standard Cloud'), Spacer(1, 14)])
+    md.extend(['### '+title, intro, '![Preferencias](imagenes/configuracion-preferencias.png)'])
+    for heading, text in [
+        ('Duración de los avisos', 'Tiempo duración del Toast (ms) configura cuánto tiempo se muestran los avisos temporales de la interfaz que utilizan esta preferencia. El valor se expresa en milisegundos: 1.000 ms equivalen a un segundo. La captura muestra 700 ms, es decir, 0,7 segundos. Elige una duración que permita leer los mensajes con comodidad. Este ajuste no establece la duración de la sesión ni la permanencia de las notificaciones en la campana.'),
+        ('Registros por página', 'Cantidad de registros por Página define el tamaño de página para los listados que utilizan esta preferencia. En la captura figura 200 registros. No es el límite total de información que puede almacenar la base de datos. Un valor mayor permite ver más filas por página, aunque puede aumentar el tiempo de carga.'),
+        ('Repositorio documental en Standard Cloud', 'Ruta raíz de documentos muestra la ubicación del repositorio documental. En este ejemplo es /data/kiwikerp/documents. El campo aparece deshabilitado porque la infraestructura de KiwiKERP Standard Cloud administra esta ruta: se ofrece como información y no puede modificarse desde KiwiKERP. No es una carpeta que debas crear en tu ordenador.'),
+        ('Diferencia respecto al servidor propio', 'La captura anterior del aviso de primer acceso correspondía a una instalación en servidor propio; esta pantalla corresponde a Standard Cloud. Son ejemplos de modalidades diferentes. En servidor propio se debe revisar la carpeta configurada en el servidor y sus permisos de escritura; en Standard Cloud la ubicación está gestionada por la infraestructura.'),
+        ('Continuación', 'Esta captura permite revisar los valores del panel, pero no muestra las acciones de guardado ni la confirmación final de la puesta en marcha. Documentaremos esas acciones con las pantallas correspondientes.')
+    ]:
+        result.extend([Paragraph(heading, styles['h3']), Paragraph(text, styles['text'])])
+        md.extend(['**'+heading+'**', text])
     (out/'Configuracion_inicial_empresa.md').write_text('\n\n'.join(md), encoding='utf-8')
     result.append(PageBreak())
     return result

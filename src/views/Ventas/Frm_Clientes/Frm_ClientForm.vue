@@ -271,7 +271,7 @@
                                                 </div>
                                             </template>
                                         </KiwiLookup>
-                                        <Button v-if="securityStore.hasPermission('ENTI_GEN_0002')" icon="pi pi-plus" severity="secondary"
+                                        <Button v-if="securityStore.hasPermission(PERM.ENTI_GEN_DOCS)" icon="pi pi-plus" severity="secondary"
                                             title="Nueva condición de pago" aria-label="Nueva condición de pago"
                                             :disabled="!entityReady" @click="openPaymentTerm"/>
                                         </div>
@@ -579,7 +579,7 @@
 
 
         <template #footer>
-            <Button v-if="securityStore.hasPermission('ENTI_GEN_0002')" label="Guardar" icon="pi pi-check" @click="save" />
+            <Button v-if="securityStore.hasPermission(PERM.ENTI_GEN_DOCS)" label="Guardar" icon="pi pi-check" @click="save" />
         </template>
 
 
@@ -606,6 +606,7 @@ import { provincias } from '@/data/provinces';
 import { countries } from '@/data/paises';
 import type { KiwiLookupColumn } from '../../../components/shared/KiwiLookup/KiwiLookupColumn';
 import { useSecurityStore } from '../../../stores/securityStore.ts';
+import { PERM } from '@/services/Frm_Main/permissions';
 import { useCompanyStore } from '../../../stores/companyStore';
 import PaymentTermCreateDialog from '../Frm_AjustesVentas/PaymentTermCreateDialog.vue';
 /* =========================
@@ -633,7 +634,7 @@ const activeTab = ref('0');
 type PaymentTerm = {id:number;descriptionEs:string;active?:boolean;value?:number;dueRules?:string|null};
 const terms = ref<PaymentTerm[]>([]);
 function openPaymentTerm() {
-    if (!entityReady.value || !entity.value.isclient || !securityStore.hasPermission('ENTI_GEN_0002')) return;
+    if (!entityReady.value || !entity.value.isclient || !securityStore.hasPermission(PERM.ENTI_GEN_DOCS)) return;
     paymentTermDialog.value?.open(entity.value.name);
 }
 function paymentTermCreated(term:PaymentTerm) {

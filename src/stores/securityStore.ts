@@ -89,8 +89,15 @@ export const useSecurityStore = defineStore('security', {
             if (this.admin)
                 return true;
 
+            // Compat legacy: el codigo bueno también vale si el usuario
+            // solo tiene la fila vieja (003/004 de 3 dígitos, typo REPORTINNG).
+            const aliases: string[] = [code];
+            if (code === 'ENTI_CON_0003') aliases.push('ENTI_CON_003');
+            if (code === 'ENTI_CON_0004') aliases.push('ENTI_CON_004');
+            if (code === 'REPORTING_GEN_0002') aliases.push('REPORTINNG_GEN_0002');
+
             return this.attributes.some(
-                a => a.code === code && a.active
+                a => aliases.includes(a.code) && a.active
             );
 
         }

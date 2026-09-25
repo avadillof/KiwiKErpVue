@@ -27,7 +27,7 @@
                     </div>
                 </template>
                 <template #end>
-                    <Button v-if="securityStore.hasPermission('ENTI_GEN_0001')" class="new-document" label="Nueva entidad" icon="pi pi-plus"
+                    <Button v-if="securityStore.hasPermission(PERM.ENTI_GEN_EDIT)" class="new-document" label="Nueva entidad" icon="pi pi-plus"
                         size="small" @click="clientFormRef.open(null)" />
                 </template>
             </Toolbar>
@@ -253,6 +253,7 @@ import { useCompanyStore } from '../../../stores/companyStore';
 import { HelperDates } from '../../../libs/HelperDates.ts';
 import Frm_ClientForm from './Frm_ClientForm.vue';
 import { useSecurityStore } from '../../../stores/securityStore.ts';
+import { PERM } from '@/services/Frm_Main/permissions';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue'
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import Frm_Contacts from '../../Frm_Contacts/Frm_Contacts.vue';
@@ -315,7 +316,7 @@ const menuItems = computed(() => {
 
 
 
-    if (securityStore.hasPermission('ENTI_GEN_0001')) {
+    if (securityStore.hasPermission(PERM.ENTI_GEN_EDIT)) {
 
         items.push({
             label: 'Borrar',
@@ -326,7 +327,7 @@ const menuItems = computed(() => {
     };
 
 
-    if (securityStore.hasPermission('ENTI_GEN_0003')) {
+    if (securityStore.hasPermission(PERM.ENTI_GEN_NOTES)) {
         if (items.length > 0) {
             items.push({
                 separator: true
@@ -342,7 +343,7 @@ const menuItems = computed(() => {
     }
 
 
-    if (securityStore.hasPermission('ENTI_GEN_0002')) {
+    if (securityStore.hasPermission(PERM.ENTI_GEN_DOCS)) {
 
         if (items.length > 0) {
             items.push({

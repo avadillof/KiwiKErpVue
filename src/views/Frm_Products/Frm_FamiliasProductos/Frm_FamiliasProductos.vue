@@ -4,7 +4,7 @@
         <header class="page-header"><div class="page-heading"><div class="page-icon"><i class="pi pi-sitemap"></i></div><div><span class="breadcrumb">Configuración / Datos maestros</span><h1>Familias de productos</h1><p>Clasificación común para mantener organizado el catálogo de productos y servicios.</p></div></div><nav class="header-actions"><Button :label="router.currentRoute.value.query.from === 'products' ? 'Artículos' : 'Ajustes'" icon="pi pi-arrow-left" severity="secondary" text @click="volver" /><Button label="Inicio" icon="pi pi-home" severity="secondary" text @click="router.push({ name: 'Dashboard' })" /></nav></header>
         <div class="card list-card"><Toolbar class="list-toolbar">
             <template #start><div class="workspace-heading"><span>Catálogo de familias</span><small>Consulta y organiza las agrupaciones utilizadas por los artículos.</small></div></template>
-            <template #end><Button v-if="securityStore.hasPermission('PROSER_GEN_0006')" label="Nueva familia" icon="pi pi-plus" size="small" @click="openNew" /></template>
+            <template #end><Button v-if="securityStore.hasPermission(PERM.FAM_EDIT)" label="Nueva familia" icon="pi pi-plus" size="small" @click="openNew" /></template>
         </Toolbar>
 
 
@@ -158,6 +158,7 @@ import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import Frm_FamiliaProductos from './Frm_FamiliaProductos.vue';
 
 import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 import { useConfirm } from 'primevue/useconfirm';
 import { useCompanyStore } from '@/stores/companyStore';
 import { useToast } from 'primevue/usetoast';
@@ -228,7 +229,7 @@ const menuItems = computed(() => {
 
     ];
 
-    if (securityStore.hasPermission('PROSER_GEN_0006')) {
+    if (securityStore.hasPermission(PERM.FAM_EDIT)) {
 
         items.push({
             label: 'Borrar',
@@ -241,7 +242,7 @@ const menuItems = computed(() => {
 
 
 
-    if (securityStore.hasPermission('PROSER_GEN_0007')) {
+    if (securityStore.hasPermission(PERM.FAM_NOTES)) {
         if (items.length > 0) {
             items.push({
                 separator: true
@@ -257,7 +258,7 @@ const menuItems = computed(() => {
     }
 
 
-     if (securityStore.hasPermission('PROSER_GEN_0008')) {
+     if (securityStore.hasPermission(PERM.FAM_DOCS)) {
 
         items.push({
             separator: true

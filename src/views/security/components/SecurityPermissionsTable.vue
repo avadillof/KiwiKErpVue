@@ -1,268 +1,302 @@
 <template>
-    <div class="security-card">
-
-        <!-- CABECERA -->
-        <div class="section-header">
-
-            <div class="text-xs text-500 uppercase font-semibold">
-                Permisos para la sección seleccionada
-            </div>
-
-            <div class="text-lg font-bold text-900">
-                {{ props.section?.description || 'Seleccione una sección' }}
-            </div>
-
-        </div>
-
-        <!-- MÓDULO BLOQUEADO -->
-        <div v-if="props.disabled"
-            class="flex flex-column justify-content-center align-items-center flex-1 text-center p-5">
-
-            <i class="pi pi-lock text-6xl mb-4" style="color:#bdbdbd"></i>
-
-            <div class="text-xl font-bold text-700">
-                Módulo bloqueado
-            </div>
-
-            <div class="text-500 mt-2" style="max-width:320px">
-                Active el acceso al módulo para poder configurar las
-                secciones y los permisos disponibles.
-            </div>
-
-        </div>
-
-        <!-- SIN SECCIÓN -->
-        <div v-else-if="!props.section"
-            class="flex flex-column justify-content-center align-items-center flex-1 text-center p-5">
-
-            <i class="pi pi-hand-pointer text-6xl mb-4 text-primary"></i>
-
-            <div class="text-xl font-bold text-700">
-                Seleccione una sección
-            </div>
-
-            <div class="text-500 mt-2">
-                Elija primero una sección para visualizar sus permisos.
-            </div>
-
-        </div>
-
-        <!-- TABLA -->
-        <DataTable v-else :value="permissions" scrollable scrollHeight="flex"
-            class="p-datatable-sm custom-header-table kiwi-permissions-table">
-
-
-            <Column header="Permiso / Acción">
-
-                <template #body="{ data }">
-
-                    <div class="flex align-items-start gap-3">
-
-                        <div class="permission-icon">
-                            <i class="pi pi-shield"></i>
-                        </div>
-
-                        <div class="flex flex-column">
-
-                            <span class="font-semibold text-900">
-                                {{ data.description }}
-                            </span>
-
-                            <small class="text-500">
-                                {{ data.code }}
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                </template>
-
-            </Column>
-
-            <Column header="Estado" style="width:120px">
-
-                <template #body="{ data }">
-
-                    <div class="flex align-items-center justify-content-between gap-3">
-
-                        <ToggleSwitch v-model="data.active" @change="changePermissionState(data)" />
-
-                        <span class="text-xs font-bold px-2 py-1 border-round-md"
-                            :class="data.active ? 'perm-active' : 'perm-disabled'">
-                            {{ data.active ? 'HABILITADO' : 'BLOQUEADO' }}
-                        </span>
-
-                    </div>
-
-                </template>
-
-            </Column>
-
-        </DataTable>
-
+  <div class="permissions-content">
+    <div v-if="section" class="context-strip">
+      <div>
+        <span>Sección seleccionada</span
+        ><strong>{{ section.description || section.name }}</strong>
+      </div>
+      <span class="permission-count"
+        >{{ enabledCount }}/{{ permissions.length }} permitidos</span
+      >
     </div>
+
+    <div v-if="disabled" class="empty-state empty-state--locked">
+      <span class="empty-icon"><i class="pi pi-lock" /></span
+      ><strong>Permisos no disponibles</strong>
+      <p>Habilita el módulo para gestionar las acciones de sus secciones.</p>
+    </div>
+    <div v-else-if="!section" class="empty-state">
+      <span class="empty-icon"><i class="pi pi-hand-pointer" /></span
+      ><strong>Selecciona una sección</strong>
+      <p>
+        Elige una sección de la columna anterior para consultar sus permisos.
+      </p>
+    </div>
+    <div v-else-if="loading" class="empty-state">
+      <i class="pi pi-spin pi-spinner loading-icon" /><strong
+        >Cargando permisos…</strong
+      >
+    </div>
+    <DataTable
+      v-else
+      :value="permissions"
+      scrollable
+      scrollHeight="flex"
+      class="permissions-table"
+    >
+      <Column header="Permiso / Acción">
+        <template #body="{ data }">
+          <div class="permission-row">
+            <span class="permission-icon"><i class="pi pi-shield" /></span>
+            <div>
+              <strong>{{ data.description }}</strong
+              ><small>{{ data.code }}</small>
+            </div>
+          </div>
+        </template>
+      </Column>
+      <Column header="Acceso" style="width: 10rem">
+        <template #body="{ data }">
+          <div class="state-cell">
+            <ToggleSwitch
+              v-model="data.active"
+              :aria-label="`Permiso ${data.description}`"
+              @change="changePermissionState(data)"
+            />
+            <span
+              :class="[
+                'state-label',
+                data.active ? 'state-label--active' : 'state-label--blocked',
+              ]"
+              >{{ data.active ? "Permitido" : "Denegado" }}</span
+            >
+          </div>
+        </template>
+      </Column>
+      <template #empty
+        ><div class="empty-inline">
+          <i class="pi pi-shield" />Esta sección no contiene permisos.
+        </div></template
+      >
+    </DataTable>
+  </div>
 </template>
 
 <script setup lang="ts">
-
-import { ref, watch } from 'vue'
-import { getSecurityAttributesUser } from '@/services/Frm_Security/SecurityService'
-import { updatePermissionUser } from '@/services/Frm_Security/SecurityService'
-import { useToast } from 'primevue/usetoast'
-
-const toast = useToast()
+import { computed, ref, watch } from "vue";
+import {
+  getSecurityAttributesUser,
+  updatePermissionUser,
+} from "@/services/Frm_Security/SecurityService";
+import { useToast } from "primevue/usetoast";
 
 const props = defineProps<{
+  section: any;
+  disabled?: boolean;
+  userPk: number;
+}>();
+const toast = useToast();
+const permissions = ref<any[]>([]);
+const loading = ref(false);
+let loadVersion = 0;
+const enabledCount = computed(
+  () => permissions.value.filter((permission) => permission.active).length,
+);
 
-    section: any
-    disabled?: boolean
-    userPk: number
-
-}>()
-
-const permissions = ref<any[]>([])
-
-const loadPermissions = async (section: any) => {
-
-    if (!section) {
-
-        permissions.value = []
-
-        return
-
-    }
-
-    try {
-
-        permissions.value =
-            await getSecurityAttributesUser(
-
-                props.userPk,
-
-                section.categoryPk
-
-            )
-
-    }
-    catch (e) {
-
-        console.error(e)
-
-        permissions.value = []
-
-    }
-
+async function loadPermissions(section: any) {
+  const version = ++loadVersion;
+  permissions.value = [];
+  if (!section || props.disabled) return;
+  loading.value = true;
+  try {
+    const result = await getSecurityAttributesUser(
+      props.userPk,
+      section.categoryPk,
+    );
+    if (version === loadVersion) permissions.value = result;
+  } catch (error) {
+    console.error("Error al cargar permisos de seguridad:", error);
+  } finally {
+    if (version === loadVersion) loading.value = false;
+  }
 }
 
-
-const changePermissionState = async (permission: any) => {
-
-    const oldValue = !permission.active
-
-    try {
-
-        await updatePermissionUser(
-
-            props.userPk,
-            permission.attributePk,
-            permission.active
-
-        )
-
-    } catch (e) {
-
-        permission.active = oldValue
-
-        toast.add({
-
-            severity: 'error',
-            summary: 'Error',
-            detail: 'No se pudo actualizar el permiso.',
-            life: 3000
-
-        })
-
-    }
-
+async function changePermissionState(permission: any) {
+  const oldValue = !permission.active;
+  try {
+    await updatePermissionUser(
+      props.userPk,
+      permission.attributePk,
+      permission.active,
+    );
+  } catch {
+    permission.active = oldValue;
+    toast.add({
+      severity: "error",
+      summary: "No se pudo guardar",
+      detail: "No se pudo actualizar el permiso.",
+      life: 3000,
+    });
+  }
 }
-
 
 watch(
-
-    () => props.section,
-
-    (section) => {
-
-        loadPermissions(section)
-
-    },
-
-    {
-
-        immediate: true
-
-    }
-
-)
-
+  () => [props.section, props.disabled, props.userPk],
+  () => loadPermissions(props.section),
+  { immediate: true },
+);
 </script>
 
 <style scoped>
-.code-column {
-    font-family: monospace;
-    color: #9ca3af;
-    font-size: .82rem;
+.permissions-content {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
-
-.security-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--surface-border);
-    border-radius: 10px;
-    overflow: hidden;
-    background: var(--surface-card);
+.context-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #e8ecf0;
+  background: #fff;
 }
-
-.section-header {
-    padding: 1rem;
-    border-bottom: 1px solid var(--surface-border);
-    background: var(--surface-50);
-    flex-shrink: 0;
+.context-strip > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
-
-.perm-active {
-    background: #e9f8dc;
-    color: #4d7c0f;
+.context-strip div > span {
+  color: #8b96a5;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
-
-.perm-disabled {
-    background: #fdeaea;
-    color: #b42318;
+.context-strip strong {
+  overflow: hidden;
+  color: #2d3748;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-:deep(.kiwi-permissions-table) {
-    flex: 1;
+.permission-count {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #5f7b00;
+  background: #eff6db;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
-
-:deep(.kiwi-permissions-table .p-datatable-wrapper) {
-    height: 100%;
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 22px;
+  text-align: center;
 }
-
-
-.permission-icon{
-    width:34px;
-    height:34px;
-    border-radius:50%;
-    background:var(--primary-50);
-    color:var(--primary-color);
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    flex-shrink:0;
+.empty-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  color: #769900;
+  background: #f0f6df;
+  font-size: 1.35rem;
 }
-
+.empty-state--locked .empty-icon {
+  color: #8a94a3;
+  background: #eef1f4;
+}
+.empty-state strong {
+  color: #344054;
+  font-size: 1rem;
+}
+.empty-state p {
+  max-width: 290px;
+  margin: 6px 0 0;
+  color: #7b8797;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.loading-icon {
+  margin-bottom: 12px;
+  color: #769900;
+  font-size: 1.6rem;
+}
+.permissions-table {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  padding: 8px;
+}
+.permission-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.permission-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #587100;
+  background: #f0f6df;
+}
+.permission-row div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.permission-row strong {
+  color: #293548;
+  font-size: 0.87rem;
+  line-height: 1.3;
+}
+.permission-row small {
+  margin-top: 2px;
+  color: #98a2b0;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.7rem;
+}
+.state-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.state-label {
+  min-width: 60px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.state-label--active {
+  color: #5d7c00;
+}
+.state-label--blocked {
+  color: #9a4c4c;
+}
+.empty-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 12px;
+  color: #8993a1;
+  font-size: 0.84rem;
+}
+:deep(.p-datatable-table-container) {
+  height: 100%;
+}
+:deep(.p-datatable-thead > tr > th) {
+  padding: 10px 12px;
+  color: #697386;
+  background: #f7f9fb;
+  border-color: #e8ecf0;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+:deep(.p-datatable-tbody > tr > td) {
+  padding: 9px 12px;
+  border-color: #edf0f3;
+}
 </style>

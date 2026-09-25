@@ -154,7 +154,7 @@
 
         <template #footer>
 
-            <Button v-if="securityStore.hasPermission('PROSER_GEN_0006')" label="Guardar" icon="pi pi-check"
+            <Button v-if="securityStore.hasPermission(PERM.FAM_EDIT)" label="Guardar" icon="pi pi-check"
                 @click="save" />
 
         </template>
@@ -184,6 +184,7 @@ import { useToast } from 'primevue/usetoast';
 import { useFormValidator } from '../../../libs/HelperView';
 import { useCompanyStore } from '../../../stores/companyStore';
 import { useSecurityStore } from '../../../stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 
 
 /* =========================================================

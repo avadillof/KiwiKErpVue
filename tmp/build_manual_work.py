@@ -83,7 +83,7 @@ Asistentes de consulta|Formular preguntas sobre la información comercial|Interp
 
 Configuración y administración
 Empresa y preferencias|Datos de empresa e imagen corporativa|Preferencias generales del sistema|Configuración del correo y prueba de conexión
-Usuarios y seguridad|Alta y mantenimiento de usuarios|Permisos sobre módulos y secciones|Gestión de certificados y usuarios autorizados
+Usuarios y seguridad|Tipos de usuario: Administrador y Usuario|Listado, búsqueda y navegación|Alta de usuarios y datos identificativos|Fotografía y perfil del usuario|Rol o grupo y estado activo|Contraseña y modificación de usuarios|Historial de conexiones|Seguridad y permisos por usuario|Borrado de usuarios y confirmación|Actualización del listado y exportación a Excel|Gestión de certificados y usuarios autorizados
 Configuración de ventas|Condiciones y plazos de pago|Automatizaciones de presupuestos|Recordatorios de facturas
 Inteligencia artificial|Configuración del proveedor y del modelo|Disponibilidad de los asistentes|Comprobación de la configuración
 Salvaguarda de datos|Configuración de copias de seguridad|Salvaguarda de documentos|Consulta de resultados e incidencias
@@ -159,6 +159,7 @@ Resultado esperado: se accede a KiwiKERP. Si la configuración inicial está pen
 Si dejas alguno de los dos campos vacío, aparece Campos incompletos y el mensaje Usuario y contraseña son requeridos. Completa ambos campos antes de volver a acceder.
 [[firstaccess]]
 [[company]]
+[[users]]
 ### 3.1.2. Sesión caducada y problemas de acceso
 Si aparece Usuario o contraseña inválidos, revisa ambos datos y vuelve a intentarlo. La opción ¿Has olvidado tu contraseña? abre el formulario de recuperación.
 Si la aplicación te devuelve al inicio de sesión, vuelve a identificarte. Si muestra un problema de conexión o de disponibilidad del servicio, conserva el mensaje para comunicarlo al responsable de la instalación.
@@ -210,6 +211,10 @@ for i,block in enumerate(outline.split('\n\n'),1):
     md.append('')
 for line in body.splitlines():
     if not line:continue
+    if line=='[[users]]':
+        from manual_users import users_pages
+        story.extend(users_pages(out,styles))
+        continue
     if line=='[[company]]':
         story.extend(company_page(out,styles))
         continue

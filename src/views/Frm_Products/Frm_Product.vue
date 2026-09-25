@@ -289,7 +289,7 @@
                                     </FloatLabel>
 
                                     <Button
-                                        v-if="securityStore.hasPermission('PROSER_GEN_0006') && securityStore.hasPermission('PROSER_GEN_0005')"
+                                        v-if="securityStore.hasPermission(PERM.FAM_EDIT) && securityStore.hasPermission(PERM.PROD_FAMILIES_NAV)"
                                         icon="pi pi-plus" severity="secondary" @click="openNewFamily" />
 
                                 </InputGroup>
@@ -467,7 +467,7 @@
 
                                         </FloatLabel>
 
-                                        <Button v-if="securityStore.hasPermission('PROSER_GEN_0078')" icon="pi pi-plus"
+                                        <Button v-if="securityStore.hasPermission(PERM.PROD_TAX)" icon="pi pi-plus"
                                             severity="secondary" @click="openNewSalesTax" />
 
                                     </InputGroup>
@@ -562,7 +562,7 @@
 
                                         </FloatLabel>
 
-                                        <Button v-if="securityStore.hasPermission('PROSER_GEN_0078')" icon="pi pi-plus"
+                                        <Button v-if="securityStore.hasPermission(PERM.PROD_TAX)" icon="pi pi-plus"
                                             severity="secondary" @click="openNewPurchaseTax" />
 
                                     </InputGroup>
@@ -584,7 +584,7 @@
 
         <template #footer>
 
-            <Button v-if="securityStore.hasPermission('PROSER_GEN_0002')" label="Guardar" icon="pi pi-check"
+            <Button v-if="securityStore.hasPermission(PERM.PROD_DOCS)" label="Guardar" icon="pi pi-check"
                 @click="save" />
 
         </template>
@@ -632,6 +632,7 @@ import { useFormValidator } from '../../libs/HelperView';
 import { useToast } from 'primevue/usetoast';
 import { useCompanyStore } from '@/stores/companyStore';
 import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 import Frm_FamiliaProductos from '../Frm_Products/Frm_FamiliasProductos/Frm_FamiliaProductos.vue';
 import Frm_SalexTaxForm from '../Frm_SalexTax/Frm_SalesTaxForm.vue';
 

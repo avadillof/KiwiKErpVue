@@ -26,7 +26,7 @@
                     </div>
                 </template>
                 <template #end>
-                    <Button v-if="securityStore.hasPermission('PROSER_GEN_0001')" class="new-document" label="Nuevo artículo" icon="pi pi-plus"
+                    <Button v-if="securityStore.hasPermission(PERM.PROD_EDIT)" class="new-document" label="Nuevo artículo" icon="pi pi-plus"
                         size="small" @click="newProduct"/>
                 </template>
             </Toolbar>
@@ -185,6 +185,7 @@ import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useCompanyStore } from '../../stores/companyStore';
 import { useSecurityStore } from '../../stores/securityStore.ts';
+import { PERM } from '@/services/Frm_Main/permissions';
 import GenericDataTable from '@/components/shared/GenericDataTable.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import Frm_Product from './Frm_Product.vue';
@@ -239,7 +240,7 @@ const menuItemsTable = computed(() => {
 
     const items: any[] = [];
 
-    if (securityStore.hasPermission('PROSER_GEN_0005')) {
+    if (securityStore.hasPermission(PERM.PROD_FAMILIES_NAV)) {
 
         items.push({
             label: 'Familias de Productos',
@@ -291,7 +292,7 @@ const menuItems = computed(() => {
 
 
 
-    if (securityStore.hasPermission('PROSER_GEN_0001')) {
+    if (securityStore.hasPermission(PERM.PROD_EDIT)) {
 
         items.push({
             label: 'Borrar',
@@ -302,7 +303,7 @@ const menuItems = computed(() => {
     };
 
 
-    if (securityStore.hasPermission('PROSER_GEN_0003')) {
+    if (securityStore.hasPermission(PERM.PROD_NOTES)) {
         if (items.length > 0) {
             items.push({
                 separator: true
@@ -318,7 +319,7 @@ const menuItems = computed(() => {
     }
 
 
-    if (securityStore.hasPermission('PROSER_GEN_0002')) {
+    if (securityStore.hasPermission(PERM.PROD_DOCS)) {
 
         if (items.length > 0) {
             items.push({

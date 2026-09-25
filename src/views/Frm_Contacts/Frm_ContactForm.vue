@@ -201,7 +201,7 @@
 
 
 
-            <Panel style="margin-top:20px" v-if="securityStore.hasPermission('ENTI_CON_0002')">
+            <Panel style="margin-top:20px" v-if="securityStore.hasPermission(PERM.ENTI_CON_ADDRESS)">
 
                 <template #header>
 
@@ -500,7 +500,7 @@
         <template #footer>
 
 
-            <Button label="Guardar" icon="pi pi-check" @click="save" v-if="securityStore.hasPermission('ENTI_CON_0001')"/>
+            <Button label="Guardar" icon="pi pi-check" @click="save" v-if="securityStore.hasPermission(PERM.ENTI_CON_EDIT)"/>
 
 
         </template>
@@ -524,6 +524,7 @@ import { HelperString } from '@/libs/HelperString';
 import { provincias } from '@/data/provinces';
 import { countries } from '@/data/paises';
 import { useSecurityStore } from '../../stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 
 
 
