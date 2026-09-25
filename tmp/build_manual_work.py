@@ -7,6 +7,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from pypdf import PdfReader, PdfWriter
 import pypdfium2 as pdfium
+from manual_installation import installation_pages
 from manual_diagrams import ManualDiagram
 from manual_screens import pages as screen_pages, CaptureCard, calendar_page
 
@@ -179,6 +180,10 @@ Una vez activado el entorno, el usuario puede completar los datos básicos y com
 ## 1.2. Cómo utilizar este manual''')
 body=body.replace('### 1.1.3. El circuito de gestión comercial','''[[panel]]
 ### 1.1.3. El circuito de gestión comercial''')
+start=body.index('# 2. Instalación y puesta en marcha')
+end=body.index('# 3. Acceso y entorno de trabajo',start)
+body=body[:start]+'[[installation]]\n\n'+body[end:]
+outline=outline.replace('Asistente de instalación|Acceso al asistente y comprobaciones iniciales|Configuración de la instalación|Finalización y primer acceso','Solicitud de prueba en la nube|Acceder a la solicitud|Completar los datos de contacto|Confirmación de la solicitud|Recibir el acceso al entorno\nAsistente de instalación|Preparación del entorno|Datos de la empresa|Primer administrador|Confirmación previa a la instalación')
 styles={
 'text':ParagraphStyle('text',fontName='Regular',fontSize=10.5,leading=15.5,spaceAfter=9,textColor=HexColor('#2B2B2B')),
 'h1':ParagraphStyle('h1',fontName='Bold',fontSize=23,leading=29,spaceAfter=20,textColor=HexColor('#9CC10A')),
@@ -201,6 +206,8 @@ for i,block in enumerate(outline.split('\n\n'),1):
     md.append('')
 for line in body.splitlines():
     if not line:continue
+    if line=='[[installation]]':
+        story.append(PageBreak());story.extend(installation_pages(out,styles));continue
     if line=='[[panel]]':
         story.append(PageBreak())
         story.append(Paragraph('El Panel de control',styles['h2']))
@@ -235,18 +242,18 @@ def footer(c,d):
     c.setFillColor(HexColor('#648506'));c.setFont('Bold',9);c.drawString(54,804,'KiwiKERP')
     c.setFillColor(HexColor('#666666'));c.setFont('Regular',8);c.drawRightString(541,804,'Manual de Usuario')
     c.setStrokeColor(HexColor('#9CC10A'));c.setLineWidth(.6);c.line(54,49,541,49)
-    c.drawString(54,34,'Edición de trabajo 0.10 · Septiembre 2026');c.drawRightString(541,34,str(d.page))
+    c.drawString(54,34,'Edición de trabajo 0.11 · Septiembre 2026');c.drawRightString(541,34,str(d.page))
     c.setFillColor(HexColor('#648506'));c.drawCentredString(393,34,'www.freelandsite.es')
     c.linkURL('https://www.freelandsite.es',(352,31,434,43),relative=0)
 inner=qa/'interior.pdf'
 SimpleDocTemplate(str(inner),pagesize=(595.276,841.89),leftMargin=54,rightMargin=54,topMargin=62,bottomMargin=64).build(story,onFirstPage=footer,onLaterPages=footer)
 writer=PdfWriter();writer.append(str(out/'KiwiKERP_Portada_Manual_Usuario_v0_3.pdf'));writer.append(str(inner))
-writer.add_metadata({'/Title':'KiwiKERP Manual de Usuario - Edición de trabajo 0.10','/Author':'FreeLandSite'})
-final=out/'KiwiKERP_Manual_Usuario_Trabajo_v0_10.pdf';writer.write(str(final))
+writer.add_metadata({'/Title':'KiwiKERP Manual de Usuario - Edición de trabajo 0.11','/Author':'FreeLandSite'})
+final=out/'KiwiKERP_Manual_Usuario_Trabajo_v0_11.pdf';writer.write(str(final))
 (out/'KiwiKERP_Manual_Usuario_Trabajo.md').write_text('\n'.join(md)+'\n\n'+body,encoding='utf-8')
 tracking='''# Seguimiento editorial y pruebas del manual
 
-Edición 0.10. La portada aprobada se conserva. Índice completo de 17 capítulos a tres niveles; no incluye paginación de apartados todavía porque la mayoría no están redactados. El cuerpo comienza con 1, 2.2 y 3.1; los huecos conservan la numeración del índice acordado.
+Edición 0.11. La portada aprobada se conserva. Índice completo de 17 capítulos a tres niveles; no incluye paginación de apartados todavía porque la mayoría no están redactados. El cuerpo comienza con 1, 2.2 y 3.1; los huecos conservan la numeración del índice acordado.
 
 ## Estado
 - Introducción: primera redacción. Revisión del usuario pendiente.

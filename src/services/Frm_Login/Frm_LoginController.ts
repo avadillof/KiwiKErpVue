@@ -55,7 +55,7 @@ export function loginController() {
 
     async function init() {
         const installation = await getInstallationState();
-        if (installation.status === 'NEW' || installation.status === 'DATABASE_EXISTS' || installation.status === 'IN_PROGRESS') {
+        if (installation.activationPending || installation.status === 'NEW' || installation.status === 'DATABASE_EXISTS' || installation.status === 'IN_PROGRESS') {
             await router.replace({ name: 'Installation' });
             return;
         }

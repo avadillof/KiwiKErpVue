@@ -176,7 +176,7 @@ router.beforeEach(async (to, from) => {
   // endpoint de instalación nunca deben permitir que se muestre el login.
   if (to.name === 'Login' || to.path === '/') {
     const installation = await getInstallationState();
-    if (installation.status === 'NEW' || installation.status === 'DATABASE_EXISTS' || installation.status === 'IN_PROGRESS') {
+    if (installation.activationPending || installation.status === 'NEW' || installation.status === 'DATABASE_EXISTS' || installation.status === 'IN_PROGRESS') {
       return { name: 'Installation' };
     }
     if (installation.status === 'ERROR') {
@@ -186,7 +186,7 @@ router.beforeEach(async (to, from) => {
 
   if (to.meta.installationRoute) {
     const installation = await getInstallationState();
-    if (installation.status === 'COMPLETED') {
+    if (installation.status === 'COMPLETED' && !installation.activationPending) {
       return { name: 'Login' };
     }
   }

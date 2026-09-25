@@ -97,9 +97,10 @@
 
           <section v-else class="installation-summary">
             <div class="installation-hero-icon installation-hero-icon--ready"><i class="pi pi-check"></i></div>
-            <h3>Todo listo para instalar</h3>
-            <p>Revisa los datos principales. El backend realizará las comprobaciones definitivas antes de activar la aplicación.</p>
-            <div class="installation-summary-grid">
+            <h3>{{ activationStarted ? 'Finalizar la activación' : 'Todo listo para instalar' }}</h3>
+            <p v-if="activationStarted">Los datos ya están guardados. Puedes reintentar la finalización para confirmar el acceso a KiwiKERP.</p>
+            <p v-else>Revisa los datos principales antes de activar la aplicación.</p>
+            <div v-if="!activationStarted" class="installation-summary-grid">
               <article><i class="pi pi-building"></i><div><span>Empresa</span><strong>{{ company.legalName }}</strong><small>{{ company.taxId }}</small></div></article>
               <article><i class="pi pi-user"></i><div><span>Administrador</span><strong>{{ administrator.name }}</strong><small>{{ administrator.username }}</small></div></article>
               <article><i class="pi pi-database"></i><div><span>Datos iniciales</span><strong>Catálogos del sistema</strong><small>Sin datos operativos</small></div></article>
@@ -112,7 +113,7 @@
         <div v-if="errorMessage" class="installation-api-error"><i class="pi pi-exclamation-triangle"></i>{{ errorMessage }}</div>
 
         <footer class="installation-actions">
-          <Button v-if="currentStep > 0" label="Atrás" icon="pi pi-arrow-left" severity="secondary" outlined
+          <Button v-if="currentStep > 0 && !activationStarted" label="Atrás" icon="pi pi-arrow-left" severity="secondary" outlined
             :disabled="isSubmitting" @click="previousStep" />
           <span v-else></span>
           <Button :label="currentStep === steps.length - 1 ? 'Finalizar instalación' : 'Continuar'"
@@ -168,6 +169,7 @@ import type { InstallationState } from '../../services/Installation/installation
 const router = useRouter();
 const currentStep = ref(0);
 const isSubmitting = ref(false);
+const activationStarted = ref(false);
 const errorMessage = ref('');
 const passwordConfirmation = ref('');
 const logoPreview = ref('');
@@ -243,6 +245,12 @@ async function runPreflight() {
     setCheck(0, 'checking', 'Comprobando que el servicio está disponible…');
     let installation = await getInstallationState();
     installationState.value = installation;
+    if (installation.activationPending) {
+      activationStarted.value = true;
+      currentStep.value = 3;
+      errorMessage.value = 'Los datos de instalación ya están guardados. Pulsa Finalizar instalación para reintentar la activación pendiente.';
+      return;
+    }
     if (installation.status === 'ERROR') throw new Error(installation.message || 'El backend no está disponible.');
     setCheck(0, 'success', 'El servicio de KiwiKERP responde correctamente.');
 
@@ -297,6 +305,7 @@ function selectLogo(event: Event) {
 }
 
 function previousStep() {
+  if (isSubmitting.value || activationStarted.value || currentStep.value === 0) return;
   errorMessage.value = '';
   currentStep.value--;
 }
@@ -311,12 +320,19 @@ async function nextStep() {
     if (currentStep.value === 1) await saveCompany(company);
     if (currentStep.value === 2) await saveAdministrator(administrator);
     if (currentStep.value === 3) {
+      // La activación puede haberse guardado aunque falle la notificación a Provisioning.
+      // En ese caso se reintenta la finalización, sin volver a editar una instalación cerrada.
+      activationStarted.value = true;
       await completeInstallation();
       await router.replace({ name: 'Login' });
       return;
     }
     currentStep.value++;
   } catch (error) {
+    if (activationStarted.value) {
+      const state = await getInstallationState();
+      if (state.status === 'IN_PROGRESS') activationStarted.value = false;
+    }
     errorMessage.value = error instanceof Error ? error.message : 'No se ha podido completar este paso.';
   } finally {
     isSubmitting.value = false;

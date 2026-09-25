@@ -16,6 +16,7 @@ export interface InstallationState {
     documentRootManaged?: boolean;
     documentRoot?: string;
     configurationRequired?: boolean;
+    activationPending?: boolean;
 }
 
 export interface CompanyInstallationData {
