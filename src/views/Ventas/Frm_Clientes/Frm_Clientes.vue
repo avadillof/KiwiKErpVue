@@ -316,7 +316,7 @@ const menuItems = computed(() => {
 
 
 
-    if (securityStore.hasPermission(PERM.ENTI_GEN_EDIT)) {
+    if (securityStore.hasPermission(PERM.ENTI_GEN_DELETE)) {
 
         items.push({
             label: 'Borrar',
@@ -367,7 +367,7 @@ const menuItems = computed(() => {
         }
 
 
-        items.push({
+        if (securityStore.hasPermission(PERM.ENTI_GEN_CONTACTS)) items.push({
             label: 'Contactos',
             icon: 'pi pi-address-book',
             command: () => openContacts()

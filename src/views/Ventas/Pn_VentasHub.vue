@@ -26,20 +26,20 @@
         >
       </div>
       <div class="flow-steps">
-        <button type="button" @click="router.push({ name: 'Presupuestos' })">
+        <button v-if="can(PERM.SALES_NAV_QUOTES)" type="button" @click="router.push({ name: 'Presupuestos' })">
           <i class="pi pi-file-edit"></i><span>Presupuesto</span></button
         ><i class="pi pi-angle-right"></i>
-        <button type="button" @click="router.push({ name: 'Pedidos' })">
+        <button v-if="can(PERM.SALES_NAV_ORDERS)" type="button" @click="router.push({ name: 'Pedidos' })">
           <i class="pi pi-shopping-cart"></i><span>Pedido</span></button
         ><i class="pi pi-angle-right"></i>
-        <button type="button" @click="router.push({ name: 'Albaranes' })">
+        <button v-if="can(PERM.SALES_NAV_DELIVERY)" type="button" @click="router.push({ name: 'Albaranes' })">
           <i class="pi pi-truck"></i><span>Albarán</span></button
         ><i class="pi pi-angle-right"></i>
-        <button type="button" @click="router.push({ name: 'Facturas' })">
+        <button v-if="can(PERM.SALES_NAV_INVOICES)" type="button" @click="router.push({ name: 'Facturas' })">
           <i class="pi pi-receipt"></i><span>Factura</span>
         </button>
         <i class="pi pi-angle-right"></i>
-        <button type="button" @click="router.push({ name: 'Rectificativas' })">
+        <button v-if="can(PERM.SALES_NAV_CREDIT)" type="button" @click="router.push({ name: 'Rectificativas' })">
           <i class="pi pi-undo"></i><span>Rectificaciones</span>
         </button>
       </div>
@@ -64,7 +64,7 @@
       </button>
     </section>
 
-    <section v-for="grupo in gruposVentas" :key="grupo.id" class="app-section">
+    <section v-for="grupo in gruposVisibles" :key="grupo.id" class="app-section">
       <div class="section-title">
         <div>
           <i :class="grupo.icono"></i>
@@ -123,6 +123,8 @@ import { computed, onMounted, reactive } from "vue";
 import axios from "axios";
 import { backendUrl } from "@/services/backendUrl";
 import { useAuthStore } from "@/stores/authStore";
+import { useSecurityStore } from "@/stores/securityStore";
+import { PERM } from "@/services/Frm_Main/permissions";
 
 interface OpcionVenta {
   id: string;
@@ -134,10 +136,13 @@ interface OpcionVenta {
   fondo: string;
   disponible: boolean;
   funciones?: string[];
+  perm?: string;
 }
 
 const router = useRouter();
 const auth = useAuthStore();
+const securityStore = useSecurityStore();
+const can = (perm: string) => auth.user?.admin === true || securityStore.hasPermission(perm);
 const api = axios.create();
 api.interceptors.request.use((config) => {
   Object.assign(config.headers, auth.portalRequestConfig().headers);
@@ -179,7 +184,7 @@ const kpiCards = computed(() => {
     o === null
       ? null
       : Number(o.deliveryPendingLines || 0) + Number(o.directInvoiceLines || 0);
-  return [
+  const all = [
     {
       key: "quotes",
       route: "Presupuestos",
@@ -218,6 +223,8 @@ const kpiCards = computed(() => {
       sub: rectPending === null ? "Abonos y correcciones" : `${fmt(rectPendingAmount)} € por pagar`,
     },
   ];
+  const KPI_PERM: Record<string, string> = { quotes: PERM.SALES_NAV_QUOTES, orders: PERM.SALES_NAV_ORDERS, invoices: PERM.SALES_NAV_INVOICES, rects: PERM.SALES_NAV_CREDIT };
+  return all.filter((k) => can(KPI_PERM[k.key]));
 });
 async function loadStats() {
   const paths = [
@@ -403,6 +410,9 @@ const gruposVentas: Array<{
   },
 ];
 
+const RUTA_PERM: Record<string, string> = { ListaPrecios: PERM.SALES_NAV_PRICELIST, Clientes: PERM.SALES_OPTIONS, Presupuestos: PERM.SALES_NAV_QUOTES, Pedidos: PERM.SALES_NAV_ORDERS, Albaranes: PERM.SALES_NAV_DELIVERY, Facturas: PERM.SALES_NAV_INVOICES, Rectificativas: PERM.SALES_NAV_CREDIT, InformesVentas: PERM.RPT_SALES, AjustesVentas: PERM.SALES_SETTINGS };
+function opcionVisible(o: OpcionVenta): boolean { if (o.ruta === "Productos") return auth.user?.admin === true || securityStore.hasModule("PRODUCTS"); const p = (o as any).perm ?? RUTA_PERM[o.ruta]; return !p || can(p); }
+const gruposVisibles = computed(() => gruposVentas.map((g) => ({ ...g, opciones: g.opciones.filter(opcionVisible) })).filter((g) => g.opciones.length > 0));
 function abrirOpcion(opcion: OpcionVenta): void {
   if (opcion.disponible) router.push({ name: opcion.ruta });
 }

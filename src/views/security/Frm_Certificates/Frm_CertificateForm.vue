@@ -97,7 +97,7 @@
             <Button label="Cancelar" icon="pi pi-times" text @click="close" />
 
 
-            <Button label="Guardar" icon="pi pi-save" @click="save" />
+            <Button v-if="securityStore.hasPermission(PERM.CERT_MANAGE)" label="Guardar" icon="pi pi-save" @click="save" />
 
 
         </template>
@@ -121,6 +121,9 @@ import Button from 'primevue/button';
 import { useFormValidator } from '../../../libs/HelperView';
 import { useToast } from 'primevue/usetoast';
 import { useCompanyStore } from '@/stores/companyStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+const securityStore = useSecurityStore();
 import CertificatePasswordDialog from '../../../components/CertificatePasswordDialog.vue';
 
 const emit = defineEmits([

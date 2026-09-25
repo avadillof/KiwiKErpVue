@@ -249,7 +249,7 @@ const menuItems = computed(() => {
     });
 
 
-    if (securityStore.hasPermission(PERM.ENTI_CON_EDIT)) {
+    if (securityStore.hasPermission(PERM.ENTI_CON_DELETE)) {
         items.push({
 
 

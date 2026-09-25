@@ -3,7 +3,7 @@
         <header class="page-header"><div class="page-heading"><div class="page-icon"><i class="pi pi-percentage"></i></div><div><span class="breadcrumb">Configuración / Datos maestros</span><h1>Impuestos</h1><p>Tipos impositivos aplicables a productos, servicios, compras y ventas.</p></div></div><nav class="header-actions"><Button label="Ajustes" icon="pi pi-arrow-left" severity="secondary" text @click="volver" /><Button label="Inicio" icon="pi pi-home" severity="secondary" text @click="router.push({ name: 'Dashboard' })" /></nav></header>
         <div class="card list-card"><Toolbar class="list-toolbar">
             <template #start><div class="workspace-heading"><span>Catálogo de impuestos</span><small>Consulta y mantiene los tipos impositivos disponibles.</small></div></template>
-            <template #end><Button label="Nuevo impuesto" icon="pi pi-plus" size="small" @click="openNewSalesTax" /></template>
+            <template #end><Button v-if="securityStore.hasPermission(PERM.SYS_TAX)" label="Nuevo impuesto" icon="pi pi-plus" size="small" @click="openNewSalesTax" /></template>
         </Toolbar>
 
         <GenericDataTable class="maintenance-table" ref="tableRef" dataKey="pkid" :endpoint="apiUrl"
@@ -75,6 +75,9 @@ import ConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from 'primevue/usetoast';
 import { useCompanyStore } from '@/stores/companyStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+const securityStore = useSecurityStore();
 const toast = useToast();
 const companyStore = useCompanyStore();
 

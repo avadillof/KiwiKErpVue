@@ -18,8 +18,8 @@
         <Tab value="1"><i class="pi pi-sliders-h"></i><span>Preferencias</span></Tab>
         <Tab value="2"><i class="pi pi-users"></i><span>Usuarios</span></Tab>
         <Tab value="3"><i class="pi pi-database"></i><span>Datos maestros</span></Tab>
-        <Tab v-if="aiAuth.user?.admin" value="4"><i class="pi pi-sparkles"></i><span>Inteligencia artificial</span></Tab>
-        <Tab v-if="aiAuth.user?.admin" value="5"><i class="pi pi-shield"></i><span>Salvaguarda de datos</span></Tab>
+        <Tab v-if="can(PERM.SYS_TECH)" value="4"><i class="pi pi-sparkles"></i><span>Inteligencia artificial</span></Tab>
+        <Tab v-if="can(PERM.SYS_TECH)" value="5"><i class="pi pi-shield"></i><span>Salvaguarda de datos</span></Tab>
       </TabList>
 
       <TabPanels>
@@ -288,24 +288,24 @@
             </div>
 
             <div class="master-grid">
-              <button type="button" class="master-card master-card--family" @click="router.push({name:'BankAccounts'})">
+              <button v-if="can(PERM.SYS_BANK)" type="button" class="master-card master-card--family" @click="router.push({name:'BankAccounts'})">
                 <span class="master-icon"><i class="pi pi-building-columns"></i></span>
                 <span class="master-copy"><strong>Cuentas bancarias</strong><small>Cuentas para compras y ventas, con comprobación del formato y control del IBAN.</small></span>
                 <span class="master-action">Gestionar <i class="pi pi-arrow-right"></i></span>
               </button>
-              <button type="button" class="master-card master-card--tax" @click="openSalesTax">
+              <button v-if="can(PERM.SYS_TAX)" type="button" class="master-card master-card--tax" @click="openSalesTax">
                 <span class="master-icon"><i class="pi pi-percentage"></i></span>
                 <span class="master-copy"><strong>Impuestos</strong><small>Tipos impositivos aplicables a productos, servicios, compras y ventas.</small></span>
                 <span class="master-action">Gestionar <i class="pi pi-arrow-right"></i></span>
               </button>
 
-              <button type="button" class="master-card master-card--certificate" @click="openCertificates">
+              <button v-if="can(PERM.CERT_ACCESS)" type="button" class="master-card master-card--certificate" @click="openCertificates">
                 <span class="master-icon"><i class="pi pi-shield"></i></span>
                 <span class="master-copy"><strong>Certificados digitales</strong><small>Firma electrónica e integración con la Agencia Tributaria y Veri*Factu.</small></span>
                 <span class="master-action">Gestionar <i class="pi pi-arrow-right"></i></span>
               </button>
 
-              <button type="button" class="master-card master-card--family" @click="openFamiliasProductos">
+              <button v-if="can(PERM.PROD_FAMILIES_NAV)" type="button" class="master-card master-card--family" @click="openFamiliasProductos">
                 <span class="master-icon"><i class="pi pi-bookmark"></i></span>
                 <span class="master-copy"><strong>Familias de productos</strong><small>Clasificación común para organizar el catálogo de productos y servicios.</small></span>
                 <span class="master-action">Gestionar <i class="pi pi-arrow-right"></i></span>
@@ -317,9 +317,9 @@
 
         </TabPanel>
 
-        <TabPanel v-if="aiAuth.user?.admin" value="4"><AiSettingsPanel v-if="activeTab === '4'"/></TabPanel>
+        <TabPanel v-if="can(PERM.SYS_TECH)" value="4"><AiSettingsPanel v-if="activeTab === '4'"/></TabPanel>
 
-        <TabPanel v-if="aiAuth.user?.admin" value="5"><BackupPanel v-if="activeTab === '5'"/></TabPanel>
+        <TabPanel v-if="can(PERM.SYS_TECH)" value="5"><BackupPanel v-if="activeTab === '5'"/></TabPanel>
       </TabPanels>
     </Tabs>
 
@@ -327,7 +327,7 @@
          Está fuera de Tabs para ocupar todo el ancho del panel. -->
     <div v-if="activeTab === '0' || activeTab === '1'" class="settings-global-actions">
       <Button
-        label="Guardar Cambios"
+        v-if="can(PERM.SYS_COMPANY)" label="Guardar Cambios"
         icon="pi pi-save"
         :loading="loading"
         @click="saveData"
@@ -821,6 +821,10 @@ import AiSettingsPanel from './AiSettingsPanel.vue';
 import BackupPanel from './BackupPanel.vue';
 import { useAuthStore } from '@/stores/authStore';
 const aiAuth=useAuthStore();
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+const securityStore = useSecurityStore();
+const can = (perm: string) => aiAuth.user?.admin === true || securityStore.hasPermission(perm);
 import { onMounted, ref, watch } from 'vue';
 import Password from 'primevue/password';
 import { useRouter } from 'vue-router';
@@ -865,7 +869,7 @@ onMounted(async () => {
 const updateActiveTab = function (queryTab: any): void {
   if (queryTab) {
 const requested=String(queryTab);
-    activeTab.value=(!aiAuth.user?.admin&&(requested==='4'||requested==='5'))?'0':requested;
+    activeTab.value=(!can(PERM.SYS_TECH)&&(requested==='4'||requested==='5'))?'0':requested;
   }
 };
 
@@ -880,7 +884,7 @@ watch(
   },
   { immediate: true }
 );
-watch(() => aiAuth.user?.admin, isAdmin => { if(!isAdmin&&(activeTab.value==='4'||activeTab.value==='5'))activeTab.value='0'; });
+watch(() => [aiAuth.user?.admin, securityStore.attributes], () => { if(!can(PERM.SYS_TECH)&&(activeTab.value==='4'||activeTab.value==='5'))activeTab.value='0'; });
 
 
 function openSalesTax() {

@@ -48,9 +48,9 @@
               <Toolbar class="ven-toolbar">
                 <template #start><Tag v-if="isReport" :value="selectedReport" severity="info" rounded /><strong class="ven-report-name">{{ selectedTitle }}</strong></template>
                 <template #end>
-                  <Button label="Vista previa" icon="pi pi-eye" outlined :disabled="!isReport || !!dateError || previewLoading" :loading="previewLoading" title="Se activa al validar el formulario" @click="preview" />
-                  <Button icon="pi pi-download" label="Descargar" outlined :disabled="!pdfUrl" title="Descargar el PDF con el nombre del informe" @click="downloadPdf" />
-                  <Button label="A Excel" icon="pi pi-file-excel" severity="success" :disabled="!previewRows.length" title="Exportar las columnas visibles" @click="exportExcel" />
+                  <Button v-if="securityStore.hasPermission(PERM.RPT_SALES)" label="Vista previa" icon="pi pi-eye" outlined :disabled="!isReport || !!dateError || previewLoading" :loading="previewLoading" title="Se activa al validar el formulario" @click="preview" />
+                  <Button icon="pi pi-download" v-if="securityStore.hasPermission(PERM.RPT_EXPORT)" label="Descargar" outlined :disabled="!pdfUrl" title="Descargar el PDF con el nombre del informe" @click="downloadPdf" />
+                  <Button v-if="securityStore.hasPermission(PERM.RPT_EXPORT)" label="A Excel" icon="pi pi-file-excel" severity="success" :disabled="!previewRows.length" title="Exportar las columnas visibles" @click="exportExcel" />
                 </template>
               </Toolbar>
               <div class="ven-main-body">
@@ -144,8 +144,14 @@
 </template>
 
 <script setup lang="ts">
+
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+const securityStore = useSecurityStore();
+
 import { useCompanyStore } from '@/stores/companyStore';
 import { buildReportPdf, exportReportExcel, sortReportRows, type ReportRow } from '@/services/Informes/reportEngine';
 import {
@@ -433,7 +439,6 @@ async function preview() {
     previewLoading.value = false;
   }
 }
-
 
 /** Descarga la previa con el nombre del informe: RPT-XXX-NNN_AAAAMMDD.pdf. */async function downloadPdf() {
   if (!pdfUrl.value) return;

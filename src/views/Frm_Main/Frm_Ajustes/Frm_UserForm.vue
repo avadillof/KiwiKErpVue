@@ -134,6 +134,8 @@ const cameraVisible = ref(false);
 const visibleInputs = ref(true);
 const authStore = useAuthStore();
 const userPkid = computed(() => authStore.user?.pkid || 0);
+// La fecha de alta no se edita: conservar también su representación del servidor.
+const savedRegistrationDate = ref<string | null>(null);
 
 const formData = ref<UserFormData>({
     pkid: 0,
@@ -193,6 +195,10 @@ const open = async (id: number | null = null) => {
             const userRes = await axios.get(backendUrl(`/WebGetUserById?pkid=${id}`));
             
             const user = userRes.data;
+            savedRegistrationDate.value = user.userDtDateUp ?? null;
+            const registrationDate = savedRegistrationDate.value
+                ? new Date(savedRegistrationDate.value)
+                : null;
 
             formData.value = {
                 pkid: user.pkid,
@@ -202,11 +208,14 @@ const open = async (id: number | null = null) => {
                 password: '', // Por seguridad no traemos la pass
                 active: user.active,
                 pin: user.pin || '',
-                userDtDateUp: user.userDtDateUp ? new Date(user.userDtDateUp) : new Date(),
+                userDtDateUp: registrationDate && !Number.isNaN(registrationDate.getTime())
+                    ? registrationDate
+                    : null,
                 groupKyId: Number(user.groupKyId),
                 profilePhoto: user.profilePhoto || undefined
             };
         } else {
+            savedRegistrationDate.value = null;
             // Reset para usuario nuevo
             formData.value = {
                 pkid: 0,
@@ -237,7 +246,7 @@ const save = async () => {
         !formData.value.name.trim() ||
         !formData.value.email.trim() ||
         formData.value.groupKyId === 0 ||
-        !formData.value.userDtDateUp) {
+        (formData.value.pkid === 0 && !formData.value.userDtDateUp)) {
 
         toast.add({
             severity: 'warn',
@@ -265,12 +274,14 @@ const save = async () => {
     }
 
     
-    // 3. Preparación de datos para el envío
-    // Creamos un objeto con los datos y convertimos la fecha a formato ISO string
-    // esto es lo que mejor entiende Java/LocalDateTime
+    // LocalDateTime no lleva zona horaria; al editar se conserva el valor recibido.
     const dataToSend = {
         ...formData.value,
-        userDtDateUp: formData.value.userDtDateUp ? new Date(formData.value.userDtDateUp).toISOString() : null
+        userDtDateUp: formData.value.pkid > 0
+            ? savedRegistrationDate.value
+            : formData.value.userDtDateUp
+                ? `${formData.value.userDtDateUp.getFullYear()}-${String(formData.value.userDtDateUp.getMonth() + 1).padStart(2, '0')}-${String(formData.value.userDtDateUp.getDate()).padStart(2, '0')}T00:00:00`
+                : null
     };
 
     // 4. Envío al servidor

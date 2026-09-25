@@ -2,7 +2,7 @@
   <main class="settings-page">
     <header class="page-header">
       <div class="title-wrap"><span class="icon"><i class="pi pi-sliders-h" /></span><div><small>KiwiKERP / Ventas</small><h1>Ajustes de Ventas</h1></div></div>
-      <div class="actions"><Button label="Volver" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({name:'Ventas'})"/><Button label="Guardar cambios" icon="pi pi-save" :loading="saving" :disabled="loading || !loaded || !!deliveryError || !!reminderBusy || quoteBusy || !!quoteError" @click="save"/></div>
+      <div class="actions"><Button label="Volver" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({name:'Ventas'})"/><Button v-if="securityStore.hasPermission(PERM.SALES_SETTINGS)" label="Guardar cambios" icon="pi pi-save" :loading="saving" :disabled="loading || !loaded || !!deliveryError || !!reminderBusy || quoteBusy || !!quoteError" @click="save"/></div>
     </header>
 
     <div v-if="loading" class="loading"><i class="pi pi-spin pi-spinner"/> Cargando ajustes…</div>
@@ -135,6 +135,7 @@
 </template>
 
 <script setup lang="ts">
+const securityStore = useSecurityStore();
 import { backendUrl } from '@/services/backendUrl';
 import PaymentTermsSettings from "./PaymentTermsSettings.vue";
 import InvoiceReminderSettings from "./InvoiceReminderSettings.vue";
@@ -142,6 +143,8 @@ import { formatCalendarDate } from '@/libs/HelperDates';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../stores/authStore';
+import { useSecurityStore } from '../../../stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
 import QuoteAutomationSettings from './QuoteAutomationSettings.vue';

@@ -9,11 +9,14 @@
       </div>
       <Message v-if="signatureExists" severity="secondary" :closable="false"><i class="pi pi-info-circle mr-2"></i>Este albarán conserva una firma manuscrita registrada anteriormente.</Message>
     </div>
-    <template #footer><div class="dialog-footer"><div class="kiwik-separator receipt-separator"></div><div class="receipt-actions"><Button label="Cancelar" severity="secondary" text :disabled="saving" @click="visible=false" /><Button label="Guardar recogida" icon="pi pi-check-circle" :loading="saving" :disabled="loading" @click="save" /></div></div></template>
+    <template #footer><div class="dialog-footer"><div class="kiwik-separator receipt-separator"></div><div class="receipt-actions"><Button label="Cancelar" severity="secondary" text :disabled="saving" @click="visible=false" /><Button v-if="securityStore.hasPermission(PERM.DELIV_PICKUP)" label="Guardar recogida" icon="pi pi-check-circle" :loading="saving" :disabled="loading" @click="save" /></div></div></template>
   </Dialog>
 </template>
 
 <script setup lang="ts">
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+const securityStore = useSecurityStore();
 import { backendUrl } from '@/services/backendUrl';
 import { ref } from 'vue';
 import axios from 'axios';

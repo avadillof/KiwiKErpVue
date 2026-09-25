@@ -59,6 +59,7 @@
         </div>
         <div class="toolbar-actions">
           <Button
+            v-if="securityStore.hasPermission(PERM.CREDIT_EMAIL)"
             label="Enviar pendientes"
             icon="pi pi-send"
             outlined
@@ -67,6 +68,7 @@
             @click="openSendPending"
           /><Button
             class="corporate"
+            v-if="securityStore.hasPermission(PERM.CREDIT_EDIT)"
             label="Nueva rectificativa"
             icon="pi pi-plus"
             @click="openNew"
@@ -1030,6 +1032,8 @@ import Select from "primevue/select";
 import Tag from "primevue/tag";
 import Textarea from "primevue/textarea";
 import { useAuthStore } from "@/stores/authStore";
+import { useSecurityStore } from "@/stores/securityStore";
+import { PERM } from "@/services/Frm_Main/permissions";
 import { useToast } from "primevue/usetoast";
 import RecInvoiceEmailDialog from "./RecInvoiceEmailDialog.vue";
 import RecInvoiceAuditDialog from "./RecInvoiceAuditDialog.vue";
@@ -1066,6 +1070,7 @@ const recInvoiceAuditDialog = ref<
   InstanceType<typeof RecInvoiceAuditDialog> | null
 >(null);
 const auth = useAuthStore();
+const securityStore = useSecurityStore();
 const api = axios.create();
 api.interceptors.request.use((config) => {
   Object.assign(config.headers, auth.portalRequestConfig().headers);
@@ -1149,9 +1154,10 @@ const rowItems = computed(() => [
   {
     label: "Auditoría de emisión",
     icon: "pi pi-history",
+    visible: securityStore.hasPermission(PERM.CREDIT_ISSUE),
     command: () => recInvoiceAuditDialog.value?.open(selected.value),
   },
-  ...(canMarkPaid(selected.value)
+  ...(canMarkPaid(selected.value) && securityStore.hasPermission(PERM.CREDIT_MARK_PAID)
     ? [
         {
           label: selected.value?.paid
@@ -1167,17 +1173,20 @@ const rowItems = computed(() => [
     label: selected.value?.dateSend
       ? "Reenviar por correo"
       : "Enviar por correo",
+    visible: securityStore.hasPermission(PERM.CREDIT_EMAIL),
     icon: "pi pi-envelope",
     command: () => emailDialog.value?.open(selected.value),
   },
   {
     label: "Historial de correo",
+    visible: securityStore.hasPermission(PERM.CREDIT_EMAIL),
     icon: "pi pi-history",
     command: () => emailDialog.value?.open(selected.value, "history"),
   },
   { separator: true },
   {
     label: "Ver / Imprimir rectificativa",
+    visible: securityStore.hasPermission(PERM.CREDIT_PRINT),
     icon: "pi pi-print",
     disabled: selected.value?.verifactuStatus !== "ACCEPTED" || busy.value,
     command: () => openRecInvoicePdf(selected.value),
@@ -1185,6 +1194,7 @@ const rowItems = computed(() => [
   { separator: true },
   {
     label: "Notas",
+    visible: securityStore.hasPermission(PERM.CREDIT_NOTES),
     icon: "pi pi-comments",
     command: () => {
       noteRequest.id = selected.value?.pkid ?? -1;
@@ -1193,6 +1203,7 @@ const rowItems = computed(() => [
   },
   {
     label: `Documentos${selected.value?.attachmentCount ? ` (${selected.value.attachmentCount})` : ""}`,
+    visible: securityStore.hasPermission(PERM.CREDIT_DOCS),
     icon: "pi pi-paperclip",
     command: () => openAttachments(selected.value),
   },
@@ -1588,15 +1599,14 @@ async function loadStats() {
 }
 watch(year, loadStats);
 const tableMenu = ref<any>(null);
-const tableItems = [
-  { label: "Refrescar", icon: "pi pi-refresh", command: () => refreshTable() },
-  { separator: true },
-  {
-    label: "Exportar Excel",
-    icon: "pi pi-file-excel",
-    command: () => tableRef.value?.exportToExcel(),
-  },
-];
+const tableItems = computed(() => {
+  const t: any[] = [{ label: "Refrescar", icon: "pi pi-refresh", command: () => refreshTable() }];
+  if (securityStore.hasPermission(PERM.RPT_EXPORT)) {
+    t.push({ separator: true });
+    t.push({ label: "Exportar Excel", icon: "pi pi-file-excel", command: () => tableRef.value?.exportToExcel() });
+  }
+  return t;
+});
 // Los valores de los selects se pasan explícitos (no vía :params), porque el
 // @change se dispara antes del re-render y refresh() leería los filtros viejos.
 const filter = () => {

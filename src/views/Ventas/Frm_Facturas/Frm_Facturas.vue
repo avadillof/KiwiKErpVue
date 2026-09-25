@@ -46,13 +46,13 @@
             >
           </div></template
         ><template #end
-          ><SalesAutomationActions module="invoices" /><Button
+          ><SalesAutomationActions module="invoices" /><Button v-if="securityStore.hasPermission(PERM.INV_EMAIL)"
             label="Enviar pendientes"
             icon="pi pi-send"
             outlined
             v-tooltip.bottom="'Envía por correo las facturas emitidas, aceptadas por VeriFactu y nunca enviadas al contacto principal del cliente (máximo 50 por tanda). Queda registrado en cada factura.'"
             :disabled="sendingPending"
-            @click="openSendPending" /><Button
+            @click="openSendPending" /><Button v-if="securityStore.hasPermission(PERM.INV_EDIT)"
             label="Nueva factura manual"
             icon="pi pi-plus"
             @click="manualInvoiceDialog?.open()" /></template></Toolbar
@@ -1398,8 +1398,11 @@ import InvoiceAuditDialog from "./InvoiceAuditDialog.vue";
 import InvoiceEmailDialog from "./InvoiceEmailDialog.vue";
 const invoiceEmailDialog = ref<any>();
 import { useAuthStore } from "@/stores/authStore";
+import { useSecurityStore } from "@/stores/securityStore";
+import { PERM } from "@/services/Frm_Main/permissions";
 const invoiceAuditDialog = ref<any>();
 const auth = useAuthStore();
+const securityStore = useSecurityStore();
 const manualInvoiceDialog = ref<any>();
 const onManualInvoiceCreated = async (invoice: any) => {
   toast.add({
@@ -2283,12 +2286,14 @@ const noteRequest = {
     {
       label: "Vencimientos",
       icon: "pi pi-calendar",
+      visible: securityStore.hasPermission(PERM.INV_DUES),
       command: () => duesDialog.value?.open(selected.value),
     },
     ...(isDraft(selected.value?.state)
       ? [
           {
             label: "Descartar borrador",
+            visible: securityStore.hasPermission(PERM.INV_ISSUE),
             disabled: invoiceProtected(selected.value) || issuing.value,
             icon: "pi pi-ban",
             command: () => cancelDraft(selected.value),
@@ -2299,6 +2304,7 @@ const noteRequest = {
       ? [
           {
             label: "Cobros de la factura",
+            visible: securityStore.hasPermission(PERM.INV_DUES),
             icon: "pi pi-wallet",
             command: () => openPayments(selected.value),
           },
@@ -2309,6 +2315,7 @@ const noteRequest = {
       label: selected.value?.dateSend
         ? "Reenviar por correo"
         : "Enviar por correo",
+      visible: securityStore.hasPermission(PERM.INV_EMAIL),
       icon: "pi pi-envelope",
       disabled:
         !selected.value?.canSendToCustomer || invoiceProtected(selected.value),
@@ -2316,11 +2323,13 @@ const noteRequest = {
     },
     {
       label: "Historial de correo",
+      visible: securityStore.hasPermission(PERM.INV_EMAIL),
       icon: "pi pi-history",
       command: () => invoiceEmailDialog.value?.open(selected.value, "history"),
     },
     {
       label: "Auditoría de emisión",
+      visible: securityStore.hasPermission(PERM.INV_VERIFACTU),
       icon: "pi pi-history",
       command: () => invoiceAuditDialog.value?.open(selected.value),
     },
@@ -2337,6 +2346,7 @@ const noteRequest = {
     { separator: true },
     {
       label: "Ver / Imprimir factura",
+      visible: securityStore.hasPermission(PERM.INV_PRINT),
       icon: "pi pi-print",
       disabled: selected.value?.verifactuStatus !== "ACCEPTED",
       command: () => openInvoicePdf(selected.value),
@@ -2346,6 +2356,7 @@ const noteRequest = {
           { separator: true },
           {
             label: "Reintentar envío VeriFactu",
+            visible: securityStore.hasPermission(PERM.INV_VERIFACTU),
             disabled: invoiceProtected(selected.value) || issuing.value,
             icon: "pi pi-refresh",
             command: () => issueInvoice(selected.value, true),
@@ -2355,6 +2366,7 @@ const noteRequest = {
     { separator: true },
     {
       label: "Notas",
+      visible: securityStore.hasPermission(PERM.INV_NOTES),
       disabled: invoiceProtected(selected.value) || issuing.value,
       icon: "pi pi-comments",
       command: () => {
@@ -2364,25 +2376,23 @@ const noteRequest = {
     },
     {
       label: `Documentos${selected.value?.attachmentCount ? ` (${selected.value.attachmentCount})` : ""}`,
+      visible: securityStore.hasPermission(PERM.INV_DOCS),
       icon: "pi pi-paperclip",
       command: () => openAttachments(selected.value),
     },
   ]),
-  tableItems = [
-    { label: "Refrescar", icon: "pi pi-refresh", command: refreshTable },
-    { separator: true },
-    {
-      label: "Exportar Excel",
-      icon: "pi pi-file-excel",
-      command: () => tableRef.value?.exportToExcel(),
-    },
-    { separator: true },
-    {
-      label: "Requerimientos y documentación AEAT",
-      icon: "pi pi-building-columns",
-      command: () => aeatCasesRef.value?.open(),
-    },
-  ];
+  tableItems = computed(() => {
+    const t: any[] = [{ label: "Refrescar", icon: "pi pi-refresh", command: refreshTable }];
+    if (securityStore.hasPermission(PERM.RPT_EXPORT)) {
+      t.push({ separator: true });
+      t.push({ label: "Exportar Excel", icon: "pi pi-file-excel", command: () => tableRef.value?.exportToExcel() });
+    }
+    if (securityStore.hasPermission(PERM.INV_VERIFACTU)) {
+      t.push({ separator: true });
+      t.push({ label: "Requerimientos y documentación AEAT", icon: "pi pi-building-columns", command: () => aeatCasesRef.value?.open() });
+    }
+    return t;
+  });
 const kpis = computed(() => [
     {
       label: "Borradores",

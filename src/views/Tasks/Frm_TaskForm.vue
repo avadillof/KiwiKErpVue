@@ -399,7 +399,7 @@
         <div class="kiwik-separator"></div>
 
         <template #footer>
-            <Button label="Guardar" icon="pi pi-check" :loading="saving" @click="save" />
+            <Button v-if="securityStore.hasPermission(PERM.TASK_EDIT)" label="Guardar" icon="pi pi-check" :loading="saving" @click="save" />
         </template>
 
         <ConfirmDialog />
@@ -409,6 +409,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
+const securityStore = useSecurityStore();
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import Button from 'primevue/button';
@@ -433,6 +434,8 @@ import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
 import { useCompanyStore } from '@/stores/companyStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';;
 import { useFormValidator } from '@/libs/HelperView';
 import {
     TASK_PRIORITIES,

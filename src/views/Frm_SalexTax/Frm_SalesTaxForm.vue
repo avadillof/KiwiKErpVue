@@ -69,7 +69,7 @@
 
 
         <template #footer>
-            <Button label="Guardar" icon="pi pi-check" @click="save" />
+            <Button v-if="securityStore.hasPermission(PERM.SYS_TAX)" label="Guardar" icon="pi pi-check" @click="save" />
         </template>
 
 
@@ -103,6 +103,7 @@ import { computed } from 'vue'
 import { ref, reactive } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useSecurityStore } from '../../stores/securityStore.ts';
+import { PERM } from '@/services/Frm_Main/permissions';
 import { useCompanyStore } from '../../stores/companyStore';
 
 

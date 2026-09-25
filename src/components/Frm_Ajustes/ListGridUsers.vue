@@ -12,6 +12,7 @@
       </template>
       <template #end>
         <Button
+          v-if="securityStore.hasPermission(PERM.SYS_USERS)"
           label="Nuevo usuario"
           icon="pi pi-plus"
           size="small"
@@ -116,6 +117,9 @@ import { ref, computed } from 'vue';
 
 import { FilterMatchMode } from '@primevue/core/api';
 import { HelperDates } from '../../libs/HelperDates';
+import { useSecurityStore } from '../../stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+const securityStore = useSecurityStore();
 import { HelperString } from '../../libs/HelperString';
 import HistoricDialog from './Dg_HitoricUserConnections.vue';
 import type { MenuItem } from 'primevue/menuitem';
@@ -183,6 +187,7 @@ const menuItems = computed(() => {
       label: 'Borrar',
       icon: 'pi pi-trash',
       style: 'color: var(--red-500)',
+      visible: securityStore.hasPermission(PERM.SYS_USERS),
       command: () => deleteUser()
     },
 
@@ -191,6 +196,7 @@ const menuItems = computed(() => {
     {
       disabled: userSelected.value?.admin,
       label: 'Seguridad de Usuario',
+      visible: securityStore.hasPermission(PERM.SYS_SECURITY),
       icon: 'pi pi-shield',
       command: () => {
         if (!userSelected.value) return;

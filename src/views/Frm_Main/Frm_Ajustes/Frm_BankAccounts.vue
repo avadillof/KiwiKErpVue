@@ -40,7 +40,10 @@ import axios from 'axios';
 import Button from 'primevue/button';import Column from 'primevue/column';import Dialog from 'primevue/dialog';import InputText from 'primevue/inputtext';import Menu from 'primevue/menu';import Message from 'primevue/message';import Toolbar from 'primevue/toolbar';
 import GenericDataTable from '@/components/shared/GenericDataTable.vue';
 import {useAuthStore} from '@/stores/authStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 import {HelperString} from '@/libs/HelperString';
+const securityStore = useSecurityStore();
 type Account={id:number|null;description:string;sucursal:string;ibam:string};
 const router=useRouter(),auth=useAuthStore(),toast=useToast(),table=ref<InstanceType<typeof GenericDataTable>>(),menu=ref<InstanceType<typeof Menu>>();
 const error=ref(''),formError=ref(''),deleteError=ref(''),visible=ref(false),saving=ref(false),attempted=ref(false),deleteVisible=ref(false),deleting=ref(false),selected=ref<Account|null>(null);
@@ -51,7 +54,7 @@ const normalizedIban=computed(()=>form.ibam.replace(/[\s\u00a0\u202f]+/g,'').toU
 const validIban=computed(()=>HelperString.isValidIban(normalizedIban.value) && (!normalizedIban.value.startsWith('ES') || /^ES[0-9]{22}$/.test(normalizedIban.value)));
 const formatIban=(value:string)=>value?.replace(/\s/g,'').replace(/(.{4})/g,'$1 ').trim()||'';
 const message=(e:any)=>typeof e.response?.data==='string'?e.response.data:e.response?.data?.message||'No se pudo completar la operación. Comprueba la conexión y tu sesión.';
-const actions=[{label:'Editar',icon:'pi pi-pencil',command:()=>{if(selected.value)edit(selected.value);}},{label:'Eliminar',icon:'pi pi-trash',command:()=>{deleteError.value='';deleteVisible.value=true;}}];
+const actions=computed(()=>{const a:any[]=[{label:'Editar',icon:'pi pi-pencil',command:()=>{if(selected.value)edit(selected.value);}}];if(securityStore.hasPermission(PERM.SYS_BANK))a.push({label:'Eliminar',icon:'pi pi-trash',command:()=>{deleteError.value='';deleteVisible.value=true;}});return a;});
 function openMenu(event:Event,account:Account){selected.value=account;menu.value?.toggle(event);}
 function edit(account?:Account){Object.assign(form,account?{...account,sucursal:account.sucursal||'',ibam:account.ibam||''}:blank());attempted.value=false;formError.value='';visible.value=true;}
 async function save(){

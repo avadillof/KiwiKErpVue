@@ -59,7 +59,7 @@
                 </Column>
                 <Column style="width:130px">
                     <template #body="{ data }">
-                        <Button label="Facturar" icon="pi pi-receipt" size="small"
+                        <Button v-if="securityStore.hasPermission(PERM.TASK_BILL)" label="Facturar" icon="pi pi-receipt" size="small"
                             :disabled="pendingOf(data) <= 0" @click="bill(data)" />
                     </template>
                 </Column>
@@ -82,6 +82,8 @@ import Tag from 'primevue/tag';
 import Toolbar from 'primevue/toolbar';
 import ManualInvoiceDialog from '@/views/Ventas/Frm_Facturas/ManualInvoiceDialog.vue';
 import { useAuthStore } from '@/stores/authStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 import { useCompanyStore } from '@/stores/companyStore';
 import {
     getBillingPending,
@@ -93,6 +95,7 @@ const router = useRouter();
 const toast = useToast();
 const companyStore = useCompanyStore();
 const authStore = useAuthStore();
+const securityStore = useSecurityStore();
 
 const loading = ref(false);
 const pending = ref<TaskDTO[]>([]);

@@ -8,7 +8,7 @@
     <section class="list-card">
       <Toolbar class="list-toolbar">
         <template #start><div class="workspace-heading"><span>Listado de tarifas</span><small>Consulta y gestiona las condiciones de precios de tus clientes.</small></div></template>
-        <template #end><Button class="new-document" label="Nueva tarifa" icon="pi pi-plus" size="small" :disabled="loading || !catalog" @click="create"/></template>
+        <template #end><Button v-if="securityStore.hasPermission(PERM.PRICELIST_EDIT)" class="new-document" label="Nueva tarifa" icon="pi pi-plus" size="small" :disabled="loading || !catalog" @click="create"/></template>
       </Toolbar>
     <GenericDataTable ref="ratesTable" class="rates-table" dataKey="id" selectionMode="single" v-model:selection="selectedRate" endpoint="WebSalesPriceLists" :requestConfig="auth.portalRequestConfig" :showPaginator="true" :filterable="true" :showActions="true" @load-error="error=pricingErrorMessage($event)">
       <template #panelOptions><span class="rule-count">{{ruleCount}} reglas guardadas</span></template>
@@ -27,7 +27,7 @@
       <div class="flex align-items-end gap-3 flex-wrap">
         <label>Moneda de los precios actuales<Select v-model="settings.baseCurrencyId" :options="catalog.currencies" optionLabel="label" optionValue="id" :disabled="baseConfigured || savingSettings" placeholder="Seleccionar moneda"/></label>
         <label>Tarifa predeterminada<Select v-model="settings.defaultTarifaId" :options="catalog.rates.filter((r:any)=>r.currencyId===settings.baseCurrencyId)" optionLabel="description" optionValue="id" :disabled="savingSettings" placeholder="Seleccionar tarifa"/></label>
-        <Button label="Guardar configuración" icon="pi pi-save" :loading="savingSettings" @click="saveSettings"/>
+        <Button v-if="securityStore.hasPermission(PERM.PRICELIST_EDIT)" label="Guardar configuración" icon="pi pi-save" :loading="savingSettings" @click="saveSettings"/>
       </div>
       <small v-if="!baseConfigured">Confirma la moneda en la que están expresados los precios de tus productos. Una vez guardada, no se podrá cambiar desde esta pantalla.</small>
       <small>La tarifa predeterminada debe usar la moneda base. Las tarifas en otras monedas pueden asignarse al cliente o al documento, pero requieren precios fijos para los productos vendidos; no se convierten divisas automáticamente.</small>
@@ -40,7 +40,7 @@
         <div class="fields"><label>Código<InputText v-model="form.code" maxlength="45" :disabled="saving"/></label><label>Descripción<InputText v-model="form.description" maxlength="80" :disabled="saving"/></label><label>Moneda<Select v-model="form.currencyId" :options="catalog?.currencies" optionLabel="label" optionValue="id" :disabled="saving || !!form.id"/><small v-if="form.id" class="currency-help">La moneda de una tarifa guardada no se cambia: sus precios no se convierten automáticamente. Crea otra tarifa para trabajar en una moneda distinta.</small></label></div>
         <Message v-if="isOtherCurrency(form.currencyId)" severity="warn" :closable="false">Tarifa en otra moneda: requiere precios fijos en la moneda seleccionada para cada producto y cantidad que vendas. No se aplican descuentos sobre el precio base ni se convierten divisas automáticamente. <span v-if="!form.rules.length">Esta tarifa todavía no tiene precios definidos.</span></Message>
         <Message severity="info">Una regla por destino y cantidad mínima. Se elige el tramo más alto alcanzado, después de priorizar producto, familia y general. La cantidad mínima se expresa en la unidad de venta habitual del producto; 0 significa sin mínimo. El precio fijo se expresa por la unidad de venta habitual del producto. Los descuentos se calculan sobre su Precio de venta; las reglas no se acumulan. Familia se refiere a la familia exacta del producto, sin herencia de subfamilias.</Message>
-        <div class="flex align-items-center justify-content-between"><h2>Reglas de precios</h2><Button label="Añadir regla" icon="pi pi-plus" :disabled="saving || form.rules.length>=1000" @click="addRule"/></div>
+        <div class="flex align-items-center justify-content-between"><h2>Reglas de precios</h2><Button v-if="securityStore.hasPermission(PERM.PRICELIST_EDIT)" label="Añadir regla" icon="pi pi-plus" :disabled="saving || form.rules.length>=1000" @click="addRule"/></div>
         <DataTable ref="rulesTable" :value="form.rules" scrollable scrollHeight="flex" class="rules-table">
           <template #empty>Sin reglas: se utilizará el precio base si la moneda coincide.</template>
           <Column header="Aplicar a" style="min-width:170px"><template #body="{data}"><Select v-model="data.scope" :options="scopes" optionLabel="label" optionValue="value" :disabled="saving" @update:modelValue="data.productId=null;data.familyId=null;data.productLabel=''" fluid/></template></Column>
@@ -68,12 +68,15 @@ import GenericDataTable from '@/components/shared/GenericDataTable.vue';
 import Menu from 'primevue/menu';
 import ProductLookup from '@/components/shared/ProductLookup.vue';
 import {useAuthStore} from '@/stores/authStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 import {pricingErrorMessage} from '@/services/salesPricing';
 const auth=useAuthStore();
+const securityStore = useSecurityStore();
 const router=useRouter(),toast=useToast(),catalog=ref<any>(null),loading=ref(false),saving=ref(false),savingSettings=ref(false),dialog=ref(false),error=ref(''),editError=ref(''),baseConfigured=ref(false),rulesTable=ref<any>();
 const configExpanded=ref(false),ratesTable=ref<any>(),selectedRate=ref<any>(null);
 const rowMenu=ref<InstanceType<typeof Menu>>(),menuRate=ref<any>(null);
-const rowMenuItems=computed(()=>[{label:'Editar tarifa',icon:'pi pi-pencil',disabled:loading.value||!menuRate.value,command:()=>{if(menuRate.value)void edit(menuRate.value.id);}}]);
+const rowMenuItems=computed(()=>[{label:'Editar tarifa',visible: securityStore.hasPermission(PERM.PRICELIST_EDIT),icon:'pi pi-pencil',disabled:loading.value||!menuRate.value,command:()=>{if(menuRate.value)void edit(menuRate.value.id);}}]);
 function openRowMenu(event:Event,rate:any){selectedRate.value=rate;menuRate.value=rate;rowMenu.value?.toggle(event);}
 async function refresh(){await Promise.all([load(),ratesTable.value?.refresh()]);}
 const settings=reactive({version:0,baseCurrencyId:null as number|null,defaultTarifaId:null as number|null});

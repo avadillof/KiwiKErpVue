@@ -6,7 +6,7 @@
         </header>
 
         <div class="card list-card">
-            <Toolbar class="list-toolbar"><template #start><div class="workspace-heading"><span>Listado de pedidos</span><small>Controla el estado y avance de cada operación de venta.</small></div></template><template #end><div class="module-actions"><SalesAutomationActions module="orders" @executed="refreshTable" /><Button class="new-document" label="Nuevo pedido" icon="pi pi-plus" size="small" @click="orderFormRef?.open(null)" /></div></template></Toolbar>
+            <Toolbar class="list-toolbar"><template #start><div class="workspace-heading"><span>Listado de pedidos</span><small>Controla el estado y avance de cada operación de venta.</small></div></template><template #end><div class="module-actions"><SalesAutomationActions module="orders" @executed="refreshTable" /><Button v-if="securityStore.hasPermission(PERM.ORDER_EDIT)" class="new-document" label="Nuevo pedido" icon="pi pi-plus" size="small" @click="orderFormRef?.open(null)" /></div></template></Toolbar>
             <GenericDataTable class="orders-table" ref="tableRef" dataKey="pkid" selectionMode="single" v-model:selection="selectedOrder"
                 endpoint="WebGetSalesOrders" :params="{ state: selectedState || undefined, pendingFlow: selectedPendingFlow || undefined, deliveryDeadline: selectedDeliveryDeadline || undefined }" :showPaginator="true" :filterable="true" :showActions="true"
                 @row-select="({ data }) => selectedOrder = data" @search="clearDateFilters">
@@ -102,10 +102,13 @@ import OrderInvoiceDialog from './OrderInvoiceDialog.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue';
 import SalesTraceabilityDialog from '../SalesTraceabilityDialog.vue';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 
 const orderInvoiceDialogRef = ref<any>();
 const traceabilityRef = ref<any>();
 const onOrderInvoiceGenerated = (invoice:any) => { tableRef.value?.refresh(); loadOrderStatistics(); router.push({name:'Facturas',query:{invoiceId:String(invoice.pkid)}}); };
+const securityStore = useSecurityStore();
 const router = useRouter(); const route = useRoute(); const toast = useToast(); const confirm = useConfirm();
 const tableRef = ref<any>(); const tableMenu = ref(); const orderMenu = ref(); const orderFormRef = ref<any>(); const deliveryDialogRef = ref<any>(); const selectedOrder = ref<any>(null); const selectedState = ref<string | null>(null); const selectedPendingFlow = ref<string | null>(null); const selectedDeliveryDeadline = ref<string | null>(null); const creationDatePanel = ref(); const creationDateRange = ref<[Date | null, Date | null] | null>(null);
 const creatorPhotoErrors = ref<Record<number, boolean>>({});
@@ -144,24 +147,28 @@ const monthlyChartData = computed(() => ({ labels: statistics.value.months, data
 const flowChartData = computed(() => ({ labels: Object.keys(statistics.value.flowCounts), datasets: [{ data: Object.values(statistics.value.flowCounts), backgroundColor: ['#dcebfa', '#f2e6f8', '#e4f5dd'], borderColor: ['#2875b6', '#9253b5', '#569419'], borderWidth: 2 }] }));
 const monthlyChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 11, usePointStyle: true } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: (value: number) => new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractionDigits: 1 }).format(value) } } } };
 const flowChartOptions = { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 11, padding: 14 } } } };
-const tableMenuItems = [{ label: 'Refrescar', icon: 'pi pi-refresh', command: () => refreshTable() }, { label: 'Exportar Excel', icon: 'pi pi-file-excel', command: () => tableRef.value?.exportToExcel() }];
+const tableMenuItems = computed(() => {
+    const t: any[] = [{ label: 'Refrescar', icon: 'pi pi-refresh', command: () => refreshTable() }];
+    if (securityStore.hasPermission(PERM.RPT_EXPORT)) t.push({ label: 'Exportar Excel', icon: 'pi pi-file-excel', command: () => tableRef.value?.exportToExcel() });
+    return t;
+});
 const orderMenuItems = computed(() => {
     const items: any[] = [{ label: 'Abrir pedido', icon: 'pi pi-pencil', command: () => orderFormRef.value?.open(selectedOrder.value?.pkid) }];
-    if (isDraft(selectedOrder.value?.state)) items.push({ separator: true }, { label: 'Confirmar pedido', icon: 'pi pi-check-circle', command: confirmOrder });
+    if (isDraft(selectedOrder.value?.state) && securityStore.hasPermission(PERM.ORDER_STATE)) items.push({ separator: true }, { label: 'Confirmar pedido', icon: 'pi pi-check-circle', command: confirmOrder });
     if (!isDraft(selectedOrder.value?.state)) {
-        items.push({ separator: true }, { label: 'Generar proforma', icon: 'pi pi-file', command: generateProforma });
-        if (Number(selectedOrder.value?.proformaCount ?? 0) > 0) items.push({ label: 'Ver proformas', icon: 'pi pi-folder-open', command: openProformas });
-        if (!['Completado / Completed', 'Cancelado / Canceled'].includes(selectedOrder.value?.state)) {
+        if (securityStore.hasPermission(PERM.ORDER_PRINT)) items.push({ separator: true }, { label: 'Generar proforma', icon: 'pi pi-file', command: generateProforma });
+        if (Number(selectedOrder.value?.proformaCount ?? 0) > 0 && securityStore.hasPermission(PERM.ORDER_PRINT)) items.push({ label: 'Ver proformas', icon: 'pi pi-folder-open', command: openProformas });
+        if (!['Completado / Completed', 'Cancelado / Canceled'].includes(selectedOrder.value?.state) && securityStore.hasPermission(PERM.ORDER_STATE)) {
             items.push({ separator: true }, { label: selectedOrder.value?.locked ? 'Desbloquear pedido' : 'Bloquear pedido', icon: selectedOrder.value?.locked ? 'pi pi-lock-open' : 'pi pi-lock', command: toggleOrderLock });
             if (!selectedOrder.value?.locked && Number(selectedOrder.value?.cancellablePendingQuantity ?? 0) > 0) items.push({ label: 'Cancelar cantidades pendientes', icon: 'pi pi-ban', command: cancelPendingOrder });
         }
     }
-    if (selectedOrder.value?.canInvoiceFromOrder) items.push({label:'Facturar desde pedido',icon:'pi pi-receipt',command:()=>orderInvoiceDialogRef.value?.open(selectedOrder.value.pkid)});
-    if (canGenerateDelivery(selectedOrder.value)) items.push({ label: 'Generar albarán', icon: 'pi pi-truck', command: () => deliveryDialogRef.value?.open(selectedOrder.value?.pkid) });
+    if (selectedOrder.value?.canInvoiceFromOrder && securityStore.hasPermission(PERM.ORDER_TO_INVOICE)) items.push({label:'Facturar desde pedido',icon:'pi pi-receipt',command:()=>orderInvoiceDialogRef.value?.open(selectedOrder.value.pkid)});
+    if (canGenerateDelivery(selectedOrder.value) && securityStore.hasPermission(PERM.ORDER_TO_DELIVERY)) items.push({ label: 'Generar albarán', icon: 'pi pi-truck', command: () => deliveryDialogRef.value?.open(selectedOrder.value?.pkid) });
     items.push({ separator: true },
         { label: 'Trazabilidad comercial', icon: 'pi pi-sitemap', command: () => traceabilityRef.value?.open('ORDER', selectedOrder.value?.pkid) },
-        { label: 'Notas', icon: 'pi pi-comments', command: openNotes },
-        { label: `Documentos${selectedOrder.value?.attachmentCount ? ` (${selectedOrder.value.attachmentCount})` : ''}`, icon: 'pi pi-paperclip', command: () => { showAttachments.value = true; } });
+        { label: 'Notas', icon: 'pi pi-comments', visible: securityStore.hasPermission(PERM.ORDER_NOTES), command: openNotes },
+        { label: `Documentos${selectedOrder.value?.attachmentCount ? ` (${selectedOrder.value.attachmentCount})` : ''}`, icon: 'pi pi-paperclip', visible: securityStore.hasPermission(PERM.ORDER_DOCS), command: () => { showAttachments.value = true; } });
     return items;
 });
 const openNotes = () => { if (!selectedOrder.value?.pkid) return; noteRequest.id = selectedOrder.value.pkid; showNotes.value = true; };

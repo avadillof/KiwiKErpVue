@@ -42,10 +42,10 @@
                         <Button label="Avisar vencidas" icon="pi pi-send" severity="secondary" outlined
                             size="small" title="Avisar vencidas a sus responsables" :loading="notifying"
                             @click="askNotifyOverdue" />
-                        <Button label="Pendientes de facturar" icon="pi pi-wallet" severity="secondary" outlined
+                        <Button v-if="securityStore.hasPermission(PERM.TASK_BILLING_PENDING)" label="Pendientes de facturar" icon="pi pi-wallet" severity="secondary" outlined
                             size="small" title="Tareas finalizadas pendientes de facturar"
                             @click="router.push({ name: 'TareasPendientes' })" />
-                        <Button class="new-document" label="Nueva tarea" icon="pi pi-plus" size="small"
+                        <Button v-if="securityStore.hasPermission(PERM.TASK_EDIT)" class="new-document" label="Nueva tarea" icon="pi pi-plus" size="small"
                             @click="openNew()" />
                     </div>
                 </template>
@@ -201,6 +201,8 @@ import Tag from 'primevue/tag';
 import Toolbar from 'primevue/toolbar';
 import { useCompanyStore } from '@/stores/companyStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 import { useMessagesStore } from '@/stores/messagesStore';
 import { backendUrl } from '@/services/backendUrl';
 import { loadTaskBoardPrefs, saveTaskBoardPrefs, type TaskBoardPrefs } from '@/services/Tasks/taskPrefs';
@@ -228,6 +230,7 @@ const confirm = useConfirm();
 const toast = useToast();
 const companyStore = useCompanyStore();
 const authStore = useAuthStore();
+const securityStore = useSecurityStore();
 const messagesStore = useMessagesStore();
 
 const loading = ref(false);

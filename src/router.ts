@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from './stores/authStore';
+import { useSecurityStore } from './stores/securityStore';
+import { PERM } from './services/Frm_Main/permissions';
 
 // 1. Importaciones tradicionales
 
@@ -68,91 +70,109 @@ const routes = [
       {
         path: '/ventas',
         name: 'Ventas', // Este nombre debe coincidir con el 'ruta' en tu lista
+        meta: { perm: PERM.SALES_OPTIONS },
         component: Pn_VentasHub
       },
       {
         path: '/ventas/clientes',
         name: 'Clientes', // <--- Este nombre debe coincidir EXACTAMENTE con la 'ruta' en tu lista
+        meta: { perm: PERM.SALES_OPTIONS },
         component: Frm_Clientes
       },
       {
         path: '/ventas/presupuestos',
         name: 'Presupuestos',
+        meta: { perm: PERM.SALES_NAV_QUOTES },
         component: Frm_Presupuestos
       },
       {
         path: '/ventas/pedidos',
         name: 'Pedidos',
+        meta: { perm: PERM.SALES_NAV_ORDERS },
         component: Frm_Pedidos
       },
       {
         path: '/ventas/albaranes',
         name: 'Albaranes',
+        meta: { perm: PERM.SALES_NAV_DELIVERY },
         component: Frm_Albaranes
       },
 {
         path: '/ventas/facturas',
         name: 'Facturas',
+        meta: { perm: PERM.SALES_NAV_INVOICES },
         component: Frm_Facturas
       },
       {
         path: '/ventas/rectificativas',
         name: 'Rectificativas',
+        meta: { perm: PERM.SALES_NAV_CREDIT },
         component: () => import('./views/Ventas/Frm_Rectificativas/Frm_Rectificativas.vue')
       },
       {
         path: '/ventas/lista-precios',
         name: 'ListaPrecios',
+        meta: { perm: PERM.SALES_NAV_PRICELIST },
         component: () => import('./views/Ventas/Frm_ListaPrecios.vue')
       },
       {
         path: '/ventas/ajustes',
         name: 'AjustesVentas',
+        meta: { perm: PERM.SALES_SETTINGS },
         component: () => import('./views/Ventas/Frm_AjustesVentas/Frm_AjustesVentas.vue')
       },
       {
         path: '/ventas/informes',
         name: 'InformesVentas',
+        meta: { perm: PERM.RPT_SALES },
         component: () => import('./views/Ventas/Frm_InformesVentas.vue')
       },
       {
         path: '/tareas',
         name: 'Tareas',
+        meta: { perm: PERM.TASK_ACCESS },
         component: () => import('./views/Tasks/Frm_Tareas.vue')
       },
       {
         path: '/tareas/pendientes',
         name: 'TareasPendientes',
+        meta: { perm: PERM.TASK_BILLING_PENDING },
         component: () => import('./views/Tasks/Frm_BillingPending.vue')
       },
       {
         path: '/security',
         name: 'security',
+        meta: { perm: PERM.SYS_SECURITY },
         component: () => import('@/views/security/Frm_Security.vue')
       },
       {
         path: '/Frm_Products',
         name: 'Productos', // <--- Este nombre debe coincidir EXACTAMENTE con la 'ruta' en tu lista
+        meta: { module: 'PRODUCTS' },
         component: Frm_Products
       },
       {
         path: '/Frm_SalexTax',
         name: 'Taxas', // <--- Este nombre debe coincidir EXACTAMENTE con la 'ruta' en tu lista
+        meta: { perm: PERM.SYS_TAX },
         component: Frm_SalesTax
       },
       {
         path: '/configuracion/cuentas-bancarias',
         name: 'BankAccounts',
+        meta: { perm: PERM.SYS_BANK },
         component: () => import('./views/Frm_Main/Frm_Ajustes/Frm_BankAccounts.vue')
       },
       {
         path: '/security/Frm_Certificates',
         name: 'Certificates', // <--- Este nombre debe coincidir EXACTAMENTE con la 'ruta' en tu lista
+        meta: { perm: PERM.CERT_ACCESS },
         component: Frm_Certificates
       },
       {
         path: '/Frm_Products/Frm_FamiliasProductos',
         name: 'FamiliasProductos',
+        meta: { perm: PERM.PROD_FAMILIES_NAV },
         component: Frm_FamiliasProductos
       },
 
@@ -197,6 +217,17 @@ router.beforeEach(async (to, from) => {
   // Si requiere autenticación y no estamos logueados, redirigimos al Login
   if (requiereAutenticacion && !authStore.isAuthenticated) {
     return { name: 'Login' }; // Redirección moderna
+  }
+
+  // Securizacion por modulo/permiso (modelo security_attributes).
+  // Si la seguridad aun no se cargo (refresh), se permite el paso y la vista
+  // ya oculta sus acciones; una vez cargada se exige el permiso.
+  const securityStore = useSecurityStore();
+  if (requiereAutenticacion && securityStore.loaded && authStore.isAuthenticated) {
+    const needModule = to.matched.map((r) => (r.meta as any)?.module).find(Boolean) as string | undefined;
+    if (needModule && !securityStore.hasModule(needModule)) return { name: 'Dashboard' };
+    const needPerm = to.matched.map((r) => (r.meta as any)?.perm).find(Boolean) as string | undefined;
+    if (needPerm && !securityStore.hasPermission(needPerm)) return { name: 'Dashboard' };
   }
 
   // Si todo está bien o no requiere autenticación, retornamos true para permitir el acceso

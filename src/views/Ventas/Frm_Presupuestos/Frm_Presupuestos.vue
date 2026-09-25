@@ -42,7 +42,7 @@
                 selectedQuote = null;
                 refreshTable();
               "
-            /><Button
+            /><Button v-if="securityStore.hasPermission(PERM.QUOTE_EDIT)"
               class="new-document"
               label="Nuevo presupuesto"
               icon="pi pi-plus"
@@ -611,7 +611,10 @@ import AttachmentsDialog from "@/components/attachments/AttachmentsDialog.vue";
 import DialogNotes from "@/components/dialogs/DialogNotes.vue";
 import Frm_PresupuestoForm from "./Frm_PresupuestoForm.vue";
 import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
+import { useSecurityStore } from "@/stores/securityStore";
+import { PERM } from "@/services/Frm_Main/permissions";
 
+const securityStore = useSecurityStore();
 const router = useRouter();
 const route = useRoute();
 const confirm = useConfirm();
@@ -688,14 +691,18 @@ const expirationQuickFilters = [
   { label: "Vencidos", value: "expired" },
 ];
 
-const tableMenuItems = [
-  { label: "Refrescar", icon: "pi pi-refresh", command: () => refreshTable() },
-  {
-    label: "Exportar Excel",
-    icon: "pi pi-file-excel",
-    command: () => tableRef.value?.exportToExcel(),
-  },
-];
+const tableMenuItems = computed(() => {
+  const t: any[] = [
+    { label: "Refrescar", icon: "pi pi-refresh", command: () => refreshTable() },
+  ];
+  if (securityStore.hasPermission(PERM.RPT_EXPORT))
+    t.push({
+      label: "Exportar Excel",
+      icon: "pi pi-file-excel",
+      command: () => tableRef.value?.exportToExcel(),
+    });
+  return t;
+});
 const isDraftQuote = (quote: any) =>
   quote?.state === "Para Aprobar / To Approved Estimation";
 const getCreatorPhotoUrl = (userId: number) =>
@@ -788,13 +795,14 @@ const quoteMenuItems = computed(() => {
       icon: "pi pi-pencil",
       command: () => quoteFormRef.value?.open(selectedQuote.value?.pkid),
     },
-    {
+  ];
+  if (securityStore.hasPermission(PERM.QUOTE_PRINT))
+    items.push({
       label: "Ver / imprimir PDF",
       icon: "pi pi-file-pdf",
       command: () => openQuotePdf(),
-    },
-  ];
-  if (isDraftQuote(selectedQuote.value)) {
+    });
+  if (isDraftQuote(selectedQuote.value) && securityStore.hasPermission(PERM.QUOTE_EDIT)) {
     items.push({ separator: true });
     items.push({
       label: "Regenerar PDF",
@@ -803,7 +811,7 @@ const quoteMenuItems = computed(() => {
     });
   }
   if (isPendingQuote(selectedQuote.value)) {
-    if (selectedQuote.value?.entityId)
+    if (selectedQuote.value?.entityId && securityStore.hasPermission(PERM.QUOTE_EMAIL))
       items.push({
         label: isSentQuote(selectedQuote.value)
           ? "Reenviar presupuesto por correo"
@@ -811,24 +819,34 @@ const quoteMenuItems = computed(() => {
         icon: "pi pi-send",
         command: openSendDialog,
       });
-    items.push({
-      label: "Aceptar presupuesto",
-      icon: "pi pi-check",
-      command: () => requestQuoteAction("accept"),
-    });
-    items.push({
-      label: "Cancelar presupuesto",
-      icon: "pi pi-times",
-      class: "p-menuitem-danger",
-      command: () => requestQuoteAction("cancel"),
-    });
+    if (securityStore.hasPermission(PERM.QUOTE_ACCEPT))
+      items.push({
+        label: "Aceptar presupuesto",
+        icon: "pi pi-check",
+        command: () => requestQuoteAction("accept"),
+      });
+    if (securityStore.hasPermission(PERM.QUOTE_DELETE))
+      items.push({
+        label: "Cancelar presupuesto",
+        icon: "pi pi-times",
+        class: "p-menuitem-danger",
+        command: () => requestQuoteAction("cancel"),
+      });
   }
-  if (isCancelledQuote(selectedQuote.value))
-    items.push({
-      label: "Reabrir presupuesto",
-      icon: "pi pi-undo",
-      command: () => requestQuoteAction("reopen"),
-    });
+  if (isCancelledQuote(selectedQuote.value)) {
+    if (securityStore.hasPermission(PERM.QUOTE_REOPEN))
+      items.push({
+        label: "Reabrir presupuesto",
+        icon: "pi pi-undo",
+        command: () => requestQuoteAction("reopen"),
+      });
+    else if (securityStore.hasPermission(PERM.QUOTE_REOPEN_CANCELLED))
+      items.push({
+        label: "Reabrir presupuesto",
+        icon: "pi pi-undo",
+        command: () => requestQuoteAction("reopen"),
+      });
+  }
   items.push({ separator: true });
   items.push({
     label: "Trazabilidad comercial",
@@ -836,21 +854,23 @@ const quoteMenuItems = computed(() => {
     command: () =>
       traceabilityRef.value?.open("QUOTE", selectedQuote.value?.pkid),
   });
-  items.push({
-    label: "Notas",
-    icon: "pi pi-comments",
-    command: () => {
-      noteRequest.id = selectedQuote.value?.pkid ?? -1;
-      showNotes.value = true;
-    },
-  });
-  items.push({
-    label: "Documentos",
-    icon: "pi pi-paperclip",
-    command: () => {
-      showAttachments.value = true;
-    },
-  });
+  if (securityStore.hasPermission(PERM.QUOTE_NOTES))
+    items.push({
+      label: "Notas",
+      icon: "pi pi-comments",
+      command: () => {
+        noteRequest.id = selectedQuote.value?.pkid ?? -1;
+        showNotes.value = true;
+      },
+    });
+  if (securityStore.hasPermission(PERM.QUOTE_DOCS))
+    items.push({
+      label: "Documentos",
+      icon: "pi pi-paperclip",
+      command: () => {
+        showAttachments.value = true;
+      },
+    });
   return items;
 });
 const noteRequest = {

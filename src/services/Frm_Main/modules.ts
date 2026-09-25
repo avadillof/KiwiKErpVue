@@ -1,5 +1,6 @@
 import { useAuthStore } from '../../stores/authStore';
 import { useSecurityStore } from '../../stores/securityStore';
+import { PERM } from './permissions';
 
 export interface AppModule {
   id: string;
@@ -82,7 +83,8 @@ export const APP_MODULES: AppModule[] = [
     colorIcono: '#648506',
     bgIcono: '#eef4d8',
     disponible: true,
-    dashboardLevel: true
+    dashboardLevel: true,
+    requiredPermission: 'TASKS'
   },
   {
     id: 'ajustes',
@@ -105,7 +107,10 @@ export function visibleAppModules(): AppModule[] {
   const securityStore = useSecurityStore();
   return APP_MODULES.filter((module) => {
     if (module.hidden) return false;
-    if (module.adminOnly) return authStore.user?.admin === true;
+    if (module.adminOnly) {
+      if (authStore.user?.admin === true) return true;
+      try { return securityStore.hasPermission(PERM.SYS_ACCESS); } catch { return false; }
+    }
     if (module.requiredPermission) {
       if (authStore.user?.admin === true) return true;
       return securityStore.hasModule(module.requiredPermission);

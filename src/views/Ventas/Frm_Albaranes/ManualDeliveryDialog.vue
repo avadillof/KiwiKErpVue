@@ -27,13 +27,16 @@
     </div>
     </div>
 
-    <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-actions"><Button label="Cancelar" severity="secondary" text :disabled="saving" @click="visible=false" /><Button label="Guardar borrador" :disabled="pricing.invalid.value" icon="pi pi-save" :loading="saving" @click="save" /></div></div></template>
+    <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-actions"><Button label="Cancelar" severity="secondary" text :disabled="saving" @click="visible=false" /><Button v-if="securityStore.hasPermission(PERM.DELIV_EDIT)" label="Guardar borrador" :disabled="pricing.invalid.value" icon="pi pi-save" :loading="saving" @click="save" /></div></div></template>
   </Dialog>
   <PriceRecalculationDialog :visible="pricing.confirmVisible.value" :busy="pricing.batchBusy.value" :canKeep="pricing.canKeep.value" :error="pricing.error.value" @cancel="pricing.cancel" @keep="pricing.keep" @recalculate="pricing.recalculate"/>
 </template>
 
 <script setup lang="ts">
 import { backendUrl } from '@/services/backendUrl';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+const securityStore = useSecurityStore();
 import { computed, nextTick, reactive, ref } from 'vue';
 import axios from 'axios';
 import PriceRecalculationDialog from '@/components/shared/PriceRecalculationDialog.vue';

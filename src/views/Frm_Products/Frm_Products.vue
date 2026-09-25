@@ -292,7 +292,7 @@ const menuItems = computed(() => {
 
 
 
-    if (securityStore.hasPermission(PERM.PROD_EDIT)) {
+    if (securityStore.hasPermission(PERM.PROD_DELETE)) {
 
         items.push({
             label: 'Borrar',

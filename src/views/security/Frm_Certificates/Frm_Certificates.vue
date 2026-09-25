@@ -4,7 +4,7 @@
         <header class="page-header"><div class="page-heading"><div class="page-icon"><i class="pi pi-shield"></i></div><div><span class="breadcrumb">Configuración / Datos maestros</span><h1>Certificados digitales</h1><p>Firma electrónica, integraciones tributarias y usuarios autorizados.</p></div></div><nav class="header-actions"><Button label="Ajustes" icon="pi pi-arrow-left" severity="secondary" text @click="volver" /><Button label="Inicio" icon="pi pi-home" severity="secondary" text @click="router.push({ name: 'Dashboard' })" /></nav></header>
         <div class="card certificate-card"><Toolbar class="list-toolbar">
             <template #start><div class="workspace-heading"><span>Certificados registrados</span><small>Selecciona un certificado para consultar sus datos y autorizaciones.</small></div></template>
-            <template #end><Button label="Nuevo certificado" icon="pi pi-plus" size="small" @click="certificateFormRef.open(null)" /></template>
+            <template #end><Button v-if="securityStore.hasPermission(PERM.CERT_MANAGE)" label="Nuevo certificado" icon="pi pi-plus" size="small" @click="certificateFormRef.open(null)" /></template>
         </Toolbar>
 
         <Splitter class="certificate-splitter">
@@ -94,6 +94,9 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 
 import { useCompanyStore } from '@/stores/companyStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+const securityStore = useSecurityStore();
 import Frm_CertificateForm from '../Frm_Certificates/Frm_CertificateForm.vue';
 import Frm_CertificateUsersDialog from '../Frm_Certificates/Frm_CertificateUsersDialog.vue';
 
