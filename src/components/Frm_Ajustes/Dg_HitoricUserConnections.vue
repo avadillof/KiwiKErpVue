@@ -1,6 +1,6 @@
 <template>
     <Dialog v-model:visible="visible" modal :header="'Análisis de Actividad para ' + selectedUserName"
-        :style="{ width: '85%', height: '95vh' }" class="kiwik-dialog" :dismissableMask="true">
+        :style="{ width: 'min(1020px, 94vw)' }" :contentStyle="{ overflow: 'auto' }" class="kiwik-dialog history-dialog" :dismissableMask="true">
         <div class="reset-container">
 
             <div class="stats-row">
@@ -37,7 +37,7 @@
                     </h4>
                     <div class="chart-container">
                         <Chart type="line" :data="ctrl.chartData" :options="ctrl.chartOptions"
-                            :style="{ height: '65%', width: '100%' }" />
+                            :style="{ height: '100%', width: '100%' }" />
                     </div>
                 </div>
 
@@ -84,12 +84,16 @@
                     </div>
                 </div>
             </div>
-
-            <div class="kiwik-separator"></div>
-            <div class="flex justify-content-end">
-                <Button label="Cerrar" @click="visible = false" />
-            </div>
         </div>
+
+        <template #footer>
+            <div class="w-full">
+                <div class="kiwik-separator mb-3"></div>
+                <div class="flex justify-content-end">
+                    <Button label="Cerrar" icon="pi pi-times" severity="secondary" @click="visible = false" />
+                </div>
+            </div>
+        </template>
 
         
         <OverlayPanel ref="opDateFilterByDate" appendTo="body" >
@@ -101,14 +105,22 @@
 </template>
 
 <style scoped>
+/* Diálogo más compacto: el footer real ocupa todo el ancho */
+.history-dialog :deep(.p-dialog-footer) {
+    padding: 0 2rem 1.25rem !important;
+}
+.history-dialog .w-full {
+    width: 100%;
+}
+.history-dialog .mb-3 {
+    margin-bottom: 0.85rem;
+}
 /* Contenedor principal con un poco más de aire */
 .reset-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
     min-height: 0;
-    overflow: hidden;
-    gap: 0.75rem;
+    gap: 0.85rem;
 }
 
 /* Las "stat-cards" ahora lucen como tarjetas flotantes */
@@ -116,17 +128,17 @@
     flex: 0 0 auto;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+    gap: 0.75rem;
 }
 
 .stat-card {
     background: #ffffff;
-    padding: 0.75rem;
+    padding: 0.6rem 0.75rem;
     border-radius: 12px;
     border: 1px solid rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
@@ -137,9 +149,9 @@
 }
 
 .stat-card i {
-    font-size: 1.5rem;
-    padding: 0.75rem;
-    border-radius: 12px;
+    font-size: 1.15rem;
+    padding: 0.6rem;
+    border-radius: 10px;
     background: rgba(0, 0, 0, 0.03);
 }
 
@@ -152,7 +164,7 @@
 
 .stat-label {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     /* Un poco más grande que el default */
     color: #6b7280;
     /* Gris medio para no competir con el valor */
@@ -160,22 +172,20 @@
 }
 
 .stat-value {
-    font-size: 1.2rem;
+    font-size: 1.05rem;
     /* Aquí está el tamaño grande que buscas */
     color: #111827;
     /* Gris muy oscuro/casi negro para máxima legibilidad */
     line-height: 1.2;
-    margin-top: 0.25rem;
+    margin-top: 0.15rem;
 }
 
 /* Grid principal con separación limpia */
 .main-grid {
     display: grid;
-    grid-template-columns: 1fr 0.65fr;
-    gap: 0.5rem;
-    flex: 1;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 0.75rem;
     min-height: 0;
-    overflow: hidden;
 }
 
 /* Paneles con estética Glass-morphism sutil */
@@ -186,8 +196,8 @@
     min-height: 0;
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 20px;
-    padding: 1.5rem;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     flex: 1;
 }
@@ -203,8 +213,8 @@ h4 {
 .chart-container {
     flex: 1;
     /* Esto le da un 50% más de peso vertical que a otros elementos hermanos si los hubiera */
-    min-height: 400px;
-    /* <--- Esto es lo que realmente "alarga" la gráfica */
+    min-height: 260px;
+    max-height: 340px;
     position: relative;
     width: 100%;
 

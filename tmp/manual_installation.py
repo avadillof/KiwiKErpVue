@@ -58,6 +58,17 @@ def installation_pages(out,s):
             heading='Base de datos existente: confirmar la recreación'
             result.append(Paragraph(heading,s['h2']))
             md.extend(['### '+heading,''])
+            capture=assets/'instalacion-recrear-confirmacion.png'
+            if not capture.exists():
+                shutil.copy2(Path('C:/Users/comer/AppData/Local/Temp/codex-clipboard-19a8bbe0-a2b5-4433-88ee-1a30e9bfcdde.png'),capture)
+            intro='Este diálogo solicita una confirmación expresa antes de recrear una base de datos existente. La captura muestra el campo de confirmación vacío y el botón Crear copia y recrear deshabilitado.'
+            result.append(Paragraph(intro,s['text']))
+            result.append(CaptureCard(capture,487,'Confirmación de recreación de la base de datos'))
+            result.append(Spacer(1,12))
+            result.append(Paragraph('Lee la advertencia: la operación elimina la información actual. Primero se genera una copia de seguridad; si la copia falla, no se borra nada. Escribe RECREAR y pulsa Crear copia y recrear únicamente cuando quieras iniciar la operación. Cancelar cierra la confirmación.',s['text']))
+            md.extend([intro,'![Confirmación de recreación de la base de datos](imagenes/instalacion-recrear-confirmacion.png)',''])
+            result.append(PageBreak())
+            result.append(Paragraph('Recreación: pasos y resultado',s['h2']))
             sections=[
                 ('Cuándo aparece', 'Durante Preparación, KiwiKERP puede detectar una base de datos existente que requiere recreación. El asistente mantiene Continuar bloqueado y muestra el diálogo Base de datos existente. No es un paso obligatorio en todas las instalaciones.'),
                 ('Antes de decidir', 'La recreación elimina la información actual de la base y prepara una estructura limpia. Si necesitas conservar los datos para seguir trabajando con ellos, pulsa Cancelar y consulta con la persona responsable de la instalación. Cancelar no solicita la recreación.'),
