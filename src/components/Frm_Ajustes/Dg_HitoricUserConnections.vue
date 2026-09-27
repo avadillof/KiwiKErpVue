@@ -56,7 +56,7 @@
                             >
 
                             <template #headerActions>
-                                <Button icon="pi pi-ellipsis-v" text rounded @click="ctrl.menu.value.toggle($event)" />
+                                <Button icon="pi pi-ellipsis-v" text rounded aria-label="Acciones del historial" @click="menu?.toggle($event)" />
                                 <Menu ref="menu" :model="opcionesMenu" popup />
                             </template>
 
@@ -249,6 +249,7 @@ import { ref, reactive, toRefs, watch } from 'vue';
 
 
 const opDateFilterByDate = ref();
+const menu = ref();
 const ctrl = reactive(useDgHistoricUserConnectionsController());
 
 const onFilterByDateClick = (event: any) => {

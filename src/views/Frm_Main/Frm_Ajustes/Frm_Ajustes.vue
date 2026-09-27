@@ -14,16 +14,16 @@
 
     <Tabs v-model:value="activeTab">
       <TabList>
-        <Tab value="0"><i class="pi pi-building"></i><span>Empresa</span></Tab>
-        <Tab value="1"><i class="pi pi-sliders-h"></i><span>Preferencias</span></Tab>
-        <Tab value="2"><i class="pi pi-users"></i><span>Usuarios</span></Tab>
-        <Tab value="3"><i class="pi pi-database"></i><span>Datos maestros</span></Tab>
+        <Tab v-if="can(PERM.SYS_COMPANY)" value="0"><i class="pi pi-building"></i><span>Empresa</span></Tab>
+        <Tab v-if="can(PERM.SYS_COMPANY)" value="1"><i class="pi pi-sliders-h"></i><span>Preferencias</span></Tab>
+        <Tab v-if="can(PERM.SYS_USERS)" value="2"><i class="pi pi-users"></i><span>Usuarios</span></Tab>
+        <Tab v-if="canAny([PERM.SYS_BANK, PERM.SYS_TAX, PERM.CERT_ACCESS, PERM.PROD_FAMILIES_NAV])" value="3"><i class="pi pi-database"></i><span>Datos maestros</span></Tab>
         <Tab v-if="can(PERM.SYS_TECH)" value="4"><i class="pi pi-sparkles"></i><span>Inteligencia artificial</span></Tab>
         <Tab v-if="can(PERM.SYS_TECH)" value="5"><i class="pi pi-shield"></i><span>Salvaguarda de datos</span></Tab>
       </TabList>
 
       <TabPanels>
-        <TabPanel value="0">
+        <TabPanel v-if="can(PERM.SYS_COMPANY)" value="0">
           <div class="grid settings-company-layout">
             <div class="col-12 lg:col-3 pr-0 lg:pr-4">
               <div
@@ -212,7 +212,7 @@
           </div>
         </TabPanel>
 
-        <TabPanel value="1">
+        <TabPanel v-if="can(PERM.SYS_COMPANY)" value="1">
           <div class="preferences-layout">
             <div class="settings-form-section settings-form-section--preference">
               <h5 class="text-primary mt-0 mb-4 flex align-items-center gap-2">
@@ -268,7 +268,7 @@
 
         </TabPanel>
 
-        <TabPanel value="2">
+        <TabPanel v-if="can(PERM.SYS_USERS)" value="2">
           <section class="users-tab">
             <UsuariosTabla @edit="openUserDialog" />
           </section>
@@ -276,7 +276,7 @@
 
 
 
-        <TabPanel value="3">
+        <TabPanel v-if="canAny([PERM.SYS_BANK, PERM.SYS_TAX, PERM.CERT_ACCESS, PERM.PROD_FAMILIES_NAV])" value="3">
           <section class="master-data">
             <div class="master-data-header">
               <div>
@@ -825,6 +825,20 @@ import { useSecurityStore } from '@/stores/securityStore';
 import { PERM } from '@/services/Frm_Main/permissions';
 const securityStore = useSecurityStore();
 const can = (perm: string) => aiAuth.user?.admin === true || securityStore.hasPermission(perm);
+const canAny = (perms: string[]) => aiAuth.user?.admin === true || perms.some((p) => securityStore.hasPermission(p));
+const firstAllowedTab = (): string => {
+  if (can(PERM.SYS_COMPANY)) return '0';
+  if (can(PERM.SYS_USERS)) return '2';
+  if (canAny([PERM.SYS_BANK, PERM.SYS_TAX, PERM.CERT_ACCESS, PERM.PROD_FAMILIES_NAV])) return '3';
+  if (can(PERM.SYS_TECH)) return '4';
+  return '0';
+};
+const isTabAllowed = (tab: string): boolean => {
+  if (tab === '0' || tab === '1') return can(PERM.SYS_COMPANY);
+  if (tab === '2') return can(PERM.SYS_USERS);
+  if (tab === '3') return canAny([PERM.SYS_BANK, PERM.SYS_TAX, PERM.CERT_ACCESS, PERM.PROD_FAMILIES_NAV]);
+  return can(PERM.SYS_TECH);
+};
 import { onMounted, ref, watch } from 'vue';
 import Password from 'primevue/password';
 import { useRouter } from 'vue-router';
@@ -869,7 +883,9 @@ onMounted(async () => {
 const updateActiveTab = function (queryTab: any): void {
   if (queryTab) {
 const requested=String(queryTab);
-    activeTab.value=(!can(PERM.SYS_TECH)&&(requested==='4'||requested==='5'))?'0':requested;
+    activeTab.value=isTabAllowed(requested)?requested:firstAllowedTab();
+  } else if (!isTabAllowed(activeTab.value)) {
+    activeTab.value = firstAllowedTab();
   }
 };
 
@@ -884,7 +900,7 @@ watch(
   },
   { immediate: true }
 );
-watch(() => [aiAuth.user?.admin, securityStore.attributes], () => { if(!can(PERM.SYS_TECH)&&(activeTab.value==='4'||activeTab.value==='5'))activeTab.value='0'; });
+watch(() => [aiAuth.user?.admin, securityStore.attributes], () => { if(!isTabAllowed(activeTab.value))activeTab.value=firstAllowedTab(); });
 
 
 function openSalesTax() {

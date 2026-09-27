@@ -36,6 +36,9 @@ export const useAuthStore = defineStore('auth', {
       if(token) void fetch(backendUrl(`/WebLogoutPortalSession`), {method:'POST',headers:{'X-Portal-Session':token}}).catch(()=>{});
       this.user = null;
       this.isAuthenticated = false;
+      // Los recientes son por navegador: limpiarlos evita que el siguiente
+      // usuario vea (y reabra) módulos del anterior.
+      try { window.localStorage.removeItem('kiwik.menuRecents'); } catch { /* sin almacenamiento */ }
     },
     refreshUserPhoto() {
       // Al cambiar este valor, cualquier componente que lo use se actualizará

@@ -66,7 +66,7 @@ def users_pages(out, s):
         result.extend([Paragraph(h,s['h3']),Paragraph(t,s['text'])]);md.extend(['**'+h+'**',t])
     result.append(PageBreak())
     title='Desactivar una cuenta y confirmar su borrado'
-    intro='Desactivar y borrar son acciones diferentes. Una cuenta desactivada permanece en el listado con estado INACTIVO. El borrado solicita eliminar la cuenta y muestra una confirmación expresa.'
+    intro='Desactivar y borrar son acciones diferentes. Una cuenta desactivada permanece en el listado con estado INACTIVO. El borrado retira la cuenta del listado habitual mediante borrado lógico y muestra una confirmación expresa.'
     result.extend([Paragraph(title,s['h2']),Paragraph(intro,s['text']),CaptureCard(out/'imagenes/usuarios-inactivos.png',487,'Listado con cuentas activas e inactivas'),Spacer(1,12)])
     md.extend(['### '+title,intro,'![Usuarios inactivos](imagenes/usuarios-inactivos.png)'])
     for h,t in [
@@ -74,8 +74,19 @@ def users_pages(out, s):
         ('Interpretar Última conexión', 'Una cuenta inactiva puede conservar una fecha de último acceso, como QA_MANUAL_2509, o mostrar Nunca, como Alberto Rodriguez en esta captura. El estado indica si la cuenta está habilitada; Última conexión informa de sus accesos registrados. No representa una sesión abierta.')]:
         result.extend([Paragraph(h,s['h3']),Paragraph(t,s['text'])]);md.extend(['**'+h+'**',t])
     result.extend([Paragraph('Confirmar la eliminación',s['h3']),CaptureCard(out/'imagenes/usuario-confirmacion-borrado.png',487,'Confirmación de borrado de la cuenta'),Spacer(1,12)])
-    text='Selecciona Borrar en el menú de acciones. El diálogo identifica al usuario y advierte de que la acción no se puede deshacer. Comprueba el nombre antes de decidir. Cancelar permite abandonar la operación; Borrar confirma la solicitud de eliminación. Si solo necesitas impedir nuevos accesos conservando la cuenta, utiliza la desactivación. Esta captura muestra la confirmación, no el resultado del borrado; sus posibles restricciones por datos relacionados quedan pendientes de comprobar.'
+    text='Selecciona Borrar en el menú de acciones. El diálogo identifica al usuario y advierte de que la acción no se puede deshacer. Comprueba el nombre antes de decidir. Cancelar permite abandonar la operación; Borrar confirma la solicitud de eliminación. Si solo necesitas impedir nuevos accesos conservando la cuenta, utiliza la desactivación. La captura muestra la confirmación. El resultado de la prueba de borrado se documenta en el apartado siguiente.'
     result.append(Paragraph(text,s['text']));md.extend(['**Confirmar la eliminación**','![Confirmación de borrado](imagenes/usuario-confirmacion-borrado.png)',text])
+    result.append(PageBreak())
+    title='Borrar o desactivar: diferencias y resultado comprobado'
+    result.append(Paragraph(title,s['h2']));md.append('### '+title)
+    for h,t in [
+        ('Cuenta activa', 'La cuenta permanece en el listado y está habilitada para iniciar sesión con credenciales válidas. El estado activo no significa que la persona esté conectada en ese momento.'),
+        ('Cuenta inactiva', 'Permanece visible en el listado, conserva sus datos y su rol, pero no está habilitada para nuevos accesos. Para una suspensión temporal, desmarca Usuario Activo y guarda. Puedes volver a habilitarla desde Editar, marcando Usuario Activo y guardando. Esto gestiona la cuenta de acceso; no representa por sí mismo una baja laboral.'),
+        ('Cuenta borrada: borrado lógico', 'En el módulo de usuarios, Borrar marca la cuenta como eliminada y la excluye del listado habitual. El código del backend revisado conserva el registro en la base de datos; no ejecuta su eliminación física. Así se mantiene la referencia que otros datos pueden tener a ese usuario, evitando romper sus relaciones. Este comportamiento está comprobado en el código de Usuarios y no debe generalizarse a todos los módulos.'),
+        ('Por qué el diálogo indica que no se puede deshacer', 'Conservar el registro internamente no implica disponer de una papelera o un botón de restauración. La cuenta borrada ya no se edita desde el listado habitual para volver a activarla. Para impedir temporalmente el acceso, utiliza INACTIVO en lugar de Borrar.'),
+        ('Prueba funcional realizada el 26/09/2026', 'En el entorno Cloud autorizado se localizó USE01790404890/2026, Alberto Rodriguez, con estado INACTIVO y última conexión Nunca. Había 3 usuarios. Se abrió Borrar y se confirmó el nombre en el diálogo. Tras confirmar, el diálogo se cerró, la cuenta desapareció y el total pasó a 2. Al ejecutar Refrescar datos, siguió ausente. El administrador y QA_MANUAL_2509 permanecieron en el listado; esta última cuenta continuó INACTIVA.'),
+        ('Alcance de la comprobación', 'Se realizó una prueba funcional real en el navegador y una revisión del código local, no una prueba unitaria aislada. El backend revisado marca USER_BOL_DELETED y guarda la entidad; el listado excluye usuarios borrados y la consulta de acceso exige una cuenta activa y no borrada. No se consultó directamente la base de datos Cloud, no se comprobó un reinicio ni se probó el acceso con las credenciales de Alberto. Tampoco se ha comprobado la revocación de sesiones ya abiertas.')]:
+        result.extend([Paragraph(h,s['h3']),Paragraph(t,s['text'])]);md.extend(['**'+h+'**',t])
     result.append(PageBreak())
     h='Alta y estado del usuario: prueba realizada'
     t='Prueba realizada el 25/09/2026 en el entorno Cloud indicado por el responsable. Se creó la cuenta QA_MANUAL_2509, Prueba Manual Usuario, con grupo Usuarios y correo ficticio. La cuenta quedó inactiva al finalizar. No se modificaron las cuentas preexistentes ni se realizaron envíos de correo.'

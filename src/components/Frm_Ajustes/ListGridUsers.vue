@@ -161,6 +161,7 @@ const menuItems = computed(() => {
     {
       label: 'Editar',
       icon: 'pi pi-pencil',
+      visible: securityStore.hasPermission(PERM.SYS_USERS),
       command: () => {
         const id = userSelected.value?.pkid;
         if (!id || !userFormRef.value) return;
@@ -171,6 +172,7 @@ const menuItems = computed(() => {
     {
       label: 'Historial Conexiones',
       icon: 'pi pi-history',
+      visible: securityStore.hasPermission(PERM.SYS_USERS),
       command: () => {
         if (!userSelected.value) return;
 

@@ -65,6 +65,7 @@ const routes = [
       {
         path: 'Frm_Ajustes', // URL: /Frm_Main/ajustes
         name: 'Frm_Ajustes',
+        meta: { perm: PERM.SYS_ACCESS },
         component: () => import('./views/Frm_Main/Frm_Ajustes/Frm_Ajustes.vue')
       },
       {
@@ -220,14 +221,18 @@ router.beforeEach(async (to, from) => {
   }
 
   // Securizacion por modulo/permiso (modelo security_attributes).
-  // Si la seguridad aun no se cargo (refresh), se permite el paso y la vista
-  // ya oculta sus acciones; una vez cargada se exige el permiso.
+  // Fail-closed: una ruta con permiso exigido NUNCA se abre sin seguridad
+  // cargada. El Dashboard no exige permiso y queda como destino de rebote.
   const securityStore = useSecurityStore();
-  if (requiereAutenticacion && securityStore.loaded && authStore.isAuthenticated) {
+  if (requiereAutenticacion && authStore.isAuthenticated) {
     const needModule = to.matched.map((r) => (r.meta as any)?.module).find(Boolean) as string | undefined;
-    if (needModule && !securityStore.hasModule(needModule)) return { name: 'Dashboard' };
     const needPerm = to.matched.map((r) => (r.meta as any)?.perm).find(Boolean) as string | undefined;
-    if (needPerm && !securityStore.hasPermission(needPerm)) return { name: 'Dashboard' };
+    if (needModule || needPerm) {
+      if (to.name === 'Dashboard') return true;
+      if (!securityStore.loaded) return { name: 'Dashboard' };
+      if (needModule && !securityStore.hasModule(needModule)) return { name: 'Dashboard' };
+      if (needPerm && !securityStore.hasPermission(needPerm)) return { name: 'Dashboard' };
+    }
   }
 
   // Si todo está bien o no requiere autenticación, retornamos true para permitir el acceso

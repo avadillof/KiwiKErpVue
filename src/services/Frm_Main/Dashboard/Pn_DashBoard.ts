@@ -3,8 +3,10 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { backendUrl } from '@/services/backendUrl';
 import { useAuthStore } from '../../../stores/authStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '../permissions';
 import { getBillingPending } from '@/services/Tasks/taskService';
-import { getRecentModules, type RecentModule } from '../recentModules';
+import { visibleRecentModules, type RecentModule } from '../recentModules';
 
 interface Stats {
   quotes: any | null;
@@ -18,8 +20,30 @@ interface Stats {
 export function DashboardController() {
     const router = useRouter();
     const authStore = useAuthStore();
+    const securityStore = useSecurityStore();
 
-    const recents = ref<RecentModule[]>(getRecentModules());
+    const canCard = (perm: string): boolean => {
+        if (authStore.user?.admin === true) return true;
+        try { return securityStore.hasPermission(perm); } catch { return false; }
+    };
+
+    /** Permiso exigido por cada ruta navegable desde el panel. */
+    const ROUTE_PERMS: Record<string, string> = {
+        Tareas: PERM.TASK_ACCESS,
+        TareasPendientes: PERM.TASK_BILLING_PENDING,
+        Ventas: PERM.SALES_OPTIONS,
+        Presupuestos: PERM.SALES_NAV_QUOTES,
+        Pedidos: PERM.SALES_NAV_ORDERS,
+        Albaranes: PERM.SALES_NAV_DELIVERY,
+        Facturas: PERM.SALES_NAV_INVOICES,
+        Rectificativas: PERM.SALES_NAV_CREDIT,
+        ListaPrecios: PERM.SALES_NAV_PRICELIST,
+        AjustesVentas: PERM.SALES_SETTINGS,
+        InformesVentas: PERM.RPT_SALES,
+        Frm_Ajustes: PERM.SYS_ACCESS,
+    };
+
+    const recents = ref<RecentModule[]>(visibleRecentModules());
 
     const stats = ref<Stats>({ quotes: null, orders: null, invoices: null, rects: null, tasks: null, billing: null });
 
@@ -82,6 +106,7 @@ export function DashboardController() {
                 value: t?.mine ?? null,
                 sub: t ? (t.overdue ? `${fmt(t.overdue)} vencidas` : 'Al día') : 'Pendiente de carga',
                 route: 'Tareas',
+                perm: PERM.TASK_ACCESS,
                 gradient: 'linear-gradient(135deg,#9cc10a,#648506)'
             },
             {
@@ -89,6 +114,7 @@ export function DashboardController() {
                 value: b?.count ?? null,
                 sub: b ? `${fmt(Math.round(b.hours * 100) / 100)} h sin facturar` : 'Pendiente de carga',
                 route: 'TareasPendientes',
+                perm: PERM.TASK_BILLING_PENDING,
                 gradient: 'linear-gradient(135deg,#e46e8e,#b74267)'
             },
             {
@@ -96,6 +122,7 @@ export function DashboardController() {
                 value: q?.pendingCount ?? null,
                 sub: q ? `${fmtMoney(q.pendingAmount)} por confirmar` : 'Pendiente de carga',
                 route: 'Presupuestos',
+                perm: PERM.SALES_NAV_QUOTES,
                 gradient: 'linear-gradient(135deg,#8d78dc,#6250ad)'
             },
             {
@@ -103,6 +130,7 @@ export function DashboardController() {
                 value: o ? (o.deliveryPendingLines ?? 0) + (o.directInvoiceLines ?? 0) : null,
                 sub: o ? `${fmt(o.deliveryPendingQuantity)} uds. a servir` : 'Pendiente de carga',
                 route: 'Pedidos',
+                perm: PERM.SALES_NAV_ORDERS,
                 gradient: 'linear-gradient(135deg,#f3ae48,#dc7c22)'
             },
             {
@@ -110,6 +138,7 @@ export function DashboardController() {
                 value: f?.pendingCount ?? null,
                 sub: f ? `${fmtMoney(f.pendingAmount)} en cartera` : 'Pendiente de carga',
                 route: 'Facturas',
+                perm: PERM.SALES_NAV_INVOICES,
                 gradient: 'linear-gradient(135deg,#e46e8e,#b74267)'
             },
             {
@@ -117,6 +146,7 @@ export function DashboardController() {
                 value: f?.overdueCount ?? null,
                 sub: f ? 'Requieren seguimiento' : 'Pendiente de carga',
                 route: 'Facturas',
+                perm: PERM.SALES_NAV_INVOICES,
                 gradient: 'linear-gradient(135deg,#f28b82,#c53030)'
             },
             {
@@ -124,9 +154,10 @@ export function DashboardController() {
                 value: rectTotal,
                 sub: r ? 'Confirmadas / emitidas' : 'Pendiente de carga',
                 route: 'Rectificativas',
+                perm: PERM.SALES_NAV_CREDIT,
                 gradient: 'linear-gradient(135deg,#e56b6f,#bd3e43)'
             },
-        ];
+        ].filter((k) => canCard((k as any).perm));
     });
 
     function fmt(value: number): string {
@@ -139,6 +170,9 @@ export function DashboardController() {
 
     function navegarA(nombreRuta: string, disponible = true): void {
         if (!disponible) return;
+        // Defensa en el propio panel: no navegar a rutas sin permiso.
+        const need = ROUTE_PERMS[nombreRuta];
+        if (need && !canCard(need)) return;
         router.push({ name: nombreRuta });
     }
 

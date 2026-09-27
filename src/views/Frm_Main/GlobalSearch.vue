@@ -49,13 +49,13 @@ import { useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import { visibleAppModules } from '@/services/Frm_Main/modules';
-import { getRecentModules, recordRecent } from '@/services/Frm_Main/recentModules';
+import { visibleRecentModules, recordRecent } from '@/services/Frm_Main/recentModules';
 
 const router = useRouter();
 const visible = ref(false);
 const q = ref('');
 
-const recentItems = computed(() => getRecentModules());
+const recentItems = computed(() => visibleRecentModules());
 const visibleModules = computed(() => visibleAppModules());
 const filteredModules = computed(() => {
   const query = q.value.trim().toLowerCase();
