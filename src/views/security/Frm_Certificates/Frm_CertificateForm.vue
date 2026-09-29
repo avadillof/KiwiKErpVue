@@ -74,7 +74,7 @@
                         <Message v-if="certificate.file" severity="success" :closable="false" class="mt-3">
 
                             <i class="pi pi-file mr-2"></i>
-                            {{ certificate.file }}
+                            {{ fileDisplayName }}
 
                         </Message>
                     </p>
@@ -112,7 +112,7 @@
 
 <script setup lang='ts'>
 import { backendUrl } from '@/services/backendUrl';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
@@ -182,6 +182,15 @@ const certificate = ref({
 
     file: null
 
+});
+
+// Nombre a mostrar: el File seleccionado expone .name; al editar, el back
+// puede devolver el nombre ya como cadena.
+const fileDisplayName = computed(() => {
+    const f: any = certificate.value.file;
+    if (!f) return '';
+    if (typeof f === 'string') return f;
+    return f.name ?? '';
 });
 
 

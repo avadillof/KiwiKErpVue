@@ -52,7 +52,7 @@
               <IconField>
                 <InputIcon class="pi pi-user" />
                 <InputText id="user" v-model="loginData.username" autocomplete="username" placeholder="Tu usuario"
-                  autofocus fluid />
+                  :autofocus="!loginData.username" fluid />
               </IconField>
             </div>
 
@@ -60,7 +60,7 @@
               <div class="password-label"><label for="pass">Contraseña</label><button type="button"
                   @click="handleForgotPassword">¿Has olvidado tu contraseña?</button></div>
               <Password inputId="pass" v-model="loginData.password" autocomplete="current-password"
-                placeholder="Tu contraseña" :feedback="false" toggleMask fluid />
+                placeholder="Tu contraseña" :feedback="false" toggleMask fluid :autofocus="!!loginData.username" />
             </div>
 
             <Button type="submit" label="Acceder a KiwiKERP" icon="pi pi-arrow-right" iconPos="right"

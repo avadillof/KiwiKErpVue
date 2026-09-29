@@ -13,7 +13,15 @@ export function loginController() {
     const companyStore = useCompanyStore();
 
     const isForgotPasswordVisible = ref(false);
-    const loginData = ref({ username: '', password: '' });
+    const LAST_USERNAME_KEY = 'kiwik.lastUsername';
+    const lastUsername = (() => {
+        try {
+            return localStorage.getItem(LAST_USERNAME_KEY) || '';
+        } catch {
+            return '';
+        }
+    })();
+    const loginData = ref({ username: lastUsername, password: '' });
     const isLoading = ref(false);
     const errorMessage = ref('');
     const router = useRouter();
@@ -141,6 +149,11 @@ export function loginController() {
                 const userDTO = await response.json();
                 const authStore = useAuthStore();
                 authStore.setUser(userDTO, response.headers.get('X-Portal-Session') || '');
+                try {
+                    localStorage.setItem(LAST_USERNAME_KEY, loginData.value.username.trim());
+                } catch {
+                    // almacenamiento no disponible: el login sigue funcionando
+                }
                 loginData.value.password = '';
                 toast.add({
                     severity: 'success',
