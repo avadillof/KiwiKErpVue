@@ -1,5 +1,6 @@
 import { backendUrl } from '@/services/backendUrl';
 import { defineStore } from 'pinia';
+import { useSecurityStore } from './securityStore';
 
 // Definimos la estructura del usuario para que TypeScript sea feliz
 interface User {
@@ -34,6 +35,9 @@ export const useAuthStore = defineStore('auth', {
       const token=this.portalSession;
       this.portalSession='';
       if(token) void fetch(backendUrl(`/WebLogoutPortalSession`), {method:'POST',headers:{'X-Portal-Session':token}}).catch(()=>{});
+      try {
+        useSecurityStore().clearSecurity();
+      } catch { /* sin pinia activo: no hay seguridad que limpiar */ }
       this.user = null;
       this.isAuthenticated = false;
       // Los recientes son por navegador: limpiarlos evita que el siguiente
