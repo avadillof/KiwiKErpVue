@@ -736,6 +736,11 @@ async function open(id: number | null = null, name: string) {
 
         await loadContact(id);
 
+    } else {
+
+        // Alta: heredar por defecto la dirección de la propia entidad
+        await loadEntityAddress();
+
     }
 
     visible.value = true;
@@ -808,8 +813,34 @@ async function loadContact(id: number) {
 
 }
 
-async function loadCargos() {
+/* Dirección por defecto: la de la propia entidad (solo en altas) */
+async function loadEntityAddress() {
 
+    try {
+
+        const response = await axios.get(
+            backendUrl(`/WebGetClient`),
+            { params: { pkid: props.entitieId } }
+        );
+
+        const e = response.data || {};
+
+        contact.value.address.address1 = e.address || '';
+        contact.value.address.address2 = e.address2 || '';
+        contact.value.address.postal = e.zipcode || '';
+        contact.value.address.city = e.city || '';
+        contact.value.address.province = e.province || '';
+        contact.value.address.country = e.country || '';
+
+    } catch {
+
+        // Sin dirección de entidad: el formulario se queda en blanco
+
+    }
+
+}
+
+async function loadCargos() {
     try {
 
         const response = await axios.get(
