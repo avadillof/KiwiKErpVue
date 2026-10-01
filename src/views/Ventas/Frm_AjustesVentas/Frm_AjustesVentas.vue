@@ -30,14 +30,14 @@
           </section>
 
           <section class="settings-card">
-            <div class="section-heading"><span><i class="pi pi-send"/></span><div><h2>Envío automático de facturas al cliente</h2><p>Aplica a: Facturas y Rectificativas. Cuando VeriFactu las acepta, se envían solas por correo al contacto principal del cliente.</p></div>
+            <div class="section-heading"><span><i class="pi pi-send"/></span><div><h2>Envío automático de facturas al cliente</h2><p>Aplica a: Facturas y Rectificativas. Cuando VeriFactu las acepta, se envían solas por correo al contacto principal del cliente.</p></div></div>
             <div class="form-grid">
               <label class="switch-field"><ToggleSwitch v-model="form.emailAutoSend"/><span><strong>Envío automático activado</strong><small>Documentos aceptados y nunca enviados, al contacto principal. Al activarlo se envían también las pendientes acumuladas.</small></span></label>
             </div>
           </section>
 
           <section class="settings-card">
-            <div class="section-heading"><span><i class="pi pi-bell"/></span><div><h2>Recordatorio diario: pedidos pendientes de entrega</h2><p>Aplica a: Pedidos de venta. Cada mañana, cada responsable recibe un único correo con sus pedidos cuya fecha de entrega vence.</p></div>
+            <div class="section-heading"><span><i class="pi pi-bell"/></span><div><h2>Recordatorio diario: pedidos pendientes de entrega</h2><p>Aplica a: Pedidos de venta. Cada mañana, cada responsable recibe un único correo con sus pedidos cuya fecha de entrega vence.</p></div></div>
             <div class="form-grid form-grid--three">
               <label class="switch-field"><ToggleSwitch v-model="form.deliveryReminderEnabled" aria-label="Activar recordatorio de entregas"/><span><strong>Recordatorio activado</strong><small>Puede pausarse sin cambiar el filtro de pedidos.</small></span></label>
               <label class="field"><span>Hora de envío (Europe/Madrid)</span><InputText aria-label="Hora de envío" type="time" v-model="form.deliveryReminderTime" :disabled="!form.deliveryReminderEnabled" fluid/><small class="field-help">Hora peninsular, con cambio de horario automático.</small></label>
@@ -66,7 +66,7 @@
             </div>
           </section>
           <section class="settings-card">
-            <div class="section-heading"><span><i class="pi pi-calendar"/></span><div><h2>Filtro «Plazo entrega» de pedidos</h2><p>Aplica a: lista de Pedidos de venta. Define los intervalos del filtro por fecha de entrega. No cambian las fechas de los pedidos.</p></div>
+            <div class="section-heading"><span><i class="pi pi-calendar"/></span><div><h2>Filtro «Plazo entrega» de pedidos</h2><p>Aplica a: lista de Pedidos de venta. Define los intervalos del filtro por fecha de entrega. No cambian las fechas de los pedidos.</p></div></div>
             <div class="form-grid">
               <label class="field"><span>Primer plazo</span><InputNumber aria-label="Primer plazo" v-model="form.deliveryDeadlineShortDays" suffix=" días" :min="1" :max="364" :maxFractionDigits="0" fluid/><small class="field-help">También determina cuántos días se resaltan en ámbar.</small></label>
               <label class="field"><span>Segundo plazo</span><InputNumber aria-label="Segundo plazo" v-model="form.deliveryDeadlineLongDays" suffix=" días" :min="2" :max="365" :maxFractionDigits="0" fluid/><small class="field-help">Debe ser mayor que el primer plazo.</small></label>
