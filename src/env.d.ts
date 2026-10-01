@@ -12,6 +12,7 @@ declare module '*.css' {
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
+  readonly VITE_FRONT_VERSION?: string;
   // Añade aquí otras variables que uses, ej:
   // readonly VITE_APP_TITLE: string;
 }

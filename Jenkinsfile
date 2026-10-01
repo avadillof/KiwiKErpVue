@@ -23,6 +23,7 @@ pipeline {
             steps {
                 sh '''
                     docker build \
+                      --build-arg FRONTEND_VERSION=${FRONTEND_VERSION} \
                       -t ${IMAGE_NAME}:${FRONTEND_VERSION} \
                       .
                 '''

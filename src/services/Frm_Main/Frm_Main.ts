@@ -1,5 +1,5 @@
 import { backendUrl } from '@/services/backendUrl';
-import { computed, defineComponent, onMounted, onUnmounted, onActivated } from 'vue';
+import { computed, defineComponent, onMounted, onUnmounted, onActivated, ref } from 'vue';
 import { useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'vue-router';
 import { useCompanyStore } from '../../stores/companyStore';
@@ -9,6 +9,7 @@ import Frm_UserForm from '../../views/Frm_Main/Frm_Ajustes/Frm_UserForm.vue';
 import { useSecurityStore } from '../../stores/securityStore.ts'
 import { useMessagesStore } from '../../stores/messagesStore';
 import { useToast } from 'primevue/usetoast';
+import { FRONT_VERSION, getBackVersion } from '../appVersion';
 
 
 export default defineComponent({
@@ -31,6 +32,7 @@ export default defineComponent({
         // Control del margen nativo del navegador
         onMounted(async function () {
             refreshSecurity();
+            getBackVersion().then((v) => { backVersion.value = v; });
             startClock();
             if (userPkid.value > 0) {
                 messagesStore.loadMessages();
@@ -101,10 +103,14 @@ export default defineComponent({
             return companyStore.companyInfo.nameCompany;
         });
 
+        // Versión de la imagen del backend (flujo Provisioning); '…' hasta cargarla
+        const backVersion = ref('…');
+
         const erpInfo = computed(function () {
             return {
                 nombre: 'KiwiKERP',
-                version: 'v2026.1.0',
+                frontVersion: FRONT_VERSION,
+                backVersion: backVersion.value,
                 copyright: '2026'
             };
         });

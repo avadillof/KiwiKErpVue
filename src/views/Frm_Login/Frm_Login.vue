@@ -71,7 +71,7 @@
         </div>
 
         <footer class="access-footer">
-          <span>KiwiKERP</span><span class="footer-dot"></span><span>Versión 1.0.4</span>
+          <span>KiwiKERP</span><span class="footer-dot"></span><span :title="`Imagen Front ${frontVersion} · Imagen Back ${backVersion}`">Front {{ frontVersion }} · Back {{ backVersion }}</span>
         </footer>
       </section>
     </section>
@@ -92,6 +92,8 @@ import InputIcon from 'primevue/inputicon';
 const {
   loginData,
   isLoading,
+  frontVersion,
+  backVersion,
   handleLogin,
   dataEmpresa,
   handleForgotPassword,

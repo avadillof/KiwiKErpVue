@@ -149,7 +149,7 @@
           style="width: 1px; height: 22px; flex: 0 0 auto; background-color: #e1e4e8;"></div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <img src="../../assets/logos/LogTras.png" alt="Logo" style="height: 18px; width: auto; opacity: 0.85;" />
-          <span>{{ erpInfo.nombre }} <span style="color: #9cc10a; font-weight: 700;">{{ erpInfo.version }}</span></span>
+          <span :title="`Imagen Front ${erpInfo.frontVersion} · Imagen Back ${erpInfo.backVersion}`">{{ erpInfo.nombre }} <span style="color: #9cc10a; font-weight: 700;">Front {{ erpInfo.frontVersion }} · Back {{ erpInfo.backVersion }}</span></span>
         </div>
         <div style="width: 4px; height: 4px; background-color: #d1d5db; border-radius: 50%;"></div>
         <span>&copy; {{ erpInfo.copyright }}</span>

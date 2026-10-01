@@ -1,4 +1,5 @@
 import { backendUrl } from '@/services/backendUrl';
+import { FRONT_VERSION, getBackVersion } from '@/services/appVersion';
 import { onReconnected } from '../composables/Sv_MonitorConnectionBack.ts';
 import { ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
@@ -13,6 +14,8 @@ export function loginController() {
     const companyStore = useCompanyStore();
 
     const isForgotPasswordVisible = ref(false);
+    const frontVersion = FRONT_VERSION;
+    const backVersion = ref('…');
     const LAST_USERNAME_KEY = 'kiwik.lastUsername';
     const lastUsername = (() => {
         try {
@@ -62,6 +65,7 @@ export function loginController() {
     }
 
     async function init() {
+        getBackVersion().then((v) => { backVersion.value = v; });
         const installation = await getInstallationState();
         if (installation.activationPending || installation.status === 'NEW' || installation.status === 'DATABASE_EXISTS' || installation.status === 'IN_PROGRESS') {
             await router.replace({ name: 'Installation' });
@@ -195,6 +199,8 @@ export function loginController() {
         loginData,
         isLoading,
         errorMessage,
+        frontVersion,
+        backVersion,
         handleLogin,
         dataEmpresa,
         handleForgotPassword,
