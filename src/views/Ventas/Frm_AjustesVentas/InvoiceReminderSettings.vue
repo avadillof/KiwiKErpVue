@@ -1,6 +1,6 @@
 <template>
  <section class="invoice-reminder-settings">
-  <div class="section-heading"><span><i class="pi pi-bell"/></span><div><h2>Recordatorio diario de vencimientos</h2><p>Aplica a: Facturas con saldo pendiente. Resumen interno para tu equipo; no se envía a clientes.</p></div>
+  <div class="section-heading"><span><i class="pi pi-bell"/></span><div><h2>Recordatorio diario de vencimientos</h2><p>Aplica a: Facturas con saldo pendiente. Resumen interno para tu equipo; no se envía a clientes.</p></div></div>
   <Message v-if="error" severity="error" :closable="false">{{error}}</Message>
   <Message v-if="saved" severity="success" :closable="false">Ajustes del recordatorio guardados.</Message>
   <fieldset :disabled="busy || !loaded">
