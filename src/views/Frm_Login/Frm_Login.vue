@@ -71,7 +71,7 @@
         </div>
 
         <footer class="access-footer">
-          <span>KiwiKERP</span><span class="footer-dot"></span><span :title="`Imagen Front ${frontVersion} · Imagen Back ${backVersion}`">Front {{ frontVersion }} · Back {{ backVersion }}</span>
+          <span>KiwiKERP</span><span class="footer-dot" v-if="versionLabel"></span><span v-if="versionLabel" :title="`Imagen Front ${frontVersion} · Imagen Back ${backVersion}`">{{ versionLabel }}</span>
         </footer>
       </section>
     </section>
@@ -94,6 +94,7 @@ const {
   isLoading,
   frontVersion,
   backVersion,
+  versionLabel,
   handleLogin,
   dataEmpresa,
   handleForgotPassword,

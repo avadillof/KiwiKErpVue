@@ -29,11 +29,11 @@
 
     <section class="actions-section" aria-label="Acciones pendientes">
       <div class="section-heading compact">
-        <div><span class="section-kicker">Acciones pendientes</span><h2>En espera de tu atención</h2></div>
+        <div><span class="section-kicker">Atención general</span><h2>Tu trabajo pendiente</h2></div>
       </div>
-      <div class="actions-grid">
+      <div v-if="generalActionCards.length" class="actions-grid actions-grid--general">
         <button
-          v-for="k in actionCards"
+          v-for="k in generalActionCards"
           :key="k.key"
           type="button"
           class="action-card"
@@ -48,6 +48,34 @@
           </span>
           <i class="pi pi-chevron-right action-arrow" />
         </button>
+      </div>
+
+      <div v-if="salesActionCards.length" class="area-actions area-actions--sales">
+        <div class="area-actions__heading">
+          <span class="area-actions__icon"><i class="pi pi-shopping-cart" /></span>
+          <div><span>Área de Ventas</span><small>Clientes, entregas y cobros</small></div>
+        </div>
+        <div class="actions-grid">
+          <button v-for="k in salesActionCards" :key="k.key" type="button" class="action-card" :class="{ 'action-card--quiet': !k.value }" @click="navegarA(k.route)">
+            <span class="action-icon" :style="{ background: k.gradient }"><i :class="k.icon" /></span>
+            <span class="action-copy"><strong>{{ k.value == null ? '—' : fmt(k.value) }}</strong><span>{{ k.label }}</span><small>{{ k.sub }}</small></span>
+            <i class="pi pi-chevron-right action-arrow" />
+          </button>
+        </div>
+      </div>
+
+      <div v-if="purchaseActionCards.length" class="area-actions area-actions--purchases">
+        <div class="area-actions__heading">
+          <span class="area-actions__icon"><i class="pi pi-truck" /></span>
+          <div><span>Área de Compras</span><small>Proveedores, recepciones y pagos</small></div>
+        </div>
+        <div class="actions-grid">
+          <button v-for="k in purchaseActionCards" :key="k.key" type="button" class="action-card" :class="{ 'action-card--quiet': !k.value }" @click="navegarA(k.route)">
+            <span class="action-icon" :style="{ background: k.gradient }"><i :class="k.icon" /></span>
+            <span class="action-copy"><strong>{{ k.value == null ? '—' : fmt(k.value) }}</strong><span>{{ k.label }}</span><small>{{ k.sub }}</small></span>
+            <i class="pi pi-chevron-right action-arrow" />
+          </button>
+        </div>
       </div>
     </section>
 
@@ -67,13 +95,13 @@ export default defineComponent({
   name: 'Pn_DashBoard',
   components: { SalesCalendar, CompanySnapshot },
   setup() {
-    const { recents, actionCards, fmt, navegarA, refresh } = DashboardController();
+    const { recents, generalActionCards, salesActionCards, purchaseActionCards, fmt, navegarA, refresh } = DashboardController();
     const messagesStore = useMessagesStore();
     watch(
       () => messagesStore.feedVersion,
       () => refresh()
     );
-    return { recents, actionCards, fmt, navegarA };
+    return { recents, generalActionCards, salesActionCards, purchaseActionCards, fmt, navegarA };
   }
 });
 </script>
@@ -99,6 +127,16 @@ export default defineComponent({
 
 .actions-section { margin-top: 22px; }
 .actions-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.actions-grid--general { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 760px; }
+.area-actions { margin-top: 18px; padding: 14px; border: 1px solid #e5e9f0; border-radius: 16px; background: #fbfcfd; }
+.area-actions--sales { border-left: 4px solid #9cc10a; }
+.area-actions--purchases { border-left: 4px solid #dc7c22; background: #fffaf5; }
+.area-actions__heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.area-actions__heading > div { display: flex; flex-direction: column; }
+.area-actions__heading span { color: #253047; font-size: .92rem; font-weight: 800; }
+.area-actions__heading small { color: #8992a1; font-size: .74rem; }
+.area-actions__icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; background: #eef4dc; color: #648506 !important; }
+.area-actions--purchases .area-actions__icon { background: #fbe9d7; color: #c96a1e !important; }
 .action-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid #e3e8d2; border-radius: 12px; background: #fff; text-align: left; cursor: pointer; box-shadow: 0 4px 14px rgba(31,41,55,.05); transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
 .action-card:hover { transform: translateY(-3px); border-color: #cfe0a8; box-shadow: 0 10px 24px rgba(31,41,55,.1); }
 .action-card--quiet { opacity: .62; }

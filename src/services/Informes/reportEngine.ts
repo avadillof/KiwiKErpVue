@@ -12,6 +12,7 @@ import * as XLSX from 'xlsx';
 export interface ReportColumn {
   key: string;
   header: string;
+  align?: 'left' | 'center' | 'right';
 }
 
 export type ReportRow = Record<string, string | boolean | number>;
@@ -53,23 +54,39 @@ export interface ReportCompany {
   logoUrl: string;
 }
 
+export interface ReportSection {
+  title: string;
+  rows: ReportRow[];
+  columns?: ReportColumn[];
+  /** Filas de cierre, como los totales contables de una tabla. */
+  footerRows?: ReportRow[];
+  /** Tamaño de los valores del cuerpo; la cabecera conserva su jerarquía. */
+  bodyFontSize?: number;
+}
+
 export interface ReportExcelInput {
   code: string;
   columns: ReportColumn[];
   rows: ReportRow[];
+  sections?: ReportSection[];
 }
 
 /** Exporta las columnas visibles del informe a Excel. Nombre: RPT-XXX-NNN_AAAAMMDD.xlsx */
 export function exportReportExcel(input: ReportExcelInput): void {
   const cell = (v: unknown) =>
     typeof v === 'boolean' ? (v ? 'Sí' : 'No') : typeof v === 'number' ? v : String((v as string) ?? '');
-  const sheet = XLSX.utils.aoa_to_sheet([
-    input.columns.map((c) => c.header),
-    ...input.rows.map((r) => input.columns.map((c) => cell(r[c.key])))
-  ]);
-  sheet['!cols'] = input.columns.map(() => ({ wch: 22 }));
   const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, sheet, 'Informe');
+  const sections = input.sections?.length ? input.sections : [{ title: 'Informe', rows: input.rows }];
+  for (const section of sections) {
+    const columns = section.columns?.length ? section.columns : input.columns;
+    const sheet = XLSX.utils.aoa_to_sheet([
+      columns.map((c) => c.header),
+      ...section.rows.map((r) => columns.map((c) => cell(r[c.key]))),
+      ...(section.footerRows ?? []).map((r) => columns.map((c) => cell(r[c.key])))
+    ]);
+    sheet['!cols'] = columns.map(() => ({ wch: 22 }));
+    XLSX.utils.book_append_sheet(book, sheet, section.title.slice(0, 31));
+  }
   const now = new Date();
   const pad = (v: number) => String(v).padStart(2, '0');
   XLSX.writeFile(book, `${input.code}_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.xlsx`);
@@ -81,6 +98,10 @@ export interface ReportPdfInput {
   filtersText: string;
   columns: ReportColumn[];
   rows: ReportRow[];
+  /** Bloques independientes que comparten columnas (p.ej. Ventas y Compras). */
+  sections?: ReportSection[];
+  /** Línea punteada suave bajo cada registro. */
+  dottedRows?: boolean;
   /** Filas destacadas en rojo (p.ej. borrados). */
   redWhen?: (row: ReportRow) => boolean;
   company: ReportCompany;
@@ -160,24 +181,55 @@ export async function buildReportPdf(input: ReportPdfInput): Promise<string> {
     doc.text(`${input.rows.length} registros · Página ${page}/${pages}`, 285, 198, { align: 'right' });
   };
 
-  autoTable(doc, {
-    startY: 38,
-    head: [input.columns.map((c) => c.header)],
-    body: input.rows.map((r) => input.columns.map((c) => cell(r[c.key]))),
-    styles: { fontSize: 7, cellPadding: 1.5, overflow: 'linebreak' },
-    headStyles: { fillColor: [100, 133, 6], fontSize: 7 },
-    tableWidth: 'auto',
-    margin: { top: 20, bottom: 22 },
-    didParseCell: (data: any) => {
-      if (data.section === 'body' && input.redWhen?.(input.rows[data.row.index])) {
-        data.cell.styles.fillColor = [253, 230, 230];
-      }
-    },
-    didDrawPage: (data: any) => {
-      if (data.pageNumber === 1) drawFirstHeader();
-      else drawSmallHeader();
+  const sections = input.sections?.length ? input.sections : [{ title: '', rows: input.rows }];
+  let startY = 38;
+  for (const section of sections) {
+    const columns = section.columns?.length ? section.columns : input.columns;
+    if (startY > 174) { doc.addPage(); startY = 21; }
+    if (section.title) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(73, 94, 16);
+      doc.text(section.title, 12, startY); startY += 3;
     }
-  });
+    const columnStyles = Object.fromEntries(columns.map((column, index) => [index, { halign: column.align ?? 'left' }]));
+    autoTable(doc, {
+      startY,
+      head: [columns.map((c) => c.header)],
+      body: section.rows.map((r) => columns.map((c) => cell(r[c.key]))),
+      foot: (section.footerRows ?? []).map((r) => columns.map((c) => cell(r[c.key]))),
+      showFoot: 'lastPage',
+      styles: { fontSize: section.bodyFontSize ?? 7, cellPadding: 1.5, overflow: 'linebreak' },
+      headStyles: { fillColor: [100, 133, 6], fontSize: 7 },
+      footStyles: { fillColor: [255, 255, 255], textColor: [24, 24, 24], fontStyle: 'bold', fontSize: 7 },
+      columnStyles,
+      tableWidth: 'auto',
+      margin: { top: 20, bottom: 22 },
+      didParseCell: (data: any) => {
+        const columnIndex = Number(data.column?.index ?? data.column?.dataKey);
+        const column = columns[columnIndex];
+        // Se aplica directamente también a la cabecera: autoTable puede
+        // sobrescribir la alineación heredada con sus headStyles.
+        if (column?.align && (data.section === 'head' || data.section === 'body' || data.section === 'foot')) data.cell.styles.halign = column.align;
+        if (data.section === 'body' && input.redWhen?.(section.rows[data.row.index])) data.cell.styles.fillColor = [253, 230, 230];
+      },
+      didDrawCell: (data: any) => {
+        if (data.section === 'foot') {
+          doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.45); doc.setLineDashPattern([], 0);
+          doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+          return;
+        }
+        if (!input.dottedRows || data.section !== 'body') return;
+        const y = data.cell.y + data.cell.height;
+        doc.setDrawColor(205, 210, 215); doc.setLineWidth(0.12); doc.setLineDashPattern([0.55, 0.65], 0);
+        doc.line(data.cell.x, y, data.cell.x + data.cell.width, y);
+        doc.setLineDashPattern([], 0);
+      },
+      didDrawPage: () => {
+        const page = (doc.internal as any).getCurrentPageInfo().pageNumber;
+        if (page === 1) drawFirstHeader(); else drawSmallHeader();
+      }
+    });
+    startY = ((doc as any).lastAutoTable?.finalY ?? startY) + 9;
+  }
   // Pie en segunda pasada: aquí sí se conoce el total de páginas.
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {

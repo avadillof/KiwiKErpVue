@@ -2,22 +2,50 @@
   <section class="estado-empresa">
     <div class="widget-head">
       <div>
-        <span class="section-kicker">Visión general</span>
-        <h2>Estado de la empresa</h2>
+        <span class="section-kicker">Indicadores por área</span>
+        <h2>{{ activeTab === 'summary' ? 'Resumen de la empresa' : activeTab === 'sales' ? 'Resumen de ventas' : 'Resumen de compras' }}</h2>
         <p v-if="loading" class="widget-state"><i class="pi pi-spin pi-spinner"></i> Cargando estadísticas…</p>
         <p v-else-if="error" class="widget-state widget-state--error"><i class="pi pi-exclamation-triangle"></i> {{ error }}</p>
-        <p v-else class="widget-state widget-state--ok">Datos consolidados del ejercicio</p>
+        <p v-else class="widget-state widget-state--ok">{{ activeTab === 'summary' ? 'Ventas y compras claramente diferenciadas' : `Datos del ejercicio · ${activeTab === 'sales' ? 'clientes' : 'proveedores'}` }}</p>
       </div>
-      <button type="button" class="widget-reload" title="Actualizar" :disabled="loading" @click="reload">
-        <i :class="loading ? 'pi pi-spin pi-refresh' : 'pi pi-refresh'"></i>
-      </button>
+      <div class="widget-head__actions">
+        <div class="area-tabs" role="tablist" aria-label="Área de indicadores">
+          <button v-for="tab in tabs" :key="tab.value" type="button" :class="{ active: activeTab === tab.value }" @click="activeTab = tab.value"><i :class="tab.icon" />{{ tab.label }}</button>
+        </div>
+        <button type="button" class="widget-reload" title="Actualizar" :disabled="loading" @click="reload"><i :class="loading ? 'pi pi-spin pi-refresh' : 'pi pi-refresh'"></i></button>
+      </div>
     </div>
 
-    <div class="widgets-grid">
+    <div v-if="activeTab === 'summary'" class="summary-grid">
+      <article class="area-summary area-summary--sales">
+        <header><span class="area-summary__icon"><i class="pi pi-shopping-cart" /></span><div><small>VENTAS</small><strong>Actividad con clientes</strong></div></header>
+        <div class="summary-kpis">
+          <div><small>Facturado</small><strong>{{ money(invoices?.issuedAmount) }}</strong></div>
+          <div><small>Pendiente de cobro</small><strong>{{ money(invoices?.pendingAmount) }}</strong></div>
+          <div><small>Pedidos</small><strong>{{ integer(orders?.totalCount) }}</strong></div>
+          <div><small>Facturas vencidas</small><strong>{{ integer(invoices?.overdueCount) }}</strong></div>
+        </div>
+      </article>
+      <article v-if="canPurchases" class="area-summary area-summary--purchases">
+        <header><span class="area-summary__icon"><i class="pi pi-truck" /></span><div><small>COMPRAS</small><strong>Actividad con proveedores</strong></div></header>
+        <div class="summary-kpis">
+          <div><small>Recepciones</small><strong>{{ integer(purchaseDeliveries?.confirmedCount) }}</strong></div>
+          <div><small>Pendientes de facturar</small><strong>{{ integer(purchaseDeliveries?.pendingInvoiceCount) }}</strong></div>
+          <div><small>Facturas pendientes</small><strong>{{ integer(purchaseInvoices?.pendingCount) }}</strong></div>
+          <div><small>Facturas vencidas</small><strong>{{ integer(purchaseInvoices?.overdueCount) }}</strong></div>
+        </div>
+      </article>
+      <article class="summary-note">
+        <i class="pi pi-info-circle" />
+        <div><strong>Lectura clara del negocio</strong><span>Los importes de Ventas corresponden a facturas emitidas a clientes. Compras muestra recepciones y facturas recibidas de proveedores.</span></div>
+      </article>
+    </div>
+
+    <div v-else-if="activeTab === 'sales'" class="widgets-grid">
       <article class="widget-card widget-card--wide">
         <header class="widget-card__head">
-          <span>Evolución mensual</span>
-          <small>Importe por tipo (€)</small>
+          <span>Evolución de ventas</span>
+          <small>Documentos comerciales (€)</small>
         </header>
         <div class="widget-legend">
           <span v-for="s in chartLine.series" :key="s.label" class="widget-legend__item">
@@ -41,7 +69,7 @@
       </article>
 
       <article class="widget-card">
-        <header class="widget-card__head"><span>Cobros del año</span><small>Facturación emitida</small></header>
+        <header class="widget-card__head"><span>Cobros de clientes</span><small>Facturación emitida</small></header>
         <div class="widget-doughnut">
           <div class="widget-chart widget-chart--donut">
             <svg class="chart-donut" viewBox="0 0 140 140" role="img">
@@ -113,7 +141,7 @@
       </article>
 
       <article class="widget-card widget-card--wide widget-card--top">
-        <header class="widget-card__head"><span>Top 10 productos</span><small>Facturados en {{ topYear }}</small></header>
+        <header class="widget-card__head"><span>Productos más vendidos</span><small>Facturados en {{ topYear }}</small></header>
         <ol v-if="!topError" class="top-products">
           <li v-for="(p, idx) in topProducts" :key="p.productId ?? p.productName" class="top-product">
             <span class="top-product__rank">{{ idx + 1 }}</span>
@@ -131,12 +159,43 @@
         <p v-else class="widget-fallback">No se pudo cargar el ranking de productos.</p>
       </article>
     </div>
+
+    <div v-else class="widgets-grid purchases-grid">
+      <article class="widget-card widget-card--wide">
+        <header class="widget-card__head"><span>Recepciones mensuales</span><small>Albaranes confirmados</small></header>
+        <div class="purchase-bars" aria-label="Recepciones mensuales">
+          <div v-for="bar in purchaseMonthlyBars" :key="bar.label" class="purchase-bar"><span><i :style="{ height: bar.height }"><em>{{ bar.value }}</em></i></span><small>{{ bar.label }}</small></div>
+        </div>
+      </article>
+      <article class="widget-card purchase-status-card">
+        <header class="widget-card__head"><span>Situación de compras</span><small>Ejercicio {{ topYear }}</small></header>
+        <div class="purchase-status-list">
+          <div><span><i class="pi pi-file-edit" /> Albaranes en borrador</span><strong>{{ integer(purchaseDeliveries?.draftCount) }}</strong></div>
+          <div><span><i class="pi pi-clock" /> Pendientes de facturar</span><strong>{{ integer(purchaseDeliveries?.pendingInvoiceCount) }}</strong></div>
+          <div><span><i class="pi pi-receipt" /> Facturados</span><strong>{{ integer(purchaseDeliveries?.invoicedCount) }}</strong></div>
+          <div><span><i class="pi pi-wallet" /> Facturas por pagar</span><strong>{{ integer(purchaseInvoices?.pendingCount) }}</strong></div>
+          <div class="danger"><span><i class="pi pi-exclamation-triangle" /> Facturas vencidas</span><strong>{{ integer(purchaseInvoices?.overdueCount) }}</strong></div>
+        </div>
+      </article>
+      <article class="widget-card widget-card--wide">
+        <header class="widget-card__head"><span>Principales proveedores</span><small>Volumen de albaranes en {{ topYear }}</small></header>
+        <ol class="top-products top-suppliers">
+          <li v-for="(supplier, idx) in purchaseSuppliers" :key="`${supplier.name}-${idx}`" class="top-product">
+            <span class="top-product__rank">{{ idx + 1 }}</span><span class="top-product__body"><span class="top-product__name">{{ supplier.name }}</span><span class="top-product__bar"><i :style="{ width: supplier.width }" /></span></span><span class="top-product__qty">{{ supplier.count }} alb.</span><span class="top-product__amount">{{ money(supplier.amount) }}</span>
+          </li>
+          <li v-if="!purchaseSuppliers.length" class="top-product top-product--empty">Sin compras registradas en el ejercicio.</li>
+        </ol>
+      </article>
+    </div>
   </section>
 </template>
 
 <script lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useCompanyStats, monthlyRow, MONTHS } from '../../../services/Frm_Main/Dashboard/CompanyStats';
+import { useAuthStore } from '@/stores/authStore';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
 
 const C = {
   quote: '#7c5cbf',
@@ -163,6 +222,15 @@ export default {
   name: 'CompanySnapshot',
   setup() {
     const stats = useCompanyStats();
+    const auth = useAuthStore();
+    const security = useSecurityStore();
+    const canPurchases = computed(() => auth.user?.admin === true || security.hasPermission(PERM.PURCHASE_OPTIONS));
+    const activeTab = ref<'summary' | 'sales' | 'purchases'>('summary');
+    const tabs = computed(() => [
+      { value: 'summary' as const, label: 'Resumen', icon: 'pi pi-th-large' },
+      { value: 'sales' as const, label: 'Ventas', icon: 'pi pi-shopping-cart' },
+      ...(canPurchases.value ? [{ value: 'purchases' as const, label: 'Compras', icon: 'pi pi-truck' }] : [])
+    ]);
 
     const chartLine = computed(() => {
       const row = monthlyRow(stats.quotes.value, stats.orders.value, stats.invoices.value);
@@ -281,6 +349,22 @@ export default {
       return `${Math.max(3, pct)}%`;
     }
 
+    function integer(value: unknown): string {
+      return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(Number(value ?? 0));
+    }
+
+    const purchaseMonthlyBars = computed(() => {
+      const values = Array.from({ length: 12 }, (_, i) => Number(stats.purchaseDeliveries.value?.monthlyConfirmed?.[i] ?? 0));
+      const max = Math.max(1, ...values);
+      return MONTHS.map((label, index) => ({ label, value: values[index], height: `${Math.max(values[index] ? 8 : 2, Math.round((values[index] / max) * 100))}%` }));
+    });
+
+    const purchaseSuppliers = computed(() => {
+      const rows = Array.isArray(stats.purchaseDeliveries.value?.topSuppliers) ? stats.purchaseDeliveries.value.topSuppliers : [];
+      const max = Math.max(1, ...rows.map((row: any) => Number(row.amount ?? 0)));
+      return rows.map((row: any) => ({ ...row, width: `${Math.max(3, Math.round((Number(row.amount ?? 0) / max) * 100))}%` }));
+    });
+
     return {
       ...stats,
       chartLine,
@@ -290,7 +374,13 @@ export default {
       funnel,
       fmtQty,
       barWidth,
-      money
+      money,
+      integer,
+      activeTab,
+      tabs,
+      purchaseMonthlyBars,
+      purchaseSuppliers,
+      canPurchases
     };
   }
 };
@@ -300,6 +390,12 @@ export default {
 .estado-empresa { margin-top: 26px; }
 .section-kicker { color: #648506; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .widget-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.widget-head__actions { display: flex; align-items: center; gap: 10px; }
+.area-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #e2e7ed; border-radius: 11px; background: #f5f7f9; }
+.area-tabs button { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 0; border-radius: 8px; background: transparent; color: #687386; font: inherit; font-size: .78rem; font-weight: 750; cursor: pointer; }
+.area-tabs button:hover { color: #344054; background: #fff; }
+.area-tabs button.active { color: #344600; background: #fff; box-shadow: 0 2px 7px rgba(17,24,39,.09); }
+.area-tabs button.active:last-child { color: #914c13; }
 .widget-head h2 { margin: 4px 0 0; color: #253047; font-size: 1.3rem; }
 .widget-state { margin: 6px 0 0; color: #8a93a3; font-size: .78rem; }
 .widget-state--error { color: #b91c1c; }
@@ -307,6 +403,28 @@ export default {
 .widget-reload { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid #e2e6ee; border-radius: 9px; background: #fff; color: #5a6472; cursor: pointer; font-size: .9rem; transition: border-color .15s, background .15s; }
 .widget-reload:hover { border-color: #9cc10a; background: #f6f9ef; }
 .widget-reload:disabled { opacity: .55; cursor: default; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.area-summary { overflow: hidden; padding: 18px; border: 1px solid #e5e9f0; border-radius: 16px; background: #fff; box-shadow: 0 5px 16px rgba(17,24,39,.05); }
+.area-summary--sales { border-top: 4px solid #9cc10a; }
+.area-summary--purchases { border-top: 4px solid #dc7c22; }
+.area-summary header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.area-summary header > div { display: flex; flex-direction: column; gap: 2px; }
+.area-summary header small { color: #8791a0; font-size: .68rem; font-weight: 850; letter-spacing: .1em; }
+.area-summary header strong { color: #253047; font-size: 1rem; }
+.area-summary__icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 11px; background: #eef5dc; color: #648506; }
+.area-summary--purchases .area-summary__icon { background: #fbe9d7; color: #c96a1e; }
+.summary-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.summary-kpis > div { padding: 12px; border-radius: 10px; background: #f7f9fb; }
+.area-summary--purchases .summary-kpis > div { background: #fff8f1; }
+.summary-kpis small, .summary-kpis strong { display: block; }
+.summary-kpis small { color: #7d8797; font-size: .72rem; }
+.summary-kpis strong { margin-top: 3px; color: #253047; font-size: 1.08rem; font-variant-numeric: tabular-nums; }
+.summary-note { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 1px solid #dfe7cc; border-radius: 12px; background: #f8faF2; color: #5d6675; }
+.summary-note > i { color: #789b08; font-size: 1.1rem; }
+.summary-note > div { display: flex; flex-direction: column; gap: 2px; }
+.summary-note strong { color: #344054; font-size: .82rem; }
+.summary-note span { font-size: .75rem; line-height: 1.4; }
 
 .widgets-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .widget-card { display: flex; flex-direction: column; padding: 16px 18px; border: 1px solid #e5e9f0; border-radius: 16px; background: #fff; box-shadow: 0 5px 16px rgba(17,24,39,.05); }
@@ -358,6 +476,21 @@ export default {
 
 .widget-fallback { margin: 12px 0; color: #98a0ad; font-size: .8rem; }
 
+.purchase-bars { display: flex; align-items: end; gap: 8px; height: 205px; margin-top: 15px; padding: 12px 8px 0; border-bottom: 1px solid #e5e9f0; }
+.purchase-bar { display: flex; min-width: 0; height: 100%; flex: 1; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
+.purchase-bar > span { display: flex; width: 100%; height: 165px; align-items: end; justify-content: center; }
+.purchase-bar i { position: relative; display: block; width: min(28px, 72%); min-height: 2px; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg,#f1ad69,#c96a1e); }
+.purchase-bar em { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); color: #687386; font-size: .65rem; font-style: normal; font-weight: 800; }
+.purchase-bar small { color: #9099a7; font-size: .65rem; }
+.purchase-status-list { display: flex; flex-direction: column; gap: 0; margin-top: 12px; }
+.purchase-status-list > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-bottom: 1px solid #edf0f4; }
+.purchase-status-list > div:last-child { border-bottom: 0; }
+.purchase-status-list span { display: inline-flex; align-items: center; gap: 8px; color: #5d6675; font-size: .76rem; font-weight: 700; }
+.purchase-status-list i { color: #c96a1e; }
+.purchase-status-list strong { color: #253047; font-size: .94rem; font-variant-numeric: tabular-nums; }
+.purchase-status-list .danger i, .purchase-status-list .danger strong { color: #bd4e36; }
+.top-suppliers .top-product__bar i { background: linear-gradient(90deg,#e8a25c,#c96a1e); }
+
 .top-products { display: flex; flex-direction: column; gap: 9px; margin: 12px 0 0; padding: 0; list-style: none; }
 .top-product { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .top-product__rank { display: grid; width: 22px; height: 22px; flex: 0 0 auto; place-items: center; border-radius: 6px; background: #eef1f6; color: #5a6472; font-size: .72rem; font-weight: 800; }
@@ -371,5 +504,5 @@ export default {
 .top-product--empty { justify-content: center; padding: 16px 0; color: #98a0ad; font-size: .8rem; }
 
 @media (max-width: 1180px) { .widgets-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .widget-card--wide { grid-column: span 2; } }
-@media (max-width: 720px) { .widgets-grid { grid-template-columns: 1fr; } .widget-card--wide { grid-column: span 1; } .widget-doughnut { flex-direction: column; } }
+@media (max-width: 720px) { .widget-head { flex-direction: column; } .widget-head__actions { width: 100%; } .area-tabs { flex: 1; } .area-tabs button { flex: 1; justify-content: center; } .summary-grid,.widgets-grid { grid-template-columns: 1fr; } .widget-card--wide { grid-column: span 1; } .widget-doughnut { flex-direction: column; } .summary-kpis { grid-template-columns: 1fr; } }
 </style>

@@ -2,8 +2,9 @@
   <section class="sales-calendar">
     <div class="calendar-head">
       <div>
-        <span class="section-kicker">Planificación</span>
-        <h2>Calendario comercial</h2>
+        <span class="section-kicker"><i class="pi pi-shopping-cart"></i> Área de Ventas</span>
+        <h2>Calendario comercial de ventas</h2>
+        <p>Presupuestos, pedidos, entregas y vencimientos relacionados con clientes.</p>
       </div>
 <div class="calendar-nav">
         <button type="button" class="calendar-collapse" :title="collapsed ? 'Expandir calendario' : 'Contraer calendario'" @click="toggleCollapsed">
@@ -106,7 +107,9 @@ export default defineComponent({
 .sales-calendar { margin-top: 30px; padding: 20px 22px; border: 1px solid #e5e9f0; border-radius: 16px; background: #fff; box-shadow: 0 5px 16px rgba(17,24,39,.05); }
 .calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .calendar-head h2 { margin: 4px 0 0; color: #253047; font-size: 1.3rem; }
-.section-kicker { color: #648506; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.calendar-head p { margin: 3px 0 0; color: #8791a0; font-size: .78rem; }
+.section-kicker { display: inline-flex; align-items: center; gap: 7px; color: #648506; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.section-kicker i { font-size: .76rem; }
 .calendar-nav { display: flex; align-items: center; gap: 8px; }
 .calendar-collapse { border-style: dashed !important; color: #7a8392 !important; }
 .calendar-nav button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid #e2e6ee; border-radius: 9px; background: #fff; color: #5a6472; cursor: pointer; font-size: .85rem; transition: border-color .15s, background .15s; }

@@ -4,14 +4,14 @@
             <div class="products-title">
                 <div class="products-icon"><i class="pi pi-box"></i></div>
                 <div>
-                    <span class="breadcrumb">Ventas / Datos maestros</span>
+                    <span class="breadcrumb">{{ esCompras ? 'Compras' : 'Ventas' }} / Datos maestros</span>
                     <h1>Artículos y servicios</h1>
                     <p>Catálogo comercial, clasificación, unidades de medida y disponibilidad de compra y venta.</p>
                 </div>
             </div>
             <nav class="header-actions" aria-label="Navegación">
-                <Button label="Ventas" icon="pi pi-arrow-left" severity="secondary" text
-                    @click="router.push({ name: 'Ventas' })" />
+                <Button :label="esCompras ? 'Compras' : 'Ventas'" icon="pi pi-arrow-left" severity="secondary" text
+                    @click="volver" />
                 <Button label="Inicio" icon="pi pi-home" severity="secondary" text
                     @click="router.push({ name: 'Dashboard' })" />
             </nav>
@@ -174,7 +174,7 @@ import { backendUrl } from '@/services/backendUrl';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue'
 import type { ProductsDTO } from '../../models/ProductsDTO.ts';
 import { ref, computed, watch, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import Toolbar from 'primevue/toolbar';
 import Menu from 'primevue/menu';
 import Button from 'primevue/button';
@@ -185,6 +185,7 @@ import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useCompanyStore } from '../../stores/companyStore';
 import { useSecurityStore } from '../../stores/securityStore.ts';
+import { useAuthStore } from '../../stores/authStore';
 import { PERM } from '@/services/Frm_Main/permissions';
 import GenericDataTable from '@/components/shared/GenericDataTable.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
@@ -192,7 +193,21 @@ import Frm_Product from './Frm_Product.vue';
 
 const productFormRef = ref();
 const securityStore = useSecurityStore();
+const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
+// Vista compartida Ventas/Compras: el hub origen viaja en ?from=compras.
+// Sin query, si el usuario solo tiene Compras, se vuelve a Compras.
+const esCompras = computed(() => {
+    if (route.query.from === 'compras') return true;
+    if (route.query.from === 'ventas') return false;
+    const puedeCompras = authStore.user?.admin === true || securityStore.hasModule('PURCHASES');
+    const puedeVentas = authStore.user?.admin === true || securityStore.hasModule('SALES');
+    return puedeCompras && !puedeVentas;
+});
+function volver() {
+    router.push({ name: esCompras.value ? 'Compras' : 'Ventas' });
+}
 const tableRef = ref();
 const menuTable = ref();
 const menuOptionRegistro = ref();

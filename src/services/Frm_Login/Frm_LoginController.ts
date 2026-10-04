@@ -1,7 +1,7 @@
 import { backendUrl } from '@/services/backendUrl';
 import { FRONT_VERSION, getBackVersion } from '@/services/appVersion';
 import { onReconnected } from '../composables/Sv_MonitorConnectionBack.ts';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '../../stores/authStore';
 import { useCompanyStore } from '../../stores/companyStore';
@@ -16,6 +16,17 @@ export function loginController() {
     const isForgotPasswordVisible = ref(false);
     const frontVersion = FRONT_VERSION;
     const backVersion = ref('…');
+    // Etiqueta Docker: solo versiones conocidas (en local son 'dev'/'—' y se oculta).
+    const versionLabel = computed(() => {
+        const front = String(frontVersion ?? '').trim();
+        const back = String(backVersion.value ?? '').trim();
+        const frontKnown = front !== '' && front !== 'dev';
+        const backKnown = back !== '' && back !== '…' && back !== '—' && back !== 'dev';
+        if (frontKnown && backKnown) return `Front ${front} · Back ${back}`;
+        if (frontKnown) return `Front ${front}`;
+        if (backKnown) return `Back ${back}`;
+        return '';
+    });
     const LAST_USERNAME_KEY = 'kiwik.lastUsername';
     const lastUsername = (() => {
         try {
@@ -201,6 +212,7 @@ export function loginController() {
         errorMessage,
         frontVersion,
         backVersion,
+        versionLabel,
         handleLogin,
         dataEmpresa,
         handleForgotPassword,

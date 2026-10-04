@@ -20,6 +20,9 @@ import Frm_Facturas from './views/Ventas/Frm_Facturas/Frm_Facturas.vue';
 import Frm_Products from './views/Frm_Products/Frm_Products.vue';
 import Frm_SalesTax from './views/Frm_SalexTax/Frm_SalesTax.vue';
 import Frm_Certificates from './views/security/Frm_Certificates/Frm_Certificates.vue';
+import Pn_ComprasHub from './views/Compras/Pn_ComprasHub.vue';
+import Frm_AlbaranesCompra from './views/Compras/Frm_AlbaranesCompra.vue';
+import Frm_FacturasCompra from './views/Compras/Frm_FacturasCompra.vue';
 
 import Frm_FamiliasProductos from './views/Frm_Products/Frm_FamiliasProductos/Frm_FamiliasProductos.vue';
 
@@ -127,6 +130,24 @@ const routes = [
         name: 'InformesVentas',
         meta: { perm: PERM.RPT_SALES },
         component: () => import('./views/Ventas/Frm_InformesVentas.vue')
+      },
+      {
+        path: '/compras',
+        name: 'Compras',
+        meta: { perm: PERM.PURCHASE_OPTIONS },
+        component: Pn_ComprasHub
+      },
+      {
+        path: '/compras/albaranes',
+        name: 'AlbaranesCompra',
+        meta: { perm: PERM.PURCHASE_NAV_DELIVERY },
+        component: Frm_AlbaranesCompra
+      },
+      {
+        path: '/compras/facturas',
+        name: 'FacturasCompra',
+        meta: { perm: PERM.PURCHASE_NAV_INVOICES },
+        component: Frm_FacturasCompra
       },
       {
         path: '/tareas',

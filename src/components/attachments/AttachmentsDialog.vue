@@ -141,7 +141,6 @@
 
             <div class="kiwik-separator"></div>
 
-
             <div class="upload-container">
 
 
@@ -149,10 +148,66 @@
                     @select="upload" />
 
 
+                <Button icon="pi pi-camera" label="Escanear" severity="secondary" outlined v-tooltip="'Capturar con la cámara o escáner documental USB'" @click="openScanner" />
+
+
             </div>
 
 
         </div>
+
+
+
+    </Dialog>
+
+
+
+
+    <Dialog v-model:visible="scanVisible" modal header="Escanear documento" :style="{ width: 'min(760px,94vw)' }"
+        :closable="!scanning" :draggable="false" :resizable="false" :dismissableMask="false" :pt="{
+            root: {
+                class: 'kiwik-dialog'
+            },
+            header: {
+                class: 'kiwik-dialog-header'
+            },
+            content: {
+                class: 'kiwik-dialog-content'
+            }
+        }" @hide="stopScanner">
+
+
+        <Message v-if="scanError" severity="error" :closable="false" class="w-full mb-3">{{ scanError }}</Message>
+
+
+        <div v-else class="scan-container">
+
+
+            <video ref="scanVideo" autoplay playsinline muted class="scan-video"></video>
+
+
+            <small>Apunta al documento y pulsa Capturar. Sirven la cámara del equipo, la del móvil y las cámaras documentales USB (se exponen como webcam). Los escáneres TWAIN de sobremesa deben usar su propio programa con salida a carpeta.</small>
+
+
+        </div>
+
+
+        <template #footer>
+
+
+            <div class="flex justify-content-end gap-2">
+
+
+                <Button label="Cerrar" severity="secondary" text :disabled="scanning" @click="stopScanner(); scanVisible = false" />
+
+
+                <Button label="Capturar" icon="pi pi-camera" :disabled="scanning || !!scanError" :loading="scanning" @click="captureScan" />
+
+
+            </div>
+
+
+        </template>
 
 
     </Dialog>
@@ -263,6 +318,8 @@
 
     justify-content: flex-end;
 
+    gap: 0.5rem;
+
     padding-top: 1rem;
 
 }
@@ -321,6 +378,30 @@
     object-fit: contain;
 
     border-radius: 8px;
+
+}
+
+
+.scan-container {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 0.75rem;
+
+}
+
+
+.scan-video {
+
+    width: 100%;
+
+    max-height: 52vh;
+
+    border-radius: 8px;
+
+    background: #000;
 
 }
 </style>
@@ -399,6 +480,191 @@ interface Attachment {
 
 
 const documents = ref<Attachment[]>([]);
+
+
+const scanVisible = ref(false);
+
+
+const scanning = ref(false);
+
+
+const scanError = ref('');
+
+
+const scanVideo = ref<HTMLVideoElement | null>(null);
+
+
+let scanStream: MediaStream | null = null;
+
+
+
+
+async function openScanner() {
+
+
+    scanError.value = '';
+
+
+    scanVisible.value = true;
+
+
+    try {
+
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+            throw new Error('Este navegador no permite acceder a la cámara.');
+        }
+
+
+        stopScannerTracks();
+
+
+        scanStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: false
+        });
+
+
+        if (scanVideo.value) {
+            scanVideo.value.srcObject = scanStream;
+            await scanVideo.value.play().catch(() => { /* autoplay con muted basta */ });
+        }
+
+
+    } catch (error: any) {
+
+
+        scanError.value = error?.name === 'NotAllowedError'
+            ? 'Permiso de cámara denegado. Actívalo en el navegador para escanear.'
+            : (error?.message || 'No se pudo abrir la cámara para escanear.');
+
+
+    }
+
+
+}
+
+
+function stopScannerTracks() {
+
+
+    if (scanStream) {
+
+
+        scanStream.getTracks().forEach((track) => track.stop());
+
+
+        scanStream = null;
+
+
+    }
+
+
+    if (scanVideo.value) {
+
+        scanVideo.value.srcObject = null;
+
+    }
+
+
+}
+
+
+function stopScanner() {
+
+
+    stopScannerTracks();
+
+
+}
+
+
+async function captureScan() {
+
+
+    if (!scanVideo.value || !scanStream) {
+        return;
+    }
+
+
+    scanning.value = true;
+
+
+    try {
+
+
+        const video = scanVideo.value;
+
+
+        const canvas = document.createElement('canvas');
+
+
+        canvas.width = video.videoWidth || 1280;
+
+
+        canvas.height = video.videoHeight || 720;
+
+
+        canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+
+        const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, 'image/jpeg', 0.92)
+        );
+
+
+        if (!blob) {
+            throw new Error('No se pudo capturar la imagen');
+        }
+
+
+        const now = new Date();
+
+
+        const pad = (value: number) => String(value).padStart(2, '0');
+
+
+        const name = `ESCANEADO_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.jpg`;
+
+
+        await uploadFiles([new File([blob], name, { type: 'image/jpeg' })]);
+
+
+        stopScanner();
+
+
+        scanVisible.value = false;
+
+
+    } catch (error) {
+
+
+        console.error(error);
+
+
+        toast.add({
+
+            severity: 'error',
+
+            summary: 'Error',
+
+            detail: 'No se pudo capturar el documento',
+
+            life: companyStore.companyInfo.toastDuration ?? 3000
+
+        });
+
+
+    } finally {
+
+
+        scanning.value = false;
+
+
+    }
+
+
+}
 
 
 
@@ -642,6 +908,20 @@ async function upload(event: any) {
 
 
     const files = event.files;
+
+
+    if (!files || files.length === 0) {
+        return;
+    }
+
+
+    await uploadFiles(files);
+
+
+}
+
+
+async function uploadFiles(files: File[]) {
 
 
     if (!files || files.length === 0) {

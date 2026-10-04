@@ -19,8 +19,8 @@
         <div class="trace-heading">
           <span class="trace-heading-icon"><i class="pi pi-sitemap" /></span>
           <div>
-            <b>Trazabilidad comercial</b>
-            <small>Del presupuesto al cobro, conservando todas las ramas</small>
+            <b>{{ mode === 'purchases' ? 'Trazabilidad de compras' : 'Trazabilidad comercial' }}</b>
+            <small>{{ mode === 'purchases' ? 'Del albarán a la factura y su pago' : 'Del presupuesto al cobro, conservando todas las ramas' }}</small>
           </div>
         </div>
         <Button
@@ -89,7 +89,7 @@
                   <dd>{{ formatDate(node.date) }}</dd>
                 </div>
                 <div>
-                  <dt>{{ node.type === 'PAYMENT' ? 'Cobrado' : 'Importe' }}</dt>
+                  <dt>{{ node.type === 'PAYMENT' ? (mode === 'purchases' ? 'Pagado' : 'Cobrado') : 'Importe' }}</dt>
                   <dd>{{ formatCurrency(node.amount) }}</dd>
                 </div>
               </dl>
@@ -104,7 +104,7 @@
                   <i class="pi pi-map-marker" /> Documento consultado
                 </span>
                 <Button
-                  v-if="node.type !== 'PAYMENT' && node.key !== selectedKey"
+                  v-if="mode === 'sales' && node.type !== 'PAYMENT' && node.key !== selectedKey"
                   label="Ir al módulo"
                   icon="pi pi-arrow-right"
                   icon-pos="right"
@@ -176,6 +176,8 @@ interface TraceStage {
 }
 
 const router = useRouter();
+const props = withDefaults(defineProps<{ mode?: 'sales' | 'purchases' }>(), { mode: 'sales' });
+const endpoint = () => (props.mode === 'purchases' ? '/WebGetPurchasesTraceability' : '/WebGetSalesTraceability');
 const visible = ref(false);
 const loading = ref(false);
 const error = ref("");
@@ -204,7 +206,7 @@ const open = async (documentType: string, documentId: number) => {
   activeRequest = request;
   try {
     const { data } = await axios.get(
-      backendUrl(`/WebGetSalesTraceability`),
+      backendUrl(endpoint()),
       {
         params: { documentType, documentId },
         signal: request.signal,
@@ -213,6 +215,10 @@ const open = async (documentType: string, documentId: number) => {
     );
     if (request.signal.aborted || activeRequest !== request) return;
     selectedKey.value = data.selectedKey;
+    if (props.mode === 'purchases') {
+      // El back marca PURCHASE_DELIVERY/PURCHASE_INVOICE; los nodos usan DELIVERY/INVOICE.
+      selectedKey.value = documentType === 'PURCHASE_INVOICE' ? `INVOICE-${documentId}` : `DELIVERY-${documentId}`;
+    }
     stages.value = data.stages ?? [];
   } catch (requestError: any) {
     if (request.signal.aborted || requestError.code === "ERR_CANCELED") return;
@@ -284,15 +290,23 @@ const stageDescription = (stage: TraceStage) =>
     ? "1 documento relacionado"
     : `${stage.nodes.length} documentos relacionados`;
 
-const emptyText = (type: TraceNode["type"]) =>
-  ({
+const emptyText = (type: TraceNode["type"]): string => {
+  const purchaseTexts: Record<string, string> = {
+    DELIVERY: 'No se han generado albaranes.',
+    INVOICE: 'Todavía no se han generado facturas.',
+    PAYMENT: 'Todavía no hay pagos registrados.',
+  };
+  if (props.mode === 'purchases') return purchaseTexts[type] ?? 'Sin documentos relacionados.';
+  const salesTexts: Record<string, string> = {
     QUOTE: "El circuito no parte de un presupuesto.",
     ORDER: "No hay pedidos de venta relacionados.",
     DELIVERY: "No se han generado albaranes.",
     INVOICE: "Todavía no se han generado facturas.",
     RECTIFICATION: "Todavía no hay rectificativas.",
     PAYMENT: "Todavía no hay cobros registrados.",
-  })[type];
+  };
+  return salesTexts[type];
+};
 
 const originText = (parentKeys: string[]) => {
   const labels = parentKeys.map((key) => {
@@ -350,9 +364,9 @@ const printTraceability = () => {
     })
     .join("");
 
-  printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Trazabilidad comercial</title><style>
+  printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${props.mode === 'purchases' ? 'Trazabilidad de compras' : 'Trazabilidad comercial'}</title><style>
     @page{size:A4;margin:14mm}*{box-sizing:border-box}body{margin:0;color:#263126;font:12px Arial,sans-serif}header{display:flex;justify-content:space-between;align-items:end;padding-bottom:10px;border-bottom:3px solid #9cc10a}h1{margin:0;font-size:21px}header p{margin:4px 0 0;color:#667264}header small{color:#7b8578}.stage{position:relative;margin-top:16px;padding-left:24px}.stage:before{content:"";position:absolute;left:6px;top:13px;bottom:-18px;border-left:2px solid #dbe5c7}.stage:last-child:before{bottom:auto;height:13px}.stage-title{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:14px;font-weight:bold}.stage-title:before{content:"";position:absolute;left:0;width:14px;height:14px;border:3px solid #fff;border-radius:50%;background:#789900;box-shadow:0 0 0 1px #aabd83}.stage-title small{display:inline-grid;min-width:19px;height:19px;place-items:center;border-radius:10px;background:#eef2ea;color:#5f695c}.nodes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.node{break-inside:avoid;padding:9px;border:1px solid #dce3d8;border-radius:6px}.node.selected{border:2px solid #9cc10a;background:#fbfdf4}.node.reversed{background:#fff5f3}.node-head{display:flex;justify-content:space-between;gap:8px}.state{padding:2px 6px;border-radius:9px;background:#eef2ea;font-size:10px}.origin{margin-top:6px;padding:4px 6px;background:#f5f7f3;color:#606c5d;font-size:10px}.details{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:7px;color:#4d584b}.consulted{margin-top:6px;color:#668500;font-size:10px;font-weight:bold}.empty{padding:8px;border:1px dashed #d5ddd1;color:#788176}.print-footer{margin-top:18px;padding-top:7px;border-top:1px solid #dce3d8;color:#7b8578;font-size:9px;text-align:right}@media print{.node{box-shadow:none}}
-  </style></head><body><header><div><h1>Trazabilidad comercial</h1><p>Presupuesto · Pedido · Albarán · Factura · Rectificativa · Cobro</p></div><small>${escapeHtml(new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeStyle: "short" }).format(new Date()))}</small></header>${stageHtml}<div class="print-footer">KiwiKERP · Trazabilidad comercial</div><script>window.addEventListener('load',()=>{window.print();});<\/script></body></html>`);
+  </style></head><body><header><div><h1>${props.mode === 'purchases' ? 'Trazabilidad de compras' : 'Trazabilidad comercial'}</h1><p>${props.mode === 'purchases' ? 'Albarán · Factura · Pago' : 'Presupuesto · Pedido · Albarán · Factura · Rectificativa · Cobro'}</p></div><small>${escapeHtml(new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeStyle: "short" }).format(new Date()))}</small></header>${stageHtml}<div class="print-footer">KiwiKERP · ${props.mode === 'purchases' ? 'Trazabilidad de compras' : 'Trazabilidad comercial'}</div><script>window.addEventListener('load',()=>{window.print();});<\/script></body></html>`);
   printWindow.document.close();
 };
 

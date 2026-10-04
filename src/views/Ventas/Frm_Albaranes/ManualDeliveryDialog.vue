@@ -3,24 +3,27 @@
     <div class="manual-form-content">
     <Message severity="info" :closable="false" class="mb-4">Este albarán no estará vinculado a un pedido. Las cantidades se contabilizarán como salida únicamente cuando se confirme.</Message>
     <div class="grid p-fluid manual-header">
-      <div class="col-12 md:col-6"><FloatLabel variant="on"><CustomerLookup :disabled="saving || pricing.busy.value" id="manual-customer" v-model="form.entityId" :label="customerLabel" @selected="selectCustomer" /><label for="manual-customer">Cliente *</label></FloatLabel></div>
+      <div class="col-12 md:col-6"><FloatLabel variant="on"><CustomerLookup :disabled="saving || pricing.busy.value" id="manual-customer" v-model="form.entityId" :label="customerLabel" @selected="selectCustomer" /><label for="manual-customer">Cliente *</label></FloatLabel><InlineMessage v-if="errors.customer" severity="error">{{ errors.customer }}</InlineMessage></div>
       <div class="col-12 md:col-3"><FloatLabel variant="on"><DatePicker id="manual-date" v-model="form.date" dateFormat="dd/mm/yy" showIcon iconDisplay="input" showTime hourFormat="24" class="w-full" /><label for="manual-date">Fecha *</label></FloatLabel></div>
       <div class="col-12 md:col-3"><FloatLabel variant="on"><InputText id="manual-reference" v-model="form.reference" maxlength="145" /><label for="manual-reference">Referencia</label></FloatLabel></div>
-      <div class="col-12 md:col-4"><FloatLabel variant="on"><Select id="manual-reason" v-model="form.reason" :options="reasons" class="w-full" /><label for="manual-reason">Motivo *</label></FloatLabel></div>
+      <div class="col-12 md:col-4"><FloatLabel variant="on"><Select id="manual-reason" v-model="form.reason" :options="reasons" class="w-full" :invalid="!!errors.reason" /><label for="manual-reason">Motivo *</label></FloatLabel><InlineMessage v-if="errors.reason" severity="error">{{ errors.reason }}</InlineMessage></div>
     </div>
 
-    <label class="flex gap-2 align-items-center">Tarifa<Select v-model="form.salesTarifaId" :options="rates" optionLabel="description" optionValue="pkid" :disabled="saving || pricing.busy.value"/></label>
+    <label class="flex gap-2 align-items-center">Tarifa<Select v-model="form.salesTarifaId" :options="rates" optionLabel="description" optionValue="pkid" :disabled="saving || pricing.busy.value"/></label><InlineMessage v-if="errors.tarifa" severity="error">{{ errors.tarifa }}</InlineMessage>
     <div class="lines-heading"><div><b>Líneas del albarán</b><small>Seleccione los productos entregados sin pedido previo.</small></div><Button label="Añadir línea" icon="pi pi-plus" size="small" @click="addLine" /></div>
+    <InlineMessage v-if="errors.lines" severity="error" class="mb-2">{{ errors.lines }}</InlineMessage>
     <div class="flex gap-2 align-items-center flex-wrap"><Button label="Aplicar tarifa" icon="pi pi-tags" text :disabled="pricing.busy.value" @click="pricing.request"/><small>La tarifa propone el precio neto, sin impuestos.</small></div><Message v-if="pricing.error.value" severity="error">{{pricing.error.value}}</Message>
     <DataTable ref="manualLinesTable" :value="form.lines" size="small" stripedRows scrollable scrollHeight="flex" class="manual-lines">
-      <Column header="Producto" style="min-width:220px"><template #body="{ data }"><ProductLookup :disabled="saving || pricing.busy.value" v-model="data.productId" :label="data.productLabel" @selected="selectProduct(data, $event)" @cleared="clearProduct(data)" /></template></Column>
+      <Column header="Producto" style="min-width:220px"><template #body="{ data }"><ProductLookup :disabled="saving || pricing.busy.value" mode="sale" v-model="data.productId" :label="data.productLabel" @selected="selectProduct(data, $event)" @cleared="clearProduct(data)" /></template></Column>
       <Column header="Descripción" style="min-width:250px"><template #body="{ data }"><InputText v-model="data.description" class="w-full" /></template></Column>
-      <Column header="Cantidad" style="width:130px"><template #body="{ data }"><InputNumber v-model="data.quantity" @update:modelValue="pricing.quantityChanged(data,$event)" :disabled="saving || pricing.busy.value" :min="0.001" :maxFractionDigits="3" locale="de-DE" fluid /></template></Column>
-      <Column header="Precio" style="width:135px"><template #body="{ data }"><InputNumber v-model="data.priceUnit" :disabled="saving || pricing.busy.value" :title="data.pricingSource || 'Precio manual'" @update:modelValue="data.pricingSource='Precio manual'" :min="0" :minFractionDigits="2" :maxFractionDigits="4" mode="currency" :currency="currencyCode" locale="de-DE" fluid /></template></Column>
-      <Column header="Impuesto %" style="width:120px"><template #body="{ data }"><InputNumber v-model="data.tax" :min="0" :max="100" :maxFractionDigits="2" suffix=" %" fluid /></template></Column>
+      <Column header="Cantidad" style="width:130px" bodyStyle="text-align:right" headerStyle="text-align:right" headerClass="text-right"><template #body="{ data }"><InputNumber v-model="data.quantity" @update:modelValue="pricing.quantityChanged(data,$event)" :disabled="saving || pricing.busy.value" :min="0.001" :maxFractionDigits="3" locale="de-DE" fluid inputClass="text-right" /></template></Column>
+      <Column header="Precio" style="width:135px" bodyStyle="text-align:right" headerStyle="text-align:right" headerClass="text-right"><template #body="{ data }"><InputNumber v-model="data.priceUnit" :disabled="saving || pricing.busy.value" :title="data.pricingSource || 'Precio manual'" @update:modelValue="data.pricingSource='Precio manual'" :min="0" :minFractionDigits="2" :maxFractionDigits="4" mode="currency" :currency="currencyCode" locale="de-DE" fluid inputClass="text-right" /></template></Column>
+      <Column header="Impuesto %" style="width:120px" bodyStyle="text-align:right" headerStyle="text-align:right" headerClass="text-right"><template #body="{ data }"><InputNumber v-model="data.tax" :min="0" :max="100" :maxFractionDigits="2" suffix=" %" fluid inputClass="text-right" /></template></Column>
       <Column style="width:54px"><template #body="{ index }"><Button icon="pi pi-trash" severity="danger" text rounded title="Eliminar línea" @click="removeLine(index)" /></template></Column>
       <template #empty><div class="empty-lines">Añada al menos una línea al albarán.</div></template>
     </DataTable>
+
+    <div class="manual-totals"><span>Unidades <b>{{ quantity(salesTotals.units) }}</b></span><span>Total Neto <b>{{ amount(salesTotals.net) }}</b></span><span>Impuestos <b>{{ amount(salesTotals.tax) }}</b></span><span>Total <b>{{ amount(salesTotals.total) }} {{ currencyCode }}</b></span></div>
 
     <div class="manual-notes">
       <FloatLabel variant="on"><Textarea id="manual-notes" v-model="form.notes" rows="3" maxlength="500" :autoResize="false" class="w-full fixed-observations" style="height:82px;min-height:82px;max-height:82px;resize:none;overflow-y:auto" /><label for="manual-notes">Observaciones</label></FloatLabel>
@@ -42,7 +45,7 @@ import axios from 'axios';
 import PriceRecalculationDialog from '@/components/shared/PriceRecalculationDialog.vue';
 import {useSalesPricing} from '@/services/salesPricing';
 
-import Button from 'primevue/button'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import DatePicker from 'primevue/datepicker'; import Dialog from 'primevue/dialog'; import FloatLabel from 'primevue/floatlabel'; import InputNumber from 'primevue/inputnumber'; import InputText from 'primevue/inputtext'; import Message from 'primevue/message'; import Select from 'primevue/select'; import Textarea from 'primevue/textarea';
+import Button from 'primevue/button'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import DatePicker from 'primevue/datepicker'; import Dialog from 'primevue/dialog'; import FloatLabel from 'primevue/floatlabel'; import InlineMessage from 'primevue/inlinemessage'; import InputNumber from 'primevue/inputnumber'; import InputText from 'primevue/inputtext'; import Message from 'primevue/message'; import Select from 'primevue/select'; import Textarea from 'primevue/textarea';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/stores/authStore';
 import CustomerLookup from '@/components/shared/CustomerLookup.vue';
@@ -58,17 +61,32 @@ const rates=ref<any[]>([]);
 const pricing=useSalesPricing({lines:()=>form.lines,tarifa:computed({get:()=>form.salesTarifaId,set:(v)=>{form.salesTarifaId=v}}),enabled:()=>visible.value&&!saving.value,currency:(id)=>rates.value.find(r=>r.pkid===id)?.currencyCode});
 const currencyCode=computed(()=>rates.value.find(r=>r.pkid===form.salesTarifaId)?.currencyCode||'EUR');
 const customerLabel = computed(() => selectedCustomer.value ? `${selectedCustomer.value.code ? `${selectedCustomer.value.code} — ` : ''}${selectedCustomer.value.name}` : '');
-const reset = () => { selectedCustomer.value=null; form.entityId=null; form.salesTarifaId=null; form.date=new Date(); form.reference=''; form.reason=''; form.notes=''; form.lines=[newLine()]; };
+const amount = (v: any) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true }).format(Number(v) || 0);
+const quantity = (v: any) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 3, useGrouping: true }).format(Number(v) || 0);
+const salesLineNet = (line: any) => Number(line.quantity || 0) * Number(line.priceUnit || 0);
+const salesTotals = computed(() => {
+  const units = form.lines.reduce((sum: number, line: any) => sum + Number(line.quantity || 0), 0);
+  const net = form.lines.reduce((sum: number, line: any) => sum + salesLineNet(line), 0);
+  const tax = form.lines.reduce((sum: number, line: any) => sum + (salesLineNet(line) * Number(line.tax || 0)) / 100, 0);
+  return { units, net, tax, total: net + tax };
+});
+const reset = () => { selectedCustomer.value=null; form.entityId=null; form.salesTarifaId=null; form.date=new Date(); form.reference=''; form.reason=''; form.notes=''; form.lines=[newLine()]; clearErrors(); };
+const errors = reactive({ customer: '', tarifa: '', reason: '', lines: '' });
+const clearErrors = () => { errors.customer=''; errors.tarifa=''; errors.reason=''; errors.lines=''; };
 const open = async () => { pricing.cancel();reset();visible.value=true;try{const{data}=await axios.get(backendUrl('/WebLoadSalesQuoteCatalog'));rates.value=data.rates||[];form.salesTarifaId=data.defaultTarifaId??null}catch{rates.value=[];}};
-const selectCustomer = (customer:any) => { selectedCustomer.value=customer; form.salesTarifaId=customer.salesTarifaId ?? form.salesTarifaId; };
+const selectCustomer = (customer:any) => { selectedCustomer.value=customer; form.salesTarifaId=customer.salesTarifaId ?? form.salesTarifaId; errors.customer=''; };
 const addLine = async () => { form.lines.push(newLine()); await nextTick(); requestAnimationFrame(() => { const containers=manualLinesTable.value?.$el?.querySelectorAll('.p-datatable-table-container, .p-datatable-wrapper, .p-datatable-scrollable-body') as NodeListOf<HTMLElement>|undefined; containers?.forEach(container=>{container.scrollTop=container.scrollHeight;}); }); }; const removeLine = (index:number) => form.lines.splice(index,1);
 const selectProduct = (line:any, product:any) => { line.productId=product.pkid; line.productLabel=`${product.code} — ${product.description}`; line.description=product.description || ''; line.priceUnit=Number(product.salePrice ?? 0); line.tax=Number(product.taxValue ?? 0); line.uomId=product.uomId ?? null; void pricing.apply(line); };
 const clearProduct = (line:any) => {pricing.clear(line);Object.assign(line,newLine());};
 const save = async () => {
   if(saving.value || pricing.invalid.value)return;
-  if (!form.entityId || !form.salesTarifaId) { toast.add({severity:'error',summary:'Cliente incompleto',detail:'Selecciona un cliente con tarifa de venta configurada.',life:4000}); return; }
-  if (!form.reason) { toast.add({severity:'error',summary:'Motivo obligatorio',detail:'Indica por qué se crea el albarán sin pedido.',life:4000}); return; }
-  if (!form.lines.length || form.lines.some(line=>!line.productId || Number(line.quantity)<=0)) { toast.add({severity:'error',summary:'Líneas incompletas',detail:'Todas las líneas deben tener producto y una cantidad mayor que cero.',life:4000}); return; }
+  clearErrors();
+  let valid = true;
+  if (!form.entityId) { errors.customer='Obligatorio'; valid=false; }
+  if (!form.salesTarifaId) { errors.tarifa='Obligatorio'; valid=false; }
+  if (!form.reason) { errors.reason='Obligatorio'; valid=false; }
+  if (!form.lines.length || form.lines.some(line=>!line.productId || Number(line.quantity)<=0)) { errors.lines='Todas las líneas deben tener producto y una cantidad mayor que cero.'; valid=false; }
+  if (!valid) return;
   saving.value=true;
   try { const {data}=await axios.post(backendUrl(`/WebCreateManualSalesDelivery`),{userId:authStore.user?.pkid ?? null,entityId:form.entityId,salesTarifaId:form.salesTarifaId,dateCreate:form.date.toISOString(),reference:form.reference,reason:form.reason,notes:form.notes,lines:form.lines.map(({productId,description,quantity,priceUnit,tax,uomId})=>({productId,description,quantity:Number(quantity),priceUnit:Number(priceUnit),tax:Number(tax),uomId}))}); toast.add({severity:'success',summary:'Albarán manual creado',detail:`${data.code} se ha guardado como borrador.`,life:4000}); visible.value=false; emit('saved',data); }
   catch(error:any){toast.add({severity:'error',summary:'No se pudo crear el albarán',detail:error.response?.data ?? 'Revisa los datos introducidos.',life:5000});}
@@ -78,5 +96,5 @@ defineExpose({open});
 </script>
 
 <style scoped>
-.manual-form-content{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}.manual-header{flex:0 0 auto;margin-top:.25rem}.lines-heading{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;margin:1rem 0 .65rem}.lines-heading div{display:flex;flex-direction:column;gap:.2rem}.lines-heading small{color:#7b8492}.manual-lines{flex:1 1 auto;min-height:220px;overflow:hidden;border:1px solid #e5e7eb;border-radius:8px}.manual-notes{flex:0 0 auto;width:100%;margin-top:1.25rem}.fixed-observations{height:82px!important;min-height:82px!important;max-height:82px!important;resize:none!important;overflow-y:auto!important}.empty-lines{text-align:center;color:#8791a0;padding:2rem}.dialog-footer,.dialog-actions{width:100%}.dialog-footer-separator{width:100%;min-height:1px;margin:0 0 .75rem}.dialog-actions{display:flex;justify-content:flex-end;gap:.5rem}
+.manual-form-content{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}.manual-header{flex:0 0 auto;margin-top:.25rem}.lines-heading{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;margin:1rem 0 .65rem}.lines-heading div{display:flex;flex-direction:column;gap:.2rem}.lines-heading small{color:#7b8492}.manual-lines{flex:1 1 auto;min-height:220px;overflow:hidden;border:1px solid #e5e7eb;border-radius:8px}.manual-notes{flex:0 0 auto;width:100%;margin-top:1.25rem}.fixed-observations{height:82px!important;min-height:82px!important;max-height:82px!important;resize:none!important;overflow-y:auto!important}.empty-lines{text-align:center;color:#8791a0;padding:2rem}:deep(th.text-right .p-datatable-column-header-content){justify-content:flex-end}.manual-totals{display:flex;justify-content:flex-end;gap:1.4rem;flex-wrap:wrap;padding:.7rem;margin-top:1rem;background:#f7faef;border-radius:6px}.manual-totals b{margin-left:.5rem}.dialog-footer,.dialog-actions{width:100%}.dialog-footer-separator{width:100%;min-height:1px;margin:0 0 .75rem}.dialog-actions{display:flex;justify-content:flex-end;gap:.5rem}
 </style>

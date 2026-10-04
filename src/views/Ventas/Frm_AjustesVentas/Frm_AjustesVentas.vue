@@ -83,6 +83,11 @@
             <div class="section-heading"><span><i class="pi pi-tags"/></span><div><h2>Tarifas de venta</h2><p>Configura la moneda base, la tarifa predeterminada y las reglas de precios desde Lista de precios.</p></div></div>
             <div class="reminder-actions"><Button label="Abrir Lista de precios" icon="pi pi-tags" @click="router.push({name:'ListaPrecios'})"/></div>
           </section>
+
+          <section class="settings-card">
+            <div class="section-heading"><span><i class="pi pi-briefcase"/></span><div><h2>Gestor fiscal</h2><p>Contacto que recibirá el PDF cuando una liquidación trimestral de IVA se marque como presentada.</p></div></div>
+            <label class="field"><span>Contacto gestor</span><TaxAdvisorContactLookup v-model="form.taxAdvisorContactId" :disabled="saving"/><small class="field-help">Búsqueda paginada entre contactos activos con correo. Si no seleccionas ninguno, la liquidación se presentará sin enviar correo.</small></label>
+          </section>
         </TabPanel>
 
         <TabPanel value="verifactu">
@@ -162,11 +167,12 @@ import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
+import TaxAdvisorContactLookup from '@/components/shared/TaxAdvisorContactLookup.vue';
 
 const router=useRouter(),toast=useToast(),loading=ref(true),loaded=ref(false),saving=ref(false),activeTab=ref('general');
 const environments=[{label:'Pruebas · AEAT preproducción',value:'PRUEBAS'}];
 const currentYear=new Date().getFullYear();
-const form=reactive<any>({quoteReminderEnabled:true,quoteReminderTime:'08:00',quoteReminderDays:7,quoteReminderIncludeDrafts:true,quoteCancellationEnabled:true,quoteCancellationTime:'00:10',quoteCancellationIncludeDrafts:true,quoteCancellationNotifyOwner:true,quoteCancellationNotifyCustomer:true,deliveryReminderEnabled:true,deliveryReminderTime:'08:15',deliveryReminderDays:7,deliveryDeadlineShortDays:7,deliveryDeadlineLongDays:30,invoiceSeriesPrefix:'KW',defaultTerms:'',offersMailBody:'',emailAutoSend:false,veriFactuEnabled:true,veriFactuEnvironment:'PRUEBAS',veriFactuAutoSend:true,veriFactuSystemId:77,veriFactuSystemEntity:'',veriFactuSystemNif:'',veriFactuSystemName:'KiwiKERP',veriFactuSystemVersion:'',veriFactuInstallationNumber:1,veriFactuAddQr:true,veriFactuQrSize:95,veriFactuQrX:350,veriFactuQrY:740,veriFactuRetries:3,veriFactuRetryMinutes:10,veriFactuAcceptedVisible:20});
+const form=reactive<any>({quoteReminderEnabled:true,quoteReminderTime:'08:00',quoteReminderDays:7,quoteReminderIncludeDrafts:true,quoteCancellationEnabled:true,quoteCancellationTime:'00:10',quoteCancellationIncludeDrafts:true,quoteCancellationNotifyOwner:true,quoteCancellationNotifyCustomer:true,deliveryReminderEnabled:true,deliveryReminderTime:'08:15',deliveryReminderDays:7,deliveryDeadlineShortDays:7,deliveryDeadlineLongDays:30,invoiceSeriesPrefix:'KW',taxAdvisorContactId:null,defaultTerms:'',offersMailBody:'',emailAutoSend:false,veriFactuEnabled:true,veriFactuEnvironment:'PRUEBAS',veriFactuAutoSend:true,veriFactuSystemId:77,veriFactuSystemEntity:'',veriFactuSystemNif:'',veriFactuSystemName:'KiwiKERP',veriFactuSystemVersion:'',veriFactuInstallationNumber:1,veriFactuAddQr:true,veriFactuQrSize:95,veriFactuQrX:350,veriFactuQrY:740,veriFactuRetries:3,veriFactuRetryMinutes:10,veriFactuAcceptedVisible:20});
 const quoteBusy=ref(false),savedQuotes=ref('');
 const quoteSnapshot=()=>JSON.stringify(Object.keys(form).filter(k=>k.startsWith('quote')).sort().map(k=>[k,form[k]]));
 const quoteError=computed(()=>{

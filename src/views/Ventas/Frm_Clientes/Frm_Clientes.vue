@@ -4,15 +4,15 @@
             <div class="entities-title">
                 <div class="entities-icon"><i class="pi pi-users"></i></div>
                 <div>
-                    <span class="breadcrumb">Ventas / Datos maestros</span>
+                    <span class="breadcrumb">{{ esCompras ? 'Compras' : 'Ventas' }} / Datos maestros</span>
                     <h1>Entidades</h1>
                     <p>Clientes, proveedores, fabricantes y sus contactos en un directorio común.</p>
                 </div>
             </div>
 
             <nav class="header-actions" aria-label="Navegación">
-                <Button label="Ventas" icon="pi pi-arrow-left" severity="secondary" text
-                    @click="router.push({ name: 'Ventas' })" />
+                <Button :label="esCompras ? 'Compras' : 'Ventas'" icon="pi pi-arrow-left" severity="secondary" text
+                    @click="volver" />
                 <Button label="Inicio" icon="pi pi-home" severity="secondary" text
                     @click="router.push({ name: 'Dashboard' })" />
             </nav>
@@ -240,7 +240,7 @@
 <script setup lang="ts">
 import { backendUrl } from '@/services/backendUrl';
 import { ref, watch, reactive, nextTick, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import Toolbar from 'primevue/toolbar';
 import Menu from 'primevue/menu';
 import Button from 'primevue/button';
@@ -253,14 +253,29 @@ import { useCompanyStore } from '../../../stores/companyStore';
 import { HelperDates } from '../../../libs/HelperDates.ts';
 import Frm_ClientForm from './Frm_ClientForm.vue';
 import { useSecurityStore } from '../../../stores/securityStore.ts';
+import { useAuthStore } from '../../../stores/authStore';
 import { PERM } from '@/services/Frm_Main/permissions';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue'
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import Frm_Contacts from '../../Frm_Contacts/Frm_Contacts.vue';
 
 const securityStore = useSecurityStore();
+const authStore = useAuthStore();
 const clientFormRef = ref();
 const router = useRouter();
+const route = useRoute();
+// Vista compartida Ventas/Compras: el hub origen viaja en ?from=compras.
+// Sin query, si el usuario solo tiene Compras, se vuelve a Compras.
+const esCompras = computed(() => {
+    if (route.query.from === 'compras') return true;
+    if (route.query.from === 'ventas') return false;
+    const puedeCompras = authStore.user?.admin === true || securityStore.hasModule('PURCHASES');
+    const puedeVentas = authStore.user?.admin === true || securityStore.hasModule('SALES');
+    return puedeCompras && !puedeVentas;
+});
+function volver() {
+    router.push({ name: esCompras.value ? 'Compras' : 'Ventas' });
+}
 const tableRef = ref();
 const menuTable = ref();
 const menuOptionRegistro = ref();

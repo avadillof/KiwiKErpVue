@@ -187,6 +187,7 @@ function linkLabel(message: NotificationMessage): string {
   const link = message.link || '';
   if (link.includes('Frm_Ajustes') && link.includes('tab=5')) return 'Ir a Salvaguarda de datos';
   if (link.includes('Frm_Ajustes')) return 'Ir a Configuración';
+  if (link === 'InformesVentas') return 'Ir a Liquidación de IVA';
   if (message.type === 'quote') return 'Ir a Presupuestos';
   if (message.type === 'order') return 'Ir a Pedidos';
   if (message.type === 'delivery') return 'Ir a Albaranes';

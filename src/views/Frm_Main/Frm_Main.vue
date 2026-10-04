@@ -149,7 +149,7 @@
           style="width: 1px; height: 22px; flex: 0 0 auto; background-color: #e1e4e8;"></div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <img src="../../assets/logos/LogTras.png" alt="Logo" style="height: 18px; width: auto; opacity: 0.85;" />
-          <span :title="`Imagen Front ${erpInfo.frontVersion} · Imagen Back ${erpInfo.backVersion}`">{{ erpInfo.nombre }} <span style="color: #9cc10a; font-weight: 700;">Front {{ erpInfo.frontVersion }} · Back {{ erpInfo.backVersion }}</span></span>
+          <span v-if="versionLabel" :title="`Imagen Front ${erpInfo.frontVersion} · Imagen Back ${erpInfo.backVersion}`">{{ erpInfo.nombre }} <span style="color: #9cc10a; font-weight: 700;">{{ versionLabel }}</span></span>
         </div>
         <div style="width: 4px; height: 4px; background-color: #d1d5db; border-radius: 50%;"></div>
         <span>&copy; {{ erpInfo.copyright }}</span>
@@ -236,6 +236,18 @@ export default defineComponent({
       window.localStorage.setItem('kiwik.sidebarCollapsed', value ? '1' : '0');
     });
     const sidebarModules = computed(() => visibleAppModules());
+    // Etiqueta de versiones Docker: solo las conocidas (en local son 'dev'/'—' y se oculta).
+    const versionLabel = computed(() => {
+      const info = (setupResult as any)?.erpInfo?.value;
+      const front = String(info?.frontVersion ?? '').trim();
+      const back = String(info?.backVersion ?? '').trim();
+      const frontKnown = front !== '' && front !== 'dev';
+      const backKnown = back !== '' && back !== '…' && back !== '—' && back !== 'dev';
+      if (frontKnown && backKnown) return `Front ${front} · Back ${back}`;
+      if (frontKnown) return `Front ${front}`;
+      if (backKnown) return `Back ${back}`;
+      return '';
+    });
 
     function isModuleActive(m: { ruta: string }): boolean {
       const name = String(route.name ?? '');
@@ -295,6 +307,7 @@ return {
       openInitialConfiguration,
       sidebarCollapsed,
       sidebarModules,
+      versionLabel,
       isModuleActive,
       navTo
     };

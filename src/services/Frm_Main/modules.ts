@@ -37,28 +37,17 @@ export const APP_MODULES: AppModule[] = [
     requiredPermission: 'SALES'
   },
   {
-    id: 'informes-ventas',
-    nombre: 'Reportes',
-    descripcion: 'Informes parametrizados del ERP, cada uno con su código único RPT.',
-    funcionalidades: ['RPT-SAL-010 Lista de Artículos'],
-    icono: 'pi pi-chart-bar',
-    ruta: 'InformesVentas',
-    colorIcono: '#16a085',
-    bgIcono: '#e8f8f4',
-    disponible: true,
-    requiredPermission: 'SALES'
-  },
-  {
     id: 'compras',
     nombre: 'Compras',
-    descripcion: 'Centralizará proveedores, pedidos de compra, recepciones de mercancía y el seguimiento de gastos.',
-    funcionalidades: ['Proveedores', 'Pedidos', 'Recepciones'],
+    descripcion: 'Registra albaranes y facturas de proveedor para el diario de facturación, con gancho futuro a almacén.',
+    funcionalidades: ['Albaranes de proveedor', 'Facturas de proveedor', 'Vencimientos y pagos'],
     icono: 'pi pi-shopping-cart',
     ruta: 'Compras',
     colorIcono: '#e06b35',
     bgIcono: '#fff2e8',
-    disponible: false,
-    hidden: true
+    disponible: true,
+    dashboardLevel: true,
+    requiredPermission: 'PURCHASES'
   },
   {
     id: 'informes',
@@ -85,6 +74,18 @@ export const APP_MODULES: AppModule[] = [
     disponible: true,
     dashboardLevel: true,
     requiredPermission: 'TASKS'
+  },
+  {
+    id: 'informes-ventas',
+    nombre: 'Reportes',
+    descripcion: 'Informes parametrizados del ERP, cada uno con su código único RPT.',
+    funcionalidades: ['RPT-SAL-010 Lista de Artículos'],
+    icono: 'pi pi-chart-bar',
+    ruta: 'InformesVentas',
+    colorIcono: '#16a085',
+    bgIcono: '#e8f8f4',
+    disponible: true,
+    requiredPermission: 'SALES'
   },
   {
     id: 'ajustes',

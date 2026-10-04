@@ -294,18 +294,20 @@
           ><template #body="{ data }"
             ><span
               v-if="data.deliveryCodes?.length"
-              class="origins-cell"
+              class="orders-cell"
               :title="data.deliveryCodes.join(', ')"
-              ><i class="pi pi-truck"></i
-              ><span>{{ data.deliveryCodes[0] }}</span
-              ><span
+              ><Tag
+                class="invoice-code-tag"
+                :value="data.deliveryCodes[0]"
+                icon="pi pi-truck"
+                severity="success"
+                rounded /><Tag
                 v-if="data.deliveryCodes.length > 1"
-                class="origins-more"
-                role="button"
+                :value="`+${data.deliveryCodes.length - 1}`"
+                severity="secondary"
+                rounded
                 :title="`Ver los ${data.deliveryCodes.length} albaranes origen`"
-                @click.stop="openOriginDeliveries(data)"
-                >{{ data.deliveryCodes.length }}</span
-              ></span
+                @click.stop="openOriginDeliveries(data)" /></span
             ><span v-else>—</span></template
           ></Column
         ><Column
@@ -364,6 +366,19 @@
               :value="stateLabel(data.state)"
               :severity="severity(data.state)"
               rounded /></template></Column
+        ><Column
+          field="vatSettlement"
+          header="Liquidación IVA"
+          style="width: 135px; min-width: 135px"
+          ><template #body="{ data }"
+            ><Tag
+              v-if="data.vatSettlement"
+              :value="data.vatSettlement.label"
+              :severity="data.vatSettlement.status === 'PRESENTED' ? 'success' : 'warn'"
+              :icon="data.vatSettlement.status === 'PRESENTED' ? 'pi pi-verified' : 'pi pi-clock'"
+              :title="data.vatSettlement.status === 'PRESENTED' ? 'Incluida en una liquidación presentada' : 'Incluida en una preliquidación preparada'"
+              rounded
+            /><Tag v-else-if="!isDraft(data.state) && data.state !== 'Cancelada / Canceled'" value="Pendiente" severity="secondary" icon="pi pi-clock" rounded /><span v-else>—</span></template></Column
         ><Column
           field="verifactuStatus"
           header="VeriFactu"
@@ -757,6 +772,7 @@
             style="width: 180px; min-width: 180px"
             ><template #body="{ data }"
               ><ProductLookup
+                mode="sale"
                 v-if="canEditDetail && data.manual && !data.pkid"
                 v-model="data.productId"
                 :label="data.productCode"
@@ -2351,6 +2367,16 @@ const noteRequest = {
       disabled: selected.value?.verifactuStatus !== "ACCEPTED",
       command: () => openInvoicePdf(selected.value),
     },
+    {
+      label: "Descargar XML Facturae",
+      visible: securityStore.hasPermission(PERM.INV_PRINT),
+      icon: "pi pi-download",
+      disabled:
+        !selected.value?.pkid ||
+        isDraft(selected.value?.state) ||
+        downloadingFacturae.value,
+      command: () => downloadFacturae(selected.value),
+    },
     ...(selected.value?.canRetryVerifactu
       ? [
           { separator: true },
@@ -2534,6 +2560,49 @@ const openInvoicePdf = (item: any) => {
     );
   }
 };
+const downloadingFacturae = ref(false);
+const downloadFacturae = async (item: any) => {
+  if (!item?.pkid || isDraft(item.state) || downloadingFacturae.value) return;
+  downloadingFacturae.value = true;
+  try {
+    // La descarga conserva los bytes y la versión archivados, sin regenerar la factura.
+    const response = await axios.get(
+      backendUrl(`/WebGetSalesInvoiceFacturae/${item.pkid}`),
+      { ...auth.portalRequestConfig(), responseType: "blob" },
+    );
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    const archivedName = response.headers["content-disposition"]
+      ?.match(/filename="([a-zA-Z0-9_.-]+)"/)?.[1];
+    link.download = archivedName || `FACTURAE_${item.pkid}.xml`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error: any) {
+    let message = "No se pudo recuperar el XML Facturae archivado.";
+    if (error.response?.data instanceof Blob) {
+      const body = await error.response.data.text();
+      if (error.response.data.type.startsWith("text/plain") && body.trim()) {
+        message = body;
+      }
+    } else if (!error.response && error.message) {
+      message = error.message;
+    }
+    if (error.response?.status === 401) {
+      message = "Vuelve a iniciar sesión para descargar la factura.";
+    }
+    toast.add({
+      severity: "error",
+      summary: "Descarga de Facturae",
+      detail: message,
+      life: 6000,
+    });
+  } finally {
+    downloadingFacturae.value = false;
+  }
+};
 </script>
 <style scoped>
 .pending-group summary {
@@ -2581,6 +2650,8 @@ const openInvoicePdf = (item: any) => {
 .table :deep(.invoice-date-column) {
   white-space: nowrap;
 }
+.orders-cell{display:inline-flex;align-items:center;gap:.3rem;max-width:100%;font-size:.78rem}
+.invoice-code-tag{font-size:.72rem!important}
 .due-summary {
   display: flex;
   flex-direction: column;

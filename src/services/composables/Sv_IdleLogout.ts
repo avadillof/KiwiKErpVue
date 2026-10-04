@@ -28,6 +28,10 @@ export function startIdleWatcher() {
 
     let idleTimer: number | null = null;
     let warnTimer: number | null = null;
+    // Solo se puede cerrar el aviso de inactividad; jamás los diálogos
+    // de trabajo (un close() global anularía el confirm en curso:
+    // el mousedown lo cerraría antes de que llegue el click a aceptar).
+    let warningOpen = false;
 
     const clear = () => {
         if (idleTimer !== null) window.clearTimeout(idleTimer);
@@ -37,6 +41,7 @@ export function startIdleWatcher() {
     };
 
     const doLogout = (detail: string) => {
+        warningOpen = false;
         confirm.close();
         clear();
         authStore.logout();
@@ -56,20 +61,24 @@ export function startIdleWatcher() {
     };
 
     const showWarning = () => {
+        warningOpen = true;
         confirm.require({
             message: `Tu sesión se cerrará por inactividad en ${WARNING_SECONDS / 60} minuto.`,
             header: '¿Sigues ahí?',
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Seguir trabajando',
             rejectLabel: 'Cerrar sesión',
-            accept: () => arm(),
+            accept: () => { warningOpen = false; arm(); },
             reject: () => doLogout('Sesión cerrada.')
         });
     };
 
     const onActivity = () => {
         if (!authStore.isAuthenticated) return;
-        confirm.close();
+        if (warningOpen) {
+            warningOpen = false;
+            confirm.close();
+        }
         arm();
     };
 

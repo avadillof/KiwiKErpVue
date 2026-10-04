@@ -21,7 +21,7 @@ import CorporateLoader from './CorporateLoader.vue';
 import { ref } from 'vue';
 import axios from 'axios';
 import Button from 'primevue/button'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import Dialog from 'primevue/dialog'; import InputGroup from 'primevue/inputgroup'; import InputText from 'primevue/inputtext'; import Message from 'primevue/message';
-const props = withDefaults(defineProps<{ modelValue: number | null; label?: string; placeholder?: string; rows?: number; disabled?: boolean }>(), { label: '', placeholder: 'Seleccionar producto...', rows: 20, disabled: false });
+const props = withDefaults(defineProps<{ modelValue: number | null; label?: string; placeholder?: string; rows?: number; disabled?: boolean; mode?: 'sale' | 'purchase' }>(), { label: '', placeholder: 'Seleccionar producto...', rows: 20, disabled: false });
 const emit = defineEmits<{ 'update:modelValue': [value: number | null]; selected: [product: any]; cleared: [] }>();
 const visible = ref(false); const loading = ref(false); const items = ref<any[]>([]); const total = ref(0); const search = ref(''); const error = ref(''); let timer: ReturnType<typeof setTimeout> | undefined;
 let requestVersion = 0;
@@ -33,7 +33,7 @@ const load = async (page = 0) => {
   items.value = [];
   try {
     const { data } = await axios.get(backendUrl(`/WebGetSalesQuoteProducts`), {
-      params: { page, size: props.rows, query: search.value }
+      params: { page, size: props.rows, query: search.value, ...(props.mode ? { mode: props.mode } : {}) }
     });
     if (version !== requestVersion) return;
     items.value = data?.content ?? [];
@@ -63,7 +63,9 @@ const select = async (product: any) => {
   error.value = '';
   try {
     // La búsqueda identifica el producto; la línea usa su configuración actual.
-    const { data } = await axios.get(backendUrl(`/WebGetSalesQuoteProduct/${product.pkid}`));
+    const { data } = await axios.get(backendUrl(`/WebGetSalesQuoteProduct/${product.pkid}`), {
+      ...(props.mode ? { params: { mode: props.mode } } : {})
+    });
     emit('update:modelValue', data.pkid);
     emit('selected', data);
     visible.value = false;

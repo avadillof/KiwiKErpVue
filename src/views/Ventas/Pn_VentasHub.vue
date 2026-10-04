@@ -367,27 +367,6 @@ const gruposVentas: Array<{
     ],
   },
   {
-    id: "informes",
-    nombre: "Informes",
-    icono: "pi pi-chart-bar",
-    descripcion:
-      "Reportes parametrizados del circuito comercial, cada uno con su código único RPT.",
-    opciones: [
-      {
-        id: "informes-ventas",
-        nombre: "Reportes de Ventas",
-        descripcion:
-          "Lista de artículos de venta y próximos informes del circuito comercial.",
-        icono: "pi pi-chart-bar",
-        ruta: "InformesVentas",
-        color: "#ffffff",
-        fondo: "linear-gradient(135deg, #16a085, #0e7c66)",
-        disponible: true,
-        funciones: ["Código RPT único", "Filtros por informe"],
-      },
-    ],
-  },
-  {
     id: "configuracion",
     nombre: "Configuración comercial",
     icono: "pi pi-sliders-h",
@@ -414,7 +393,14 @@ const RUTA_PERM: Record<string, string> = { ListaPrecios: PERM.SALES_NAV_PRICELI
 function opcionVisible(o: OpcionVenta): boolean { if (o.ruta === "Productos") return auth.user?.admin === true || securityStore.hasModule("PRODUCTS"); const p = (o as any).perm ?? RUTA_PERM[o.ruta]; return !p || can(p); }
 const gruposVisibles = computed(() => gruposVentas.map((g) => ({ ...g, opciones: g.opciones.filter(opcionVisible) })).filter((g) => g.opciones.length > 0));
 function abrirOpcion(opcion: OpcionVenta): void {
-  if (opcion.disponible) router.push({ name: opcion.ruta });
+  if (!opcion.disponible) return;
+  // Vistas compartidas con Compras (Entidades, Artículos): indicar el origen
+  // para que el botón de vuelta diga "Ventas".
+  if (opcion.ruta === "Clientes" || opcion.ruta === "Productos") {
+    router.push({ name: opcion.ruta, query: { from: "ventas" } });
+    return;
+  }
+  router.push({ name: opcion.ruta });
 }
 </script>
 

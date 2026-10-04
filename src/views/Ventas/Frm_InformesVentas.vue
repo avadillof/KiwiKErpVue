@@ -49,6 +49,10 @@
                 <template #start><Tag v-if="isReport" :value="selectedReport" severity="info" rounded /><strong class="ven-report-name">{{ selectedTitle }}</strong></template>
                 <template #end>
                   <Button v-if="securityStore.hasPermission(PERM.RPT_SALES)" label="Vista previa" icon="pi pi-eye" outlined :disabled="!isReport || !!dateError || previewLoading" :loading="previewLoading" title="Se activa al validar el formulario" @click="preview" />
+                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && !ivaSettlement?.settlement && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Guardar preliquidación" icon="pi pi-save" outlined :loading="settlementBusy" @click="prepareSettlement()" />
+                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && ivaSettlement?.settlement?.status === 'PREPARED' && ivaSettlement.settlement.outdated && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Guardar nueva versión" icon="pi pi-save" outlined :loading="settlementBusy" @click="prepareSettlement()" />
+                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && ivaSettlement?.settlement?.status === 'PRESENTED' && ivaSettlement?.lateChanges?.hasChanges && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Preparar regularización" icon="pi pi-file-edit" severity="warn" outlined :loading="settlementBusy" @click="prepareSettlement(true)" />
+                  <Button v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.settlement?.status === 'PREPARED' && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Marcar presentada" icon="pi pi-check-circle" :loading="settlementBusy" :disabled="Boolean(ivaSettlement.warnings?.length || ivaSettlement.settlement.outdated)" :title="ivaSettlement.settlement.outdated ? 'Hay facturas nuevas o modificadas: guarda una nueva versión' : ivaSettlement.warnings?.length ? 'Corrige las incidencias fiscales y vuelve a guardar la preliquidación' : 'Cerrar el trimestre como presentado'" @click="presentConfirmVisible = true" />
                   <Button icon="pi pi-download" v-if="securityStore.hasPermission(PERM.RPT_EXPORT)" label="Descargar" outlined :disabled="!pdfUrl" title="Descargar el PDF con el nombre del informe" @click="downloadPdf" />
                   <Button v-if="securityStore.hasPermission(PERM.RPT_EXPORT)" label="A Excel" icon="pi pi-file-excel" severity="success" :disabled="!previewRows.length" title="Exportar las columnas visibles" @click="exportExcel" />
                 </template>
@@ -70,6 +74,11 @@
                     <label class="field"><span>Comercialización</span><Select v-model="art001.sale" :options="saleOptions" optionLabel="label" optionValue="value" fluid /></label>
                     <label class="field"><span>Estado</span><Select v-model="art001.active" :options="activeOptions" optionLabel="label" optionValue="value" fluid /></label>
                     <label class="field"><span>Borrados</span><Select v-model="art001.deleted" :options="deletedOptions" optionLabel="label" optionValue="value" fluid /></label>
+                  </div>
+                  <div v-if="selectedReport === 'RPT-IVA-001'" class="params-grid params-grid--iva">
+                    <label class="field"><span>Ejercicio</span><InputNumber v-model="iva001.year" :min="2000" :max="2200" :useGrouping="false" fluid /></label>
+                    <label class="field"><span>Trimestre</span><Select v-model="iva001.quarter" :options="quarterOptions" optionLabel="label" optionValue="value" fluid /></label>
+                    <Message severity="info" :closable="false">Incluye facturas de venta emitidas, rectificativas confirmadas y facturas de proveedor registradas dentro del trimestre.</Message>
                   </div>
                   <div v-if="isReport" class="order-box">
                     <span class="order-title"><i class="pi pi-table" /> Columnas del informe</span>
@@ -127,6 +136,24 @@
                     <div v-if="previewLoading" class="rep-loading"><i class="pi pi-spin pi-spinner" /> Generando vista previa…</div>
                     <Message v-else-if="previewError" severity="error" :closable="false">{{ previewError }}</Message>
                     <template v-else-if="previewDone">
+                      <div v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement" class="vat-summary">
+                        <article><small>IVA repercutido · Ventas</small><strong>{{ reportMoney(ivaSettlement.output.tax) }}</strong><span>{{ ivaSettlement.output.documentCount }} documentos · Base {{ reportMoney(ivaSettlement.output.net) }}</span><em>{{ rateBreakdown(ivaSettlement.output) }}</em></article>
+                        <article><small>IVA soportado · Compras</small><strong>{{ reportMoney(ivaSettlement.input.tax) }}</strong><span>{{ ivaSettlement.input.documentCount }} documentos · Base {{ reportMoney(ivaSettlement.input.net) }}</span><em>{{ rateBreakdown(ivaSettlement.input) }}</em></article>
+                        <article :class="{ 'vat-result--negative': Number(ivaSettlement.result) < 0 }"><small>Resultado orientativo</small><strong>{{ reportMoney(ivaSettlement.result) }}</strong><span>{{ Number(ivaSettlement.result) >= 0 ? 'A ingresar' : 'A compensar / devolver' }}</span></article>
+                      </div>
+                      <div v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement" class="vat-settlement-state">
+                        <Tag v-if="ivaSettlement.settlement" :value="`${ivaSettlement.settlement.label} · v${ivaSettlement.settlement.version} · ${ivaSettlement.settlement.status === 'PRESENTED' ? 'Presentada' : ivaSettlement.settlement.outdated ? 'Desactualizada' : 'Preparada'}`" :severity="ivaSettlement.settlement.status === 'PRESENTED' ? 'success' : ivaSettlement.settlement.outdated ? 'danger' : 'warn'" icon="pi pi-verified" rounded />
+                        <Tag v-else value="Pendiente de preparar" severity="secondary" icon="pi pi-clock" rounded />
+                        <span v-if="ivaSettlement.settlement?.status === 'PRESENTED'">Fotografía fiscal cerrada; las facturas incluidas quedan identificadas en sus listados.</span>
+                        <span v-else>Guarda la preliquidación para identificar las facturas incluidas. Márcala presentada únicamente después de enviarla a la gestoría o AEAT.</span>
+                      </div>
+                      <Message v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.settlement?.outdated" severity="error" :closable="false">Han aparecido facturas nuevas o han cambiado documentos del trimestre después de guardar la versión {{ ivaSettlement.settlement.version }}. Revisa el informe y pulsa <b>Guardar nueva versión</b> antes de presentarlo.</Message>
+                      <Message v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.settlement?.status === 'PRESENTED' && ivaSettlement?.lateChanges?.hasChanges" severity="warn" :closable="false">
+                        La liquidación presentada permanece intacta, pero hay cambios pendientes: <b>{{ ivaSettlement.lateChanges.newDocumentCount }}</b> documento{{ ivaSettlement.lateChanges.newDocumentCount === 1 ? '' : 's' }} nuevo{{ ivaSettlement.lateChanges.newDocumentCount === 1 ? '' : 's' }}, <b>{{ ivaSettlement.lateChanges.changedDocumentCount }}</b> modificado{{ ivaSettlement.lateChanges.changedDocumentCount === 1 ? '' : 's' }} y <b>{{ ivaSettlement.lateChanges.removedDocumentCount }}</b> retirado{{ ivaSettlement.lateChanges.removedDocumentCount === 1 ? '' : 's' }}. Pulsa <b>Preparar regularización</b> para generar una nueva versión revisable.
+                      </Message>
+                      <div v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.versions?.length" class="vat-version-history"><strong>Versiones:</strong><span v-for="version in ivaSettlement.versions" :key="version.version">v{{ version.version }} · {{ version.status === 'PRESENTED' ? 'Presentada' : version.status === 'PREPARED' ? 'Preparada' : 'Sustituida' }}</span></div>
+                      <Message v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.warnings?.length" severity="warn" :closable="false">{{ ivaSettlement.warnings.length }} incidencia{{ ivaSettlement.warnings.length === 1 ? '' : 's' }} pendiente{{ ivaSettlement.warnings.length === 1 ? '' : 's' }} de revisión antes de enviar la preliquidación.</Message>
+                      <Message v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.disclaimer" severity="info" :closable="false">{{ ivaSettlement.disclaimer }}</Message>
                       <div class="rep-meta"><strong>{{ previewRows.length }} registros</strong><span>{{ filtersText }}</span></div>
                       <Message v-if="!previewRows.length" severity="info" :closable="false">Sin resultados para los filtros indicados.</Message>
                       <iframe v-else :src="pdfUrl" class="rep-pdf" title="Vista previa del PDF" />
@@ -140,12 +167,17 @@
         </TabPanel>
       </TabPanels>
     </Tabs>
+    <Dialog v-model:visible="presentConfirmVisible" modal header="Confirmar presentación del trimestre" :style="{ width: 'min(520px,94vw)' }" class="kiwik-dialog">
+      <Message severity="warn" :closable="false">Vas a cerrar {{ ivaSettlement?.settlement?.label }} como presentada. Se conservará la fotografía de las facturas incluidas y no podrá regenerarse desde este informe.</Message>
+      <label class="advisor-send-option" :class="{ disabled: !ivaSettlement?.advisorConfigured }"><Checkbox v-model="sendToAdvisor" binary :disabled="!ivaSettlement?.advisorConfigured"/><span><strong>Enviar también el PDF al gestor</strong><small v-if="ivaSettlement?.advisorConfigured">{{ ivaSettlement.advisorName }} · {{ ivaSettlement.advisorEmail }}</small><small v-else>No hay gestor configurado en Ajustes de ventas.</small></span></label>
+      <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-footer-actions"><Button label="Volver" severity="secondary" text @click="presentConfirmVisible=false" /><Button label="Sí, marcar presentada" icon="pi pi-check-circle" :loading="settlementBusy" @click="presentSettlement" /></div></div></template>
+    </Dialog>
   </main>
 </template>
 
 <script setup lang="ts">
 
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useSecurityStore } from '@/stores/securityStore';
@@ -172,7 +204,9 @@ import {
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import DatePicker from 'primevue/datepicker';
+import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
 import Tab from 'primevue/tab';
@@ -183,9 +217,12 @@ import Tabs from 'primevue/tabs';
 import Tag from 'primevue/tag';
 import Toolbar from 'primevue/toolbar';
 import Tree from 'primevue/tree';
+import { useToast } from 'primevue/usetoast';
+import { IVA_001_COLUMNS, IVA_001_ORDER_FIELDS, fetchIva001, iva001FiltersText, prepareIva001, presentIva001, type VatSettlement } from '@/services/Informes/reports/rptIva001';
 
 const router = useRouter();
 const companyStore = useCompanyStore();
+const toast = useToast();
 
 /** Catálogo de reportes de ventas en árbol. El código RPT es la identidad única. */
 const salesNodes = ref([
@@ -201,6 +238,13 @@ const salesNodes = ref([
     key: 'fac',
     label: 'Facturación',
     children: []
+  },
+  {
+    key: 'fis',
+    label: 'Fiscalidad',
+    children: [
+      { key: 'RPT-IVA-001', label: '[RPT-IVA-001] Preliquidación trimestral de IVA' }
+    ]
   }
 ]);
 const selection = ref<Record<string, boolean>>({ 'RPT-CLI-001': true });
@@ -227,6 +271,17 @@ const art001 = reactive<Art001Filters>({
   active: 'ALL',
   deleted: 'NOT_DELETED'
 });
+const iva001 = reactive({ year: new Date().getFullYear(), quarter: Math.floor(new Date().getMonth() / 3) + 1 });
+const quarterOptions = [1, 2, 3, 4].map((value) => ({ label: `${value}º trimestre`, value }));
+const ivaSettlement = ref<VatSettlement | null>(null);
+const settlementBusy = ref(false);
+const presentConfirmVisible = ref(false);
+const sendToAdvisor = ref(false);
+const clearVatPreview = () => {
+  if (pdfUrl.value) URL.revokeObjectURL(pdfUrl.value);
+  pdfUrl.value = ''; previewRows.value = []; previewDone.value = false; previewError.value = ''; ivaSettlement.value = null; presentConfirmVisible.value = false;
+};
+watch([() => iva001.year, () => iva001.quarter], clearVatPreview);
 const saleOptions = [
   { label: 'Todos', value: 'ALL' },
   { label: 'Para vender', value: 'SALE' },
@@ -243,7 +298,7 @@ onMounted(async () => {
   }
 });
 const orderCriteria = ref<Array<{ field: string; dir: 'asc' | 'desc' }>>([{ field: 'name', dir: 'asc' }]);
-const orderFields = computed(() => (selectedReport.value === 'RPT-ART-001' ? ART_001_ORDER_FIELDS : CLI_001_ORDER_FIELDS));
+const orderFields = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_ORDER_FIELDS : selectedReport.value === 'RPT-ART-001' ? ART_001_ORDER_FIELDS : CLI_001_ORDER_FIELDS);
 const orderLabel = (value: string) => orderFields.value.find((f) => f.value === value)?.label ?? value;
 const availableOrderFields = computed(() =>
   orderFields.value.filter((f) => visibleCols.value.includes(f.value) && !orderCriteria.value.some((c) => c.field === f.value))
@@ -255,7 +310,7 @@ function removeOrder(index: number) {
   orderCriteria.value.splice(index, 1);
 }
 /** Columnas visibles del informe activo, en orden de salida. Por defecto todas. */
-const activeColumns = computed(() => (selectedReport.value === 'RPT-ART-001' ? ART_001_COLUMNS : CLI_001_COLUMNS));
+const activeColumns = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_COLUMNS : selectedReport.value === 'RPT-ART-001' ? ART_001_COLUMNS : CLI_001_COLUMNS);
 const visibleCols = ref<string[]>(CLI_001_COLUMNS.map((c) => c.key));
 const columnLabel = (key: string) => activeColumns.value.find((c) => c.key === key)?.header ?? key;
 const hiddenCols = computed(() => activeColumns.value.filter((c) => !visibleCols.value.includes(c.key)));
@@ -292,7 +347,7 @@ function dropOrder(index: number) {
 const isReport = computed(() => selectedReport.value.startsWith('RPT-'));
 /** Filtros del informe activo (CLI o ART). */
 function currentFilters() {
-  return selectedReport.value === 'RPT-ART-001' ? art001 : cli001;
+  return selectedReport.value === 'RPT-IVA-001' ? iva001 : selectedReport.value === 'RPT-ART-001' ? art001 : cli001;
 }
 function resetFilters() {
   cli001.dateFrom = null;
@@ -306,6 +361,8 @@ function resetFilters() {
   art001.sale = 'ALL';
   art001.active = 'ALL';
   art001.deleted = 'NOT_DELETED';
+  iva001.year = new Date().getFullYear();
+  iva001.quarter = Math.floor(new Date().getMonth() / 3) + 1;
 }
 function onNodeSelect(node: any) {
   selectedReport.value = node?.key ?? '';
@@ -315,12 +372,13 @@ function onNodeSelect(node: any) {
   previewRows.value = [];
   previewDone.value = false;
   previewError.value = '';
+  ivaSettlement.value = null;
   if (node?.children) {
     resetFilters();
     orderCriteria.value = [{ field: 'name', dir: 'asc' }];
   } else {
     orderCriteria.value =
-      selectedReport.value === 'RPT-ART-001' ? [{ field: 'description', dir: 'asc' }] : [{ field: 'name', dir: 'asc' }];
+      selectedReport.value === 'RPT-IVA-001' ? [{ field: 'dateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-ART-001' ? [{ field: 'description', dir: 'asc' }] : [{ field: 'name', dir: 'asc' }];
     visibleCols.value = activeColumns.value.map((c) => c.key);
     loadSavedParams();
   }
@@ -374,7 +432,8 @@ const deletedOptions = [
  * indica una fecha hay que indicar la otra y la inicial no puede superar a la final.
  */
 const dateError = computed(() => {
-  const { dateFrom, dateTo } = currentFilters();
+  if (selectedReport.value === 'RPT-IVA-001') return '';
+  const { dateFrom, dateTo } = currentFilters() as { dateFrom: Date | null; dateTo: Date | null };
   if ((dateFrom && !dateTo) || (!dateFrom && dateTo)) return 'Si indicas una fecha debes indicar la otra.';
   if (dateFrom && dateTo) {
     const from = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate()).getTime();
@@ -393,7 +452,7 @@ const previewSection = ref<HTMLElement | null>(null);
 const pdfUrl = ref('');
 
 const filtersText = computed(() =>
-  selectedReport.value === 'RPT-ART-001' ? art001FiltersText(art001) : cli001FiltersText(cli001)
+  selectedReport.value === 'RPT-IVA-001' ? iva001FiltersText(iva001, ivaSettlement.value) : selectedReport.value === 'RPT-ART-001' ? art001FiltersText(art001) : cli001FiltersText(cli001)
 );
 
 async function preview() {
@@ -404,8 +463,16 @@ async function preview() {
   previewDone.value = false;
   previewRows.value = [];
   try {
-    const isArt = selectedReport.value === 'RPT-ART-001';
-    const rows = isArt ? await fetchArt001(art001) : await fetchCli001(cli001);
+    let rows: ReportRow[];
+    if (selectedReport.value === 'RPT-IVA-001') {
+      const result = await fetchIva001(iva001);
+      ivaSettlement.value = result.settlement;
+      sendToAdvisor.value = Boolean(result.settlement.advisorConfigured);
+      rows = result.rows;
+    } else {
+      const isArt = selectedReport.value === 'RPT-ART-001';
+      rows = isArt ? await fetchArt001(art001) : await fetchCli001(cli001);
+    }
     const columns = visibleCols.value.flatMap((key) => {
       const col = activeColumns.value.find((c) => c.key === key);
       return col ? [col] : [];
@@ -423,7 +490,9 @@ async function preview() {
       filtersText: filtersText.value,
       columns: effectiveColumns,
       rows: previewRows.value,
-      redWhen: (r) => r.deleted === true,
+      sections: selectedReport.value === 'RPT-IVA-001' ? vatSections(previewRows.value, effectiveColumns) : undefined,
+      dottedRows: selectedReport.value === 'RPT-IVA-001',
+      redWhen: (r) => selectedReport.value === 'RPT-IVA-001' ? r.hasReview === true : r.deleted === true,
       company: {
         name: companyStore.companyInfo.nameCompany,
         slogan: companyStore.companyInfo.sloganCompany,
@@ -437,6 +506,36 @@ async function preview() {
     previewError.value = typeof e.response?.data === 'string' ? e.response.data : 'No se pudo generar la vista previa.';
   } finally {
     previewLoading.value = false;
+  }
+}
+
+async function prepareSettlement(regularization = false) {
+  settlementBusy.value = true;
+  try {
+    await prepareIva001(iva001, regularization);
+    toast.add({ severity: 'success', summary: regularization ? 'Regularización preparada' : 'Preliquidación guardada', detail: regularization ? `Se ha creado una nueva versión de T${iva001.quarter}/${iva001.year}; la presentada original permanece conservada.` : `T${iva001.quarter}/${iva001.year} queda preparada con su relación de facturas.`, life: 5000 });
+    await preview();
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'No se pudo guardar', detail: typeof e.response?.data === 'string' ? e.response.data : 'Revisa los datos del trimestre.', life: 5500 });
+  } finally {
+    settlementBusy.value = false;
+  }
+}
+
+async function presentSettlement() {
+  settlementBusy.value = true;
+  try {
+    const report = pdfUrl.value ? await fetch(pdfUrl.value).then((response) => response.blob()) : undefined;
+    const result = await presentIva001(iva001, report, sendToAdvisor.value);
+    presentConfirmVisible.value = false;
+    toast.add({ severity: 'success', summary: 'Liquidación presentada', detail: `T${iva001.quarter}/${iva001.year} ha quedado cerrada como presentada.`, life: 5000 });
+    if (result.advisorEmailStatus === 'SENT') toast.add({ severity: 'success', summary: 'Enviada al gestor', detail: `La liquidación se ha enviado a ${result.advisorEmail}.`, life: 5000 });
+    else if (result.advisorEmailStatus && result.advisorEmailStatus !== 'NOT_CONFIGURED') toast.add({ severity: 'warn', summary: 'Liquidación presentada, correo pendiente', detail: 'No se pudo enviar el PDF al gestor. Revisa el contacto y la configuración de correo.', life: 6500 });
+    await preview();
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'No se pudo cerrar', detail: typeof e.response?.data === 'string' ? e.response.data : 'Revisa el estado de la preliquidación.', life: 5500 });
+  } finally {
+    settlementBusy.value = false;
   }
 }
 
@@ -474,8 +573,55 @@ function exportExcel() {
     const col = activeColumns.value.find((c) => c.key === key);
     return col ? [col] : [];
   });
-  exportReportExcel({ code: selectedReport.value, columns, rows: previewRows.value });
+  exportReportExcel({ code: selectedReport.value, columns, rows: previewRows.value, sections: selectedReport.value === 'RPT-IVA-001' ? vatSections(previewRows.value, columns) : undefined });
 }
+const reportMoney = (value: unknown) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(Number(value ?? 0));
+const reportNumber = (value: unknown) => new Intl.NumberFormat('es-ES', { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value ?? 0));
+const rateBreakdown = (side: any) => (side?.rates ?? []).map((row: any) => `${Number(row.rate).toLocaleString('es-ES')} %: ${reportMoney(row.tax)}`).join(' · ') || 'Sin cuotas de IVA';
+const vatSections = (rows: ReportRow[], columns: typeof IVA_001_COLUMNS) => {
+  type PartyGroup = { party: string; nif: string; documents: number; netRaw: number; taxRaw: number; totalRaw: number };
+  const groupByParty = (direction: 'Ventas' | 'Compras', emptyLabel: string) => {
+    const groups = new Map<string, PartyGroup>();
+    for (const row of rows.filter((item) => item.direction === direction)) {
+      const party = String(row.party || emptyLabel), nif = String(row.nif || '');
+      const key = `${party}\u0000${nif}`;
+      const group = groups.get(key) ?? { party, nif, documents: 0, netRaw: 0, taxRaw: 0, totalRaw: 0 };
+      group.documents += 1; group.netRaw += Number(row.netRaw ?? 0); group.taxRaw += Number(row.taxRaw ?? 0); group.totalRaw += Number(row.totalRaw ?? 0);
+      groups.set(key, group);
+    }
+    return [...groups.values()]
+      .sort((a, b) => a.party.localeCompare(b.party, 'es', { sensitivity: 'base' }))
+      .map((group) => ({ party: group.party, nif: group.nif || '—', documents: group.documents, net: reportNumber(group.netRaw), tax: reportNumber(group.taxRaw), total: reportNumber(group.totalRaw) }));
+  };
+  const customerRows: ReportRow[] = groupByParty('Ventas', 'Cliente sin nombre');
+  const supplierRows: ReportRow[] = groupByParty('Compras', 'Proveedor sin nombre');
+  const totalRow = (source: ReportRow[], sectionColumns: typeof IVA_001_COLUMNS, label: string): ReportRow => {
+    const result: ReportRow = {};
+    for (const column of sectionColumns) result[column.key] = '';
+    const labelColumn = sectionColumns.find((column) => !['net', 'tax', 'total'].includes(column.key));
+    if (labelColumn) result[labelColumn.key] = label;
+    result.net = reportNumber(source.reduce((sum, row) => sum + Number(row.netRaw ?? 0), 0));
+    result.tax = reportNumber(source.reduce((sum, row) => sum + Number(row.taxRaw ?? 0), 0));
+    result.total = reportNumber(source.reduce((sum, row) => sum + Number(row.totalRaw ?? 0), 0));
+    return result;
+  };
+  const salesRows = rows.filter((row) => row.direction === 'Ventas');
+  const purchaseRows = rows.filter((row) => row.direction === 'Compras');
+  const salesColumns = columns.filter((column) => column.key !== 'supplierCode');
+  const purchaseColumns = columns;
+  const summaryColumns = [
+    { key: 'party', header: 'Cliente' }, { key: 'nif', header: 'NIF / CIF' },
+    { key: 'documents', header: 'Documentos', align: 'right' as const },
+    { key: 'net', header: 'Base imponible', align: 'right' as const },
+    { key: 'tax', header: 'IVA', align: 'right' as const }, { key: 'total', header: 'Total', align: 'right' as const }
+  ];
+  return [
+    { title: 'Ventas · IVA repercutido', rows: salesRows, columns: salesColumns, footerRows: [totalRow(salesRows, salesColumns, 'TOTALES VENTAS')], bodyFontSize: 6.35 },
+    { title: 'Compras · IVA soportado', rows: purchaseRows, columns: purchaseColumns, footerRows: [totalRow(purchaseRows, purchaseColumns, 'TOTALES COMPRAS')], bodyFontSize: 6.35 },
+    { title: 'Resumen final · Ventas agrupadas por cliente', rows: customerRows, columns: summaryColumns, bodyFontSize: 6.5 },
+    { title: 'Resumen final · Compras agrupadas por proveedor', rows: supplierRows, columns: [{ ...summaryColumns[0], header: 'Proveedor' }, ...summaryColumns.slice(1)], bodyFontSize: 6.5 }
+  ];
+};
 
 /** Las hojas tienen forma "[CODIGO] Título": separamos para resaltar el código. */
 const leafCode = (label?: string) => (label?.startsWith('[') ? label.slice(0, label.indexOf(']') + 1) : '');
@@ -523,6 +669,21 @@ const selectedTitle = computed(() => {
 .params-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 17px 22px; margin-top: 16px; }
 .params-grid .field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
 .params-grid .field > span { color: #596577; font-size: .78rem; font-weight: 750; }
+.params-grid--iva { grid-template-columns: minmax(180px, .5fr) minmax(220px, .7fr) minmax(300px, 1.8fr); align-items: end; }
+.vat-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+.vat-summary article { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 12px 14px; border: 1px solid #e2e8d2; border-radius: 10px; background: #f8faF2; }
+.vat-summary article:nth-child(2) { border-color: #f0ddc8; background: #fff8f1; }
+.vat-summary article:nth-child(3) { color: #344600; border-color: #cfe0a8; background: #eef5dc; }
+.vat-summary article.vat-result--negative { color: #8b4b17; border-color: #f0c99f; background: #fff3e7; }
+.vat-summary small { color: #737f8f; font-size: .69rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.vat-summary strong { font-size: 1.18rem; font-variant-numeric: tabular-nums; }
+.vat-summary span { color: #6b7585; font-size: .72rem; }
+.vat-summary em { overflow: hidden; color: #8791a0; font-size: .67rem; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.advisor-send-option{display:flex;align-items:flex-start;gap:.75rem;margin-top:14px;padding:13px 14px;border:1px solid #dfe7cc;border-radius:10px;background:#f8fbed;cursor:pointer}.advisor-send-option span,.advisor-send-option strong,.advisor-send-option small{display:block}.advisor-send-option strong{color:#354321;font-size:.88rem}.advisor-send-option small{margin-top:3px;color:#75806d;font-size:.75rem}.advisor-send-option.disabled{border-color:#e5e7eb;background:#f7f7f7;cursor:not-allowed;opacity:.78}
+.vat-settlement-state { display:flex; align-items:center; gap:10px; margin:0 0 12px; padding:10px 12px; border:1px solid #e3e8d8; border-radius:10px; background:#fbfcf8; }
+.vat-settlement-state span { color:#657080; font-size:.77rem; line-height:1.4; }
+.vat-version-history { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 12px; color:#687383; font-size:.72rem; }
+.vat-version-history span { padding:3px 7px; border:1px solid #dfe5d6; border-radius:999px; background:#fafcf6; }
 .order-box { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .8rem 22px; margin-top: 16px; padding: 12px 14px; border: 1px dashed #9cc10a; border-radius: 10px; background: #f4f9e8; }
 .order-box .order-title { display: flex; align-items: center; gap: .45rem; width: 100%; color: #648506; font-size: .82rem; font-weight: 800; }
 .order-chips { display: flex; flex-wrap: wrap; gap: .4rem; width: 100%; }
@@ -541,7 +702,7 @@ const selectedTitle = computed(() => {
 .rep-meta span { color: #7d8797; font-size: .82rem; }
 .rep-empty { color: #7d8797; font-size: .88rem; }
 .rep-pdf { flex: 1; min-height: 0; width: 100%; border: 1px solid #e8ecf0; border-radius: 8px; background: #fff; }
-@media (max-width: 900px) { .params-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 900px) { .params-grid,.params-grid--iva { grid-template-columns: repeat(2,minmax(0,1fr)); } .vat-summary { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .params-grid { grid-template-columns: 1fr; } }
 .ven-tree { border: 0; padding: 0; }
 .ven-tree :deep(.p-treenode-label) { flex: 1; font-size: .83rem; }

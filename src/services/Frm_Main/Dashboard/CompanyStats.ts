@@ -25,6 +25,8 @@ export function useCompanyStats() {
   const prevInvoices = ref<Record<string, any> | null>(null);
   const topProducts = ref<Array<Record<string, any>>>([]);
   const topError = ref(false);
+  const purchaseDeliveries = ref<Record<string, any> | null>(null);
+  const purchaseInvoices = ref<Record<string, any> | null>(null);
 
   async function load() {
     loading.value = true;
@@ -65,6 +67,13 @@ export function useCompanyStats() {
     } catch {
       topError.value = true;
     } finally {
+      // El panel distingue los datos comerciales de las operaciones de compra.
+      const purchaseResults = await Promise.allSettled([
+        axios.get(backendUrl('/WebGetPurchasesDeliveryStatistics'), { params: { year: topYear }, ...auth.portalRequestConfig() }),
+        axios.get(backendUrl('/WebGetPurchasesInvoiceStatistics'), { ...auth.portalRequestConfig() })
+      ]);
+      purchaseDeliveries.value = purchaseResults[0].status === 'fulfilled' ? purchaseResults[0].value.data ?? null : null;
+      purchaseInvoices.value = purchaseResults[1].status === 'fulfilled' ? purchaseResults[1].value.data ?? null : null;
       loading.value = false;
     }
   }
@@ -82,6 +91,8 @@ export function useCompanyStats() {
     prevInvoices,
     topProducts,
     topError,
+    purchaseDeliveries,
+    purchaseInvoices,
     reload: load
   };
 }
