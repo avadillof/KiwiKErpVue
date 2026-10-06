@@ -28,6 +28,12 @@
           <kbd>Ctrl K</kbd>
         </div>
 
+<!-- Ayuda / Autoayuda -->
+        <div role="button" title="Ayuda y tutoriales" class="fm-search-pill" @click="goHelp">
+          <i class="pi pi-question-circle"></i>
+          <span>Ayuda</span>
+        </div>
+
 <!-- Notificaciones -->
         <div style="cursor: pointer; display: flex; align-items: center; padding: 5px;" @click="openNotifications">
           <OverlayBadge v-if="mensajesNuevos > 0" :value="mensajesNuevos" severity="danger">
@@ -198,6 +204,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useRouter, useRoute } from 'vue-router';
 import { getInstallationState, type InstallationState } from '../../services/Installation/installationService';
 import { visibleAppModules } from '../../services/Frm_Main/modules';
+import { recordRecent } from '../../services/Frm_Main/recentModules';
 import GlobalSearch from './GlobalSearch.vue';
 import NotificationPanel from './NotificationPanel.vue';
 
@@ -235,7 +242,8 @@ export default defineComponent({
     watch(sidebarCollapsed, (value) => {
       window.localStorage.setItem('kiwik.sidebarCollapsed', value ? '1' : '0');
     });
-    const sidebarModules = computed(() => visibleAppModules());
+    // Autoayuda no va en el lateral: se accede desde el botón "Ayuda" de la barra superior.
+    const sidebarModules = computed(() => visibleAppModules().filter((m) => m.id !== 'autoayuda'));
     // Etiqueta de versiones Docker: solo las conocidas (en local son 'dev'/'—' y se oculta).
     const versionLabel = computed(() => {
       const info = (setupResult as any)?.erpInfo?.value;
@@ -257,7 +265,14 @@ export default defineComponent({
     function navTo(m: { ruta: string; disponible: boolean }) {
       if (!m.disponible) return;
       if (String(route.name ?? '') === m.ruta) return;
+      recordRecent(m.ruta);
       router.push({ name: m.ruta });
+    }
+
+    function goHelp() {
+      if (String(route.name ?? '') === 'Autoayuda') return;
+      recordRecent('Autoayuda');
+      router.push({ name: 'Autoayuda' });
     }
 
     const controller = Frm_Main as any;
@@ -309,7 +324,8 @@ return {
       sidebarModules,
       versionLabel,
       isModuleActive,
-      navTo
+      navTo,
+      goHelp
     };
   }
 

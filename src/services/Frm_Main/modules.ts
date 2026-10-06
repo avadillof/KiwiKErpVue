@@ -24,6 +24,18 @@ export interface AppModule {
 
 export const APP_MODULES: AppModule[] = [
   {
+    id: 'autoayuda',
+    nombre: 'Autoayuda',
+    descripcion: 'Aprende a utilizar KiwiKERP con tutoriales en vídeo y el manual de usuario.',
+    funcionalidades: ['Primeros pasos', 'Iniciar sesión', 'Recuperar contraseña', 'Manual PDF'],
+    icono: 'pi pi-play-circle',
+    ruta: 'Autoayuda',
+    colorIcono: '#648506',
+    bgIcono: '#eef4d8',
+    disponible: true,
+    dashboardLevel: true
+  },
+  {
     id: 'ventas',
     nombre: 'Ventas',
     descripcion: 'Gestiona el circuito completo desde el presupuesto hasta el cobro, con trazabilidad, documentación e indicadores en tiempo real.',
@@ -79,7 +91,7 @@ export const APP_MODULES: AppModule[] = [
     id: 'informes-ventas',
     nombre: 'Reportes',
     descripcion: 'Informes parametrizados del ERP, cada uno con su código único RPT.',
-    funcionalidades: ['RPT-SAL-010 Lista de Artículos'],
+    funcionalidades: ['RPT-SAL-002 Pedidos pendientes', 'RPT-SAL-004 Vencimientos', 'RPT-PUR-001 Albaranes ptes. facturar', 'RPT-PUR-002 Pagos pendientes', 'RPT-ART-001 Artículos', 'RPT-CLI-001 Entidades'],
     icono: 'pi pi-chart-bar',
     ruta: 'InformesVentas',
     colorIcono: '#16a085',

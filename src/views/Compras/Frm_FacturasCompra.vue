@@ -11,13 +11,13 @@
     <section class="list-card">
       <Toolbar class="list-toolbar">
         <template #start><div class="workspace-heading"><span>Listado de facturas</span><small>El nº de factura del proveedor se guarda en PURCHASES_INVOICES_DS_CODEPROVE.</small></div></template>
-        <template #end><div class="toolbar-actions"><Message severity="info" variant="simple" icon="pi pi-info-circle">Las facturas se concilian con sus albaranes</Message><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_EDIT)" label="Nueva factura manual" icon="pi pi-plus" size="small" @click="manualDialogRef?.open()" /></div></template>
+        <template #end><div class="toolbar-actions"><Message severity="info" variant="simple" icon="pi pi-info-circle">Las facturas se concilian con sus albaranes</Message><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_DUES)" label="Enviar recordatorio de vencimientos" icon="pi pi-send" severity="secondary" outlined size="small" v-tooltip.bottom="'Aviso interno con los pagos próximos. Nunca se envía al proveedor.'" @click="openDueReminder" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_EDIT)" label="Nueva factura manual" icon="pi pi-plus" size="small" @click="manualDialogRef?.open()" /></div></template>
       </Toolbar>
       <Message v-if="tableLoadError" severity="error" :closable="false" class="table-error">No se pudo cargar el listado de facturas. Comprueba que el backend esté reiniciado y vuelve a intentarlo.</Message>
       <GenericDataTable ref="tableRef" class="invoice-table" dataKey="pkid" selectionMode="single" v-model:selection="selected" endpoint="WebGetPurchasesInvoices" :params="{ state: selectedState || undefined, paid: selectedPaid ?? undefined }" :showPaginator="true" :filterable="true" :showActions="true" @data-loaded="tableLoadError=false" @load-error="tableLoadError=true">
         <template #panelOptions><div class="invoice-filters"><Select v-model="selectedState" :options="states" optionLabel="label" optionValue="value" showClear placeholder="Estado: Todos" class="state-filter"><template #value="{ value, placeholder }"><Tag v-if="value" :value="states.find(item => item.value === value)?.label ?? value" :severity="stateSeverity(value)" rounded /><span v-else>{{ placeholder }}</span></template><template #option="{ option }"><Tag :value="option.label" :severity="stateSeverity(option.value)" rounded /></template></Select><Select v-model="selectedPaid" :options="paidOptions" optionLabel="label" optionValue="value" showClear placeholder="Pago: Todas" class="paid-filter"><template #value="{ value, placeholder }"><Tag v-if="value !== null && value !== undefined" :value="value ? 'Pagadas' : 'Por pagar'" :severity="value ? 'success' : 'warn'" rounded /><span v-else>{{ placeholder }}</span></template><template #option="{ option }"><Tag :value="option.label" :severity="option.value ? 'success' : 'warn'" rounded /></template></Select></div></template>
         <template #headerActions><Button icon="pi pi-refresh" text rounded title="Refrescar" @click="refresh" /><Button icon="pi pi-ellipsis-v" text rounded title="Opciones" @click="openMenuTable($event)" /></template>
-        <Column field="code" sortField="code" header="Código" sortable style="width:13%"><template #body="{ data }"><span class="delivery-code"><span :class="{'draft-code':isDraft(data.state)}">{{ deliveryCode(data) }}</span></span></template></Column>
+        <Column field="code" sortField="code" header="Código" sortable style="width:13%"><template #body="{ data }"><span class="delivery-code"><span :class="{'draft-code':isDraft(data.state)}">{{ deliveryCode(data) }}</span><Tag v-if="Number(data.attachmentCount||0)>0" :value="String(data.attachmentCount)" icon="pi pi-paperclip" severity="info" rounded title="Fotografías y justificantes" /><i v-if="data.hasNotes" class="pi pi-comment notes-indicator" title="Tiene observaciones"></i></span></template></Column>
         <Column field="createDate" sortField="dateCreate" header="Fecha" sortable style="width:11%"><template #body="{ data }">{{ formatDate(data.createDate) }}</template></Column>
         <Column field="entityName" sortField="entitie.name" header="Proveedor" sortable style="width:15%" />
         <Column field="supplierCode" header="Nº factura proveedor" style="width:14%"><template #body="{ data }">{{ data.supplierCode || '-' }}</template></Column>
@@ -112,7 +112,7 @@
         <div class="totals"><span>Neto <b>{{ currency(detail.totalNeto) }}</b></span><span>Impuestos <b>{{ currency(detail.totalTax) }}</b></span><span class="grand-total">Total <b>{{ currency(detail.totalTotal) }}</b></span></div>
         <p v-if="detail.notes" class="detail-notes">{{ detail.notes }}</p>
       </div>
-      <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-actions"><Button label="Cerrar" severity="secondary" text @click="detailVisible = false" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_DOCS)" :label="`Justificantes${detail.attachmentCount ? ` (${detail.attachmentCount})` : ''}`" icon="pi pi-paperclip" outlined @click="openAttachments" /><Button v-if="isDraftDetail && securityStore.hasPermission(PERM.PURCHASE_INV_EDIT)" label="Guardar cambios" icon="pi pi-save" outlined :loading="detailSaving" @click="() => saveInvoice(true)" /><Button v-if="isDraftDetail && securityStore.hasPermission(PERM.PURCHASE_INV_ISSUE)" label="Registrar factura" icon="pi pi-check-circle" @click="registerDetail" /><Button v-if="!isCancelledDetail && !isDraftDetail && securityStore.hasPermission(PERM.PURCHASE_INV_MARK_PAID)" :label="detail.paid ? 'Marcar por pagar' : 'Marcar pagada'" :icon="detail.paid ? 'pi pi-undo' : 'pi pi-wallet'" outlined :loading="paidBusy" :disabled="paidBusy" @click="togglePaidDetail" /><Button v-if="detail.state && !isCancelledDetail && !detail.paid && securityStore.hasPermission(PERM.PURCHASE_INV_ISSUE)" label="Anular" icon="pi pi-ban" severity="danger" outlined @click="cancelDetail" /></div></div></template>
+      <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-actions"><Button label="Cerrar" severity="secondary" text @click="detailVisible = false" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_DOCS)" :label="`Justificantes${detail.attachmentCount ? ` (${detail.attachmentCount})` : ''}`" icon="pi pi-paperclip" outlined @click="openAttachments" /><Button v-if="isDraftDetail && securityStore.hasPermission(PERM.PURCHASE_INV_EDIT)" label="Guardar cambios" icon="pi pi-save" outlined :loading="detailSaving" @click="() => saveInvoice(true)" /><Button v-if="isDraftDetail && securityStore.hasPermission(PERM.PURCHASE_INV_ISSUE)" label="Registrar factura" icon="pi pi-check-circle" @click="registerDetail" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_DUES)" label="Vencimientos" icon="pi pi-calendar" outlined @click="openDuesRow(detail)" /><Button v-if="!isCancelledDetail && !isDraftDetail && securityStore.hasPermission(PERM.PURCHASE_INV_DUES)" label="Pagos" icon="pi pi-wallet" outlined @click="openPaymentsRow(detail)" /><Button v-if="detail.state && !isCancelledDetail && !detail.paid && securityStore.hasPermission(PERM.PURCHASE_INV_ISSUE)" label="Anular" icon="pi pi-ban" severity="danger" outlined @click="cancelDetail" /></div></div></template>
     </Dialog>
 
     <AttachmentsDialog :visible="showAttachments" moduleFolder="ATTACHEMENTS_PURCHASESINVOICES_JUSTIFICANTES" :title="`Justificantes · ${attachmentInvoice?.code || ''}`" :entityId="attachmentInvoice?.pkid || 0" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" :maxFileSize="15728640" @update:visible="onAttachmentsVisible" />
@@ -125,6 +125,34 @@
 
     <ManualPurchaseInvoiceDialog ref="manualDialogRef" @saved="refresh" />
     <SalesTraceabilityDialog ref="traceabilityRef" mode="purchases" />
+    <PurchaseInvoiceDuesDialog ref="duesDialogRef" @saved="onDuesSaved" />
+    <PurchaseInvoicePaymentsDialog ref="paymentsDialogRef" @saved="onPaymentsSaved" />
+
+    <Dialog v-model:visible="dueReminderVisible" modal header="Recordatorio interno de vencimientos" :style="{ width: 'min(980px,96vw)' }" class="kiwik-dialog">
+      <Message severity="info" :closable="false">Se avisa a quien creó cada factura de sus pagos próximos. Nunca se envía al proveedor.</Message>
+      <div class="due-params">
+        <label class="field"><span>Antelación (días)</span><InputNumber v-model="dueReminderDays" :min="0" :max="365" :maxFractionDigits="0" suffix=" días" fluid /></label>
+      </div>
+      <Message v-if="dueReminderError" severity="error" :closable="false">{{ dueReminderError }}</Message>
+      <div v-if="duePreview">
+        <h4>Vencimientos ({{ duePreview.dues?.length || 0 }})</h4>
+        <DataTable :value="duePreview.dues" size="small" stripedRows scrollable scrollHeight="220px">
+          <Column field="code" header="Factura" />
+          <Column field="client" header="Proveedor" />
+          <Column field="creatorName" header="Creada por" />
+          <Column field="dueDate" header="Vence"><template #body="{ data }">{{ formatDate(data.dueDate) }}</template></Column>
+          <Column field="pendingAmount" header="Importe" style="text-align:right" bodyStyle="text-align:right"><template #body="{ data }">{{ currency(data.pendingAmount) }}</template></Column>
+          <Column field="status" header="Estado" />
+        </DataTable>
+        <h4>Se avisará a</h4>
+        <div v-if="(duePreview.recipients || []).length" class="due-recipients">
+          <div v-for="user in duePreview.recipients" :key="user.email" class="due-recipient due-recipient--static"><i class="pi pi-user" /><span><b>{{ user.name || user.email }}</b><small>{{ user.email }} · {{ user.count }} factura{{ user.count === 1 ? '' : 's' }}</small></span></div>
+        </div>
+        <Message v-else severity="warn" :closable="false">Ningún vencimiento tiene creador con correo: no hay a quién avisar.</Message>
+      </div>
+      <Message v-if="dueSendResult" severity="success" :closable="false">Avisos enviados: {{ dueSendResult.sent }} · Fallos: {{ (dueSendResult.failed || []).length }}<span v-if="(dueSendResult.skipped || []).length"> · {{ dueSendResult.skipped.join(', ') }}</span></Message>
+      <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-actions"><Button label="Cerrar" severity="secondary" text @click="dueReminderVisible = false" /><Button label="Vista previa" icon="pi pi-eye" severity="secondary" outlined :loading="dueReminderBusy" @click="previewDueReminders" /><Button label="Enviar ahora" icon="pi pi-send" :disabled="!duePreview?.dues?.length || !(duePreview?.recipients || []).length" :loading="dueReminderBusy" @click="sendDueReminders" /></div></div></template>
+    </Dialog>
   </div>
 </template>
 
@@ -151,6 +179,8 @@ import { useToast } from "primevue/usetoast";
 import GenericDataTable from "@/components/shared/GenericDataTable.vue";
 import DialogNotes from "@/components/dialogs/DialogNotes.vue";
 import ProductLookup from "@/components/shared/ProductLookup.vue";
+import PurchaseInvoiceDuesDialog from "./PurchaseInvoiceDuesDialog.vue";
+import PurchaseInvoicePaymentsDialog from "./PurchaseInvoicePaymentsDialog.vue";
 import SupplierLookup from "@/components/shared/SupplierLookup.vue";
 import SalesTraceabilityDialog from "../Ventas/SalesTraceabilityDialog.vue";
 import AttachmentsDialog from "@/components/attachments/AttachmentsDialog.vue";
@@ -175,12 +205,64 @@ const selected = ref<any>(null);
 const selectedState = ref<string | null>(null);
 const selectedPaid = ref<boolean | null>(null);
 const traceabilityRef = ref<any>(null);
+const paymentsDialogRef = ref<any>(null);
+const openPaymentsRow = (item: any) => {
+  if (!item?.pkid) return;
+  paymentsDialogRef.value?.open(item);
+};
+const onPaymentsSaved = () => {
+  refresh();
+  if (detail.value?.pkid) openDetail({ pkid: detail.value.pkid });
+};
+const duesDialogRef = ref<any>(null);
+const openDuesRow = (item: any) => {
+  if (!item?.pkid) return;
+  duesDialogRef.value?.open(item);
+};
+const onDuesSaved = (data: any) => {
+  if (detail.value?.pkid === data?.pkid) detail.value = data;
+  refresh();
+};
+const dueReminderVisible = ref(false);
+const dueReminderBusy = ref(false);
+const dueReminderDays = ref(7);
+const dueReminderError = ref('');
+const duePreview = ref<any>(null);
+const dueSendResult = ref<any>(null);
+const openDueReminder = () => {
+  dueReminderError.value = '';
+  duePreview.value = null;
+  dueSendResult.value = null;
+  dueReminderVisible.value = true;
+  previewDueReminders();
+};
+const previewDueReminders = async () => {
+  dueReminderBusy.value = true;
+  dueReminderError.value = '';
+  dueSendResult.value = null;
+  try {
+    const { data } = await axios.get(backendUrl(`/WebPreviewPurchasesDueReminders`), { params: { days: dueReminderDays.value } });
+    duePreview.value = data;
+  } catch (e: any) {
+    dueReminderError.value = e.response?.data || 'No se pudo obtener la vista previa.';
+  } finally { dueReminderBusy.value = false; }
+};
+const sendDueReminders = async () => {
+  dueReminderBusy.value = true;
+  dueReminderError.value = '';
+  try {
+    const { data } = await axios.post(backendUrl(`/WebSendPurchasesDueReminders`), { days: dueReminderDays.value });
+    dueSendResult.value = data;
+    toast.add({ severity: 'success', summary: 'Avisos enviados', detail: `${data.sent} enviados · ${data.failed?.length || 0} fallos`, life: 4000 });
+  } catch (e: any) {
+    dueReminderError.value = e.response?.data || 'No se pudo enviar.';
+  } finally { dueReminderBusy.value = false; }
+};
 const tableLoadError = ref(false);
 const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detail = ref<any>({});
 const detailSaving = ref(false);
-const paidBusy = ref(false);
 const detailDate = ref<Date | null>(null);
 const detailEntityId = ref<number | null>(null);
 const detailSupplierLabel = ref('');
@@ -193,7 +275,7 @@ const noteRequest = { table: 'PURCHASES_INVOICES', pkField: 'PURCHASES_INVOICES_
 const openNotesRow = (item: any) => {
   if (!item?.pkid) return;
   noteRequest.id = item.pkid;
-  notesReadonly.value = item.state !== 'Borrador / Draft';
+  notesReadonly.value = item.state === 'Cancelada / Canceled';
   showNotes.value = true;
 };
 const isDraftDetail = computed(() => detail.value?.state === 'Borrador / Draft');
@@ -404,18 +486,6 @@ const registerDetail = () => {
     },
   });
 };
-const togglePaidDetail = async () => {
-  if (paidBusy.value) return;
-  paidBusy.value = true;
-  try {
-    await axios.post(backendUrl(`/WebMarkPurchasesInvoicePaid/${detail.value.pkid}`), { paid: !detail.value.paid });
-    await openDetail({ pkid: detail.value.pkid });
-    toast.add({ severity: 'success', summary: detail.value.paid ? 'Factura pagada' : 'Factura por pagar', life: 3000 });
-    refresh();
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: 'No se pudo actualizar', detail: e.response?.data || 'Inténtalo de nuevo.', life: 4500 });
-  } finally { paidBusy.value = false; }
-};
 const cancelDetail = () => {
   const item = detail.value;
   askLocalConfirm({
@@ -444,9 +514,10 @@ const menuItems = computed(() => {
   ];
   if (securityStore.hasPermission(PERM.PURCHASE_INV_DOCS)) base.push({ label: `Justificantes${selected.value?.attachmentCount ? ` (${selected.value.attachmentCount})` : ''}`, icon: 'pi pi-paperclip', command: () => openAttachmentsRow(selected.value) });
   if (securityStore.hasPermission(PERM.PURCHASE_INV_NOTES)) base.push({ label: 'Notas', icon: 'pi pi-comments', command: () => openNotesRow(selected.value) });
+  if (securityStore.hasPermission(PERM.PURCHASE_INV_DUES)) base.push({ label: 'Vencimientos', icon: 'pi pi-calendar', command: () => openDuesRow(selected.value) });
   groups.push(base);
-  if (selected.value && !isCancelledDetailFunc(selected.value.state) && !isDraft(selected.value.state) && securityStore.hasPermission(PERM.PURCHASE_INV_MARK_PAID)) groups.push([
-    { label: selected.value.paid ? 'Marcar por pagar' : 'Marcar pagada', icon: 'pi pi-wallet', command: () => togglePaidRow(selected.value) },
+  if (selected.value && !isCancelledDetailFunc(selected.value.state) && !isDraft(selected.value.state) && securityStore.hasPermission(PERM.PURCHASE_INV_DUES)) groups.push([
+    { label: 'Pagos', icon: 'pi pi-wallet', command: () => openPaymentsRow(selected.value) },
   ]);
   if (selected.value && !isCancelledDetailFunc(selected.value.state) && !selected.value.paid && securityStore.hasPermission(PERM.PURCHASE_INV_ISSUE)) groups.push([
     { label: 'Anular factura', icon: 'pi pi-ban', command: () => cancelRow(selected.value) },
@@ -455,17 +526,6 @@ const menuItems = computed(() => {
 });
 const isCancelledDetailFunc = (state = '') => state === 'Cancelada / Canceled';
 const openMenu = (event: Event, item: any) => { selected.value = item; rowMenu.value?.toggle(event); };
-const togglePaidRow = async (item: any) => {
-  if (!item?.pkid || paidBusy.value) return;
-  paidBusy.value = true;
-  try {
-    await axios.post(backendUrl(`/WebMarkPurchasesInvoicePaid/${item.pkid}`), { paid: !item.paid });
-    toast.add({ severity: 'success', summary: !item.paid ? 'Factura pagada' : 'Factura por pagar', life: 3000 });
-    refresh();
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: 'No se pudo actualizar', detail: e.response?.data || 'Inténtalo de nuevo.', life: 4500 });
-  } finally { paidBusy.value = false; }
-};
 const cancelRow = (item: any) => {
   if (!item?.pkid) return;
   askLocalConfirm({
@@ -512,6 +572,7 @@ const cancelRow = (item: any) => {
 .paid-filter { width: 200px; }
 .delivery-code { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
 .draft-code { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 5px; background: #fff3cd; color: #8a5a00; font-weight: 700; border: 1px solid #ffe08a; }
+.notes-indicator { color: #7b8f22; font-size: 0.95rem; }
 .table-error { margin: 10px 12px 0; }
 .loading { display: flex; align-items: center; justify-content: center; gap: 0.55rem; padding: 2rem; color: #687386; }
 .delivery-form { display: flex; flex-direction: column; gap: 1rem; }
@@ -538,6 +599,14 @@ const cancelRow = (item: any) => {
 .local-confirm-body { display: flex; align-items: flex-start; gap: 0.8rem; }
 .local-confirm-body i { font-size: 1.6rem; color: #c96a1e; margin-top: 0.15rem; }
 .local-confirm-body p { margin: 0; line-height: 1.5; }
+.due-params { display: flex; align-items: end; gap: 0.8rem; margin: 0.8rem 0; }
+.due-params .field { display: flex; flex-direction: column; gap: 0.3rem; max-width: 240px; }
+.due-params .field > span { font-size: 0.8rem; color: #55604d; }
+.due-recipients { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-top: 0.5rem; }
+.due-recipient { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.7rem; border: 1px solid #e5e7eb; border-radius: 8px; }
+.due-recipient i { color: #9a5a12; }
+.due-recipient span, .due-recipient small { display: block; }
+.due-recipient small { color: #7d8797; font-size: 0.75rem; }
 .stats { margin-top: 14px; overflow: hidden; border: 1px solid #dfe4ea; border-radius: 14px; background: #fff; }
 .stats > header { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid #e8ecf0; }
 .stats > header > div:last-child { display: flex; gap: 0.4rem; }

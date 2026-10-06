@@ -2,9 +2,9 @@
   <section class="sales-calendar">
     <div class="calendar-head">
       <div>
-        <span class="section-kicker"><i class="pi pi-shopping-cart"></i> Área de Ventas</span>
-        <h2>Calendario comercial de ventas</h2>
-        <p>Presupuestos, pedidos, entregas y vencimientos relacionados con clientes.</p>
+        <span class="section-kicker"><i class="pi pi-calendar"></i> Comercial</span>
+        <h2>Calendario comercial</h2>
+        <p>Ventas con clientes, compras a proveedores y vencimientos.</p>
       </div>
 <div class="calendar-nav">
         <button type="button" class="calendar-collapse" :title="collapsed ? 'Expandir calendario' : 'Contraer calendario'" @click="toggleCollapsed">
@@ -18,8 +18,16 @@
 
     <template v-if="!collapsed">
       <div class="calendar-legend">
-        <span v-for="t in types" :key="t.label" class="legend-item">
-          <i class="legend-dot" :style="{ background: t.color }"></i>{{ t.label }}
+        <span class="area-tabs" role="tablist" aria-label="Área del calendario">
+          <button type="button" :class="{ active: area === 'all' }" @click="area = 'all'"><i class="pi pi-th-large"></i>Resumen</button>
+          <button type="button" :class="{ active: area === 'sales' }" @click="area = 'sales'"><i class="pi pi-briefcase"></i>Ventas</button>
+          <button type="button" :class="{ active: area === 'purchases' }" @click="area = 'purchases'"><i class="pi pi-shopping-cart"></i>Compras</button>
+        </span>
+        <span v-for="areaGroup in legendAreas" :key="areaGroup.label" class="legend-area">
+          <b>{{ areaGroup.label }}</b>
+          <span v-for="t in areaGroup.items" :key="t.label" class="legend-item">
+            <i class="legend-dot" :style="{ background: t.color }"></i>{{ t.label }}
+          </span>
         </span>
         <span v-if="loading" class="calendar-state"><i class="pi pi-spin pi-spinner"></i> Cargando…</span>
         <span v-else-if="error" class="calendar-state calendar-state--error"><i class="pi pi-exclamation-triangle"></i> {{ error }}</span>
@@ -84,21 +92,29 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, computed, ref } from 'vue';
 import Dialog from 'primevue/dialog';
-import { useSalesCalendar } from '../../../services/Frm_Main/Dashboard/SalesCalendar';
+import { useSalesCalendar, CALENDAR_AREAS } from '../../../services/Frm_Main/Dashboard/SalesCalendar';
 
 export default defineComponent({
   name: 'SalesCalendar',
   components: { Dialog },
   setup() {
     const calendar = useSalesCalendar();
+    const legendAreas = computed(() =>
+      CALENDAR_AREAS.map((area) => ({
+        label: area.label,
+        items: area.types
+          .map((key) => (calendar.types as Record<string, { label: string; color: string }>)[key])
+          .filter(Boolean)
+      })).filter((area) => area.items.length)
+    );
     const collapsed = ref(window.localStorage.getItem('kiwik.calendarCollapsed') === '1');
     function toggleCollapsed(): void {
       collapsed.value = !collapsed.value;
       window.localStorage.setItem('kiwik.calendarCollapsed', collapsed.value ? '1' : '0');
     }
-    return { ...calendar, collapsed, toggleCollapsed };
+    return { ...calendar, legendAreas, collapsed, toggleCollapsed };
   }
 });
 </script>
@@ -116,6 +132,12 @@ export default defineComponent({
 .calendar-nav button:hover { border-color: #9cc10a; background: #f6f9ef; }
 .calendar-nav .calendar-today { width: auto; padding: 0 14px; font-size: .82rem; font-weight: 700; }
 .calendar-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 14px 0 12px; }
+.area-tabs { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid #e2e6ee; border-radius: 999px; background: #f7f8fa; }
+.area-tabs button { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; background: transparent; color: #5d6675; font: inherit; font-size: .78rem; font-weight: 700; padding: 6px 12px; cursor: pointer; }
+.area-tabs button i { font-size: .72rem; }
+.area-tabs button.active { background: #fff; color: #42560c; box-shadow: 0 1px 4px rgba(17,24,39,.12); }
+.legend-area { display: inline-flex; align-items: center; gap: 8px; padding: 3px 10px 3px 4px; border: 1px solid #edf0f4; border-radius: 999px; background: #fafbfc; }
+.legend-area > b { padding: 2px 8px; border-radius: 999px; background: #eef2e4; color: #55730b; font-size: .68rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; color: #5d6675; font-size: .8rem; font-weight: 700; }
 .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .calendar-state { display: inline-flex; align-items: center; gap: 7px; color: #7a8290; font-size: .78rem; font-style: italic; }

@@ -95,6 +95,8 @@ export function exportReportExcel(input: ReportExcelInput): void {
 export interface ReportPdfInput {
   code: string;
   title: string;
+  /** Segunda línea bajo el título (p.ej. versión de la liquidación). */
+  subtitle?: string;
   filtersText: string;
   columns: ReportColumn[];
   rows: ReportRow[];
@@ -151,10 +153,18 @@ export async function buildReportPdf(input: ReportPdfInput): Promise<string> {
     doc.setFontSize(8);
     doc.setTextColor(110);
     doc.text(doc.splitTextToSize(input.filtersText, 230), x, 23);
+    let headerBottom = 34;
+    if (input.subtitle) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(73, 94, 16);
+      doc.text(doc.splitTextToSize(input.subtitle, 230), x, 28);
+      headerBottom = 39;
+    }
     doc.text(stamp, 285, 14, { align: 'right' });
     doc.setDrawColor(156, 193, 10);
     doc.setLineWidth(1);
-    doc.line(12, 34, 285, 34);
+    doc.line(12, headerBottom, 285, headerBottom);
   };
   const drawSmallHeader = () => {
     doc.setFont('helvetica', 'bold');
@@ -182,7 +192,7 @@ export async function buildReportPdf(input: ReportPdfInput): Promise<string> {
   };
 
   const sections = input.sections?.length ? input.sections : [{ title: '', rows: input.rows }];
-  let startY = 38;
+  let startY = input.subtitle ? 43 : 38;
   for (const section of sections) {
     const columns = section.columns?.length ? section.columns : input.columns;
     if (startY > 174) { doc.addPage(); startY = 21; }

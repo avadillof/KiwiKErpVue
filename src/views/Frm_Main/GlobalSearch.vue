@@ -21,7 +21,7 @@
         <p v-if="!recentItems.length" class="global-search__empty">Aún no hay módulos visitados.</p>
 
         <p class="global-search__section-title" style="margin-top:14px">Todos los módulos</p>
-        <button v-for="m in visibleModules" :key="'all-' + m.id" type="button" class="global-search__item" @click="go(m.ruta, false)">
+        <button v-for="m in visibleModules" :key="'all-' + m.id" type="button" class="global-search__item" @click="go(m.ruta, m.disponible)">
           <span class="global-search__item-icon" :style="{ color: m.colorIcono }"><i :class="m.icono"></i></span>
           <span class="global-search__item-label">{{ m.nombre }}</span>
           <span v-if="!m.disponible" class="global-search__item-tag global-search__item-tag--soon">Próximamente</span>

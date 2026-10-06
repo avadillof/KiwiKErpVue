@@ -46,12 +46,22 @@ const amount = (value: unknown) => Number(value ?? 0).toLocaleString('es-ES', { 
 
 export async function fetchIva001(filters: Iva001Filters): Promise<{ settlement: VatSettlement; rows: ReportRow[] }> {
   const { data } = await axios.get<VatSettlement>(backendUrl('/WebGetVatQuarterSettlement'), { params: filters, timeout: 30000 });
+  return { settlement: data, rows: toRows(data) };
+}
+
+/** Fotografia de una version concreta del trimestre. */
+export async function fetchIvaVersion(year: number, quarter: number, version: number): Promise<{ settlement: VatSettlement; rows: ReportRow[] }> {
+  const { data } = await axios.get<VatSettlement>(backendUrl('/WebGetVatSettlementVersion'), { params: { year, quarter, version }, timeout: 30000 });
+  return { settlement: data, rows: toRows(data) };
+}
+
+function toRows(data: VatSettlement): ReportRow[] {
   const warnings = new Map<string, string[]>();
   for (const warning of data.warnings ?? []) {
     const key = `${warning.direction}|${warning.code}`;
     warnings.set(key, [...(warnings.get(key) ?? []), String(warning.message ?? '')]);
   }
-  const rows: ReportRow[] = (data.documents ?? []).map((row: any) => {
+  return (data.documents ?? []).map((row: any) => {
     const reviewMessages = warnings.get(`${row.direction}|${row.code}`) ?? warnings.get(`${row.direction}|${row.supplierCode}`) ?? [];
     return {
     direction: row.direction === 'VENTA' ? 'Ventas' : 'Compras', type: String(row.type ?? ''), code: String(row.code ?? ''),
@@ -61,7 +71,6 @@ export async function fetchIva001(filters: Iva001Filters): Promise<{ settlement:
     total: amount(row.total), totalRaw: Number(row.total ?? 0), review: reviewMessages.join(' ') || 'Correcta', hasReview: reviewMessages.length > 0
   };
   });
-  return { settlement: data, rows };
 }
 
 export function iva001FiltersText(filters: Iva001Filters, settlement?: VatSettlement | null): string {

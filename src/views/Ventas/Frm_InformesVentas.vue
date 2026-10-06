@@ -47,15 +47,7 @@
             <section class="ven-card ven-card--main" aria-label="Ficha del informe">
               <Toolbar class="ven-toolbar">
                 <template #start><Tag v-if="isReport" :value="selectedReport" severity="info" rounded /><strong class="ven-report-name">{{ selectedTitle }}</strong></template>
-                <template #end>
-                  <Button v-if="securityStore.hasPermission(PERM.RPT_SALES)" label="Vista previa" icon="pi pi-eye" outlined :disabled="!isReport || !!dateError || previewLoading" :loading="previewLoading" title="Se activa al validar el formulario" @click="preview" />
-                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && !ivaSettlement?.settlement && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Guardar preliquidación" icon="pi pi-save" outlined :loading="settlementBusy" @click="prepareSettlement()" />
-                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && ivaSettlement?.settlement?.status === 'PREPARED' && ivaSettlement.settlement.outdated && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Guardar nueva versión" icon="pi pi-save" outlined :loading="settlementBusy" @click="prepareSettlement()" />
-                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && ivaSettlement?.settlement?.status === 'PRESENTED' && ivaSettlement?.lateChanges?.hasChanges && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Preparar regularización" icon="pi pi-file-edit" severity="warn" outlined :loading="settlementBusy" @click="prepareSettlement(true)" />
-                  <Button v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.settlement?.status === 'PREPARED' && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Marcar presentada" icon="pi pi-check-circle" :loading="settlementBusy" :disabled="Boolean(ivaSettlement.warnings?.length || ivaSettlement.settlement.outdated)" :title="ivaSettlement.settlement.outdated ? 'Hay facturas nuevas o modificadas: guarda una nueva versión' : ivaSettlement.warnings?.length ? 'Corrige las incidencias fiscales y vuelve a guardar la preliquidación' : 'Cerrar el trimestre como presentado'" @click="presentConfirmVisible = true" />
-                  <Button icon="pi pi-download" v-if="securityStore.hasPermission(PERM.RPT_EXPORT)" label="Descargar" outlined :disabled="!pdfUrl" title="Descargar el PDF con el nombre del informe" @click="downloadPdf" />
-                  <Button v-if="securityStore.hasPermission(PERM.RPT_EXPORT)" label="A Excel" icon="pi pi-file-excel" severity="success" :disabled="!previewRows.length" title="Exportar las columnas visibles" @click="exportExcel" />
-                </template>
+
               </Toolbar>
               <div class="ven-main-body">
                 <section class="ven-params" aria-label="Parámetros">
@@ -74,6 +66,24 @@
                     <label class="field"><span>Comercialización</span><Select v-model="art001.sale" :options="saleOptions" optionLabel="label" optionValue="value" fluid /></label>
                     <label class="field"><span>Estado</span><Select v-model="art001.active" :options="activeOptions" optionLabel="label" optionValue="value" fluid /></label>
                     <label class="field"><span>Borrados</span><Select v-model="art001.deleted" :options="deletedOptions" optionLabel="label" optionValue="value" fluid /></label>
+                  </div>
+                  <div v-if="selectedReport === 'RPT-SAL-002'" class="params-grid">
+                    <label class="field"><span>Fecha prevista hasta</span><DatePicker v-model="sal002.dateTo" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
+                    <label class="field"><span>Buscar (pedido, cliente, artículo)</span><InputText v-model="sal002.query" placeholder="Texto libre" fluid /></label>
+                  </div>
+                  <div v-if="selectedReport === 'RPT-SAL-004'" class="params-grid">
+                    <label class="field"><span>Fecha hasta</span><DatePicker v-model="sal004.dateTo" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
+                    <label class="field"><span>Buscar (factura, cliente)</span><InputText v-model="sal004.query" placeholder="Texto libre" fluid /></label>
+                    <label class="field field--check"><span>Vencidas</span><span class="check-row"><Checkbox v-model="sal004.onlyOverdue" binary /> Solo vencidas</span></label>
+                  </div>
+                  <div v-if="selectedReport === 'RPT-PUR-001'" class="params-grid">
+                    <label class="field"><span>Fecha hasta</span><DatePicker v-model="pur001.dateTo" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
+                    <label class="field"><span>Buscar (albarán, proveedor)</span><InputText v-model="pur001.query" placeholder="Texto libre" fluid /></label>
+                  </div>
+                  <div v-if="selectedReport === 'RPT-PUR-002'" class="params-grid">
+                    <label class="field"><span>Fecha hasta</span><DatePicker v-model="pur002.dateTo" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
+                    <label class="field"><span>Buscar (factura, proveedor)</span><InputText v-model="pur002.query" placeholder="Texto libre" fluid /></label>
+                    <label class="field field--check"><span>Vencidas</span><span class="check-row"><Checkbox v-model="pur002.onlyOverdue" binary /> Solo vencidas</span></label>
                   </div>
                   <div v-if="selectedReport === 'RPT-IVA-001'" class="params-grid params-grid--iva">
                     <label class="field"><span>Ejercicio</span><InputNumber v-model="iva001.year" :min="2000" :max="2200" :useGrouping="false" fluid /></label>
@@ -151,7 +161,7 @@
                       <Message v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.settlement?.status === 'PRESENTED' && ivaSettlement?.lateChanges?.hasChanges" severity="warn" :closable="false">
                         La liquidación presentada permanece intacta, pero hay cambios pendientes: <b>{{ ivaSettlement.lateChanges.newDocumentCount }}</b> documento{{ ivaSettlement.lateChanges.newDocumentCount === 1 ? '' : 's' }} nuevo{{ ivaSettlement.lateChanges.newDocumentCount === 1 ? '' : 's' }}, <b>{{ ivaSettlement.lateChanges.changedDocumentCount }}</b> modificado{{ ivaSettlement.lateChanges.changedDocumentCount === 1 ? '' : 's' }} y <b>{{ ivaSettlement.lateChanges.removedDocumentCount }}</b> retirado{{ ivaSettlement.lateChanges.removedDocumentCount === 1 ? '' : 's' }}. Pulsa <b>Preparar regularización</b> para generar una nueva versión revisable.
                       </Message>
-                      <div v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.versions?.length" class="vat-version-history"><strong>Versiones:</strong><span v-for="version in ivaSettlement.versions" :key="version.version">v{{ version.version }} · {{ version.status === 'PRESENTED' ? 'Presentada' : version.status === 'PREPARED' ? 'Preparada' : 'Sustituida' }}</span></div>
+                      <div v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.versions?.length" class="vat-version-history"><strong>Versiones:</strong><Button v-for="version in ivaSettlement.versions" :key="version.version" :label="`v${version.version} · ${version.status === 'PRESENTED' ? 'Presentada' : version.status === 'PREPARED' ? 'Preparada' : 'Sustituida'}`" size="small" text rounded :disabled="versionLoading" :severity="ivaSettlement?.settlement?.version === version.version ? 'success' : 'secondary'" :title="`Ver la fotografía de la v${version.version}`" @click="viewVersion(version.version)" /></div>
                       <Message v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.warnings?.length" severity="warn" :closable="false">{{ ivaSettlement.warnings.length }} incidencia{{ ivaSettlement.warnings.length === 1 ? '' : 's' }} pendiente{{ ivaSettlement.warnings.length === 1 ? '' : 's' }} de revisión antes de enviar la preliquidación.</Message>
                       <Message v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.disclaimer" severity="info" :closable="false">{{ ivaSettlement.disclaimer }}</Message>
                       <div class="rep-meta"><strong>{{ previewRows.length }} registros</strong><span>{{ filtersText }}</span></div>
@@ -162,6 +172,19 @@
                   </div>
                 </section>
               </div>
+              <!-- Las acciones del informe comparten el pie, después de sus parámetros y vista previa. -->
+              <footer class="report-footer">
+                <div class="kiwik-separator" aria-hidden="true"></div>
+                <div class="report-footer-actions">
+                  <Button v-if="securityStore.hasPermission(PERM.RPT_SALES)" label="Vista previa" icon="pi pi-eye" outlined :disabled="!isReport || !!dateError || previewLoading" :loading="previewLoading" title="Se activa al validar el formulario" @click="preview" />
+                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && !ivaSettlement?.settlement && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Guardar preliquidación" icon="pi pi-save" outlined :loading="settlementBusy" @click="prepareSettlement()" />
+                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && ivaSettlement?.settlement?.status === 'PREPARED' && ivaSettlement.settlement.outdated && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Guardar nueva versión" icon="pi pi-save" outlined :loading="settlementBusy" @click="prepareSettlement()" />
+                  <Button v-if="selectedReport === 'RPT-IVA-001' && previewDone && ivaSettlement?.settlement?.status === 'PRESENTED' && ivaSettlement?.lateChanges?.hasChanges && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Preparar regularización" icon="pi pi-file-edit" severity="warn" outlined :loading="settlementBusy" @click="prepareSettlement(true)" />
+                  <Button v-if="selectedReport === 'RPT-IVA-001' && ivaSettlement?.settlement?.status === 'PREPARED' && securityStore.hasPermission(PERM.RPT_EXPORT)" label="Marcar presentada" icon="pi pi-check-circle" :loading="settlementBusy" :disabled="Boolean(ivaSettlement.warnings?.length || ivaSettlement.settlement.outdated)" :title="ivaSettlement.settlement.outdated ? 'Hay facturas nuevas o modificadas: guarda una nueva versión' : ivaSettlement.warnings?.length ? 'Corrige las incidencias fiscales y vuelve a guardar la preliquidación' : 'Cerrar el trimestre como presentado'" @click="presentConfirmVisible = true" />
+                  <Button icon="pi pi-download" v-if="securityStore.hasPermission(PERM.RPT_EXPORT)" label="Descargar" outlined :disabled="!pdfUrl" title="Descargar el PDF con el nombre del informe" @click="downloadPdf" />
+                  <Button v-if="securityStore.hasPermission(PERM.RPT_EXPORT)" label="A Excel" icon="pi pi-file-excel" severity="success" :disabled="!previewRows.length" title="Exportar las columnas visibles" @click="exportExcel" />
+                </div>
+              </footer>
             </section>
           </div>
         </TabPanel>
@@ -201,6 +224,34 @@ import {
   fetchArt001,
   type Art001Filters
 } from '@/services/Informes/reports/rptArt001';
+import {
+  SAL_002_COLUMNS,
+  SAL_002_ORDER_FIELDS,
+  sal002FiltersText,
+  fetchSal002,
+  type Sal002Filters
+} from '@/services/Informes/reports/rptSal002';
+import {
+  SAL_004_COLUMNS,
+  SAL_004_ORDER_FIELDS,
+  sal004FiltersText,
+  fetchSal004,
+  type Sal004Filters
+} from '@/services/Informes/reports/rptSal004';
+import {
+  PUR_001_COLUMNS,
+  PUR_001_ORDER_FIELDS,
+  pur001FiltersText,
+  fetchPur001,
+  type Pur001Filters
+} from '@/services/Informes/reports/rptPur001';
+import {
+  PUR_002_COLUMNS,
+  PUR_002_ORDER_FIELDS,
+  pur002FiltersText,
+  fetchPur002,
+  type Pur002Filters
+} from '@/services/Informes/reports/rptPur002';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import DatePicker from 'primevue/datepicker';
@@ -218,7 +269,7 @@ import Tag from 'primevue/tag';
 import Toolbar from 'primevue/toolbar';
 import Tree from 'primevue/tree';
 import { useToast } from 'primevue/usetoast';
-import { IVA_001_COLUMNS, IVA_001_ORDER_FIELDS, fetchIva001, iva001FiltersText, prepareIva001, presentIva001, type VatSettlement } from '@/services/Informes/reports/rptIva001';
+import { IVA_001_COLUMNS, IVA_001_ORDER_FIELDS, fetchIva001, fetchIvaVersion, iva001FiltersText, prepareIva001, presentIva001, type VatSettlement } from '@/services/Informes/reports/rptIva001';
 
 const router = useRouter();
 const companyStore = useCompanyStore();
@@ -236,8 +287,19 @@ const salesNodes = ref([
   },
   {
     key: 'fac',
-    label: 'Facturación',
-    children: []
+    label: 'Ventas',
+    children: [
+      { key: 'RPT-SAL-002', label: '[RPT-SAL-002] Pedidos pendientes de entrega' },
+      { key: 'RPT-SAL-004', label: '[RPT-SAL-004] Facturas vencidas y pendientes de cobro' }
+    ]
+  },
+  {
+    key: 'pur',
+    label: 'Compras',
+    children: [
+      { key: 'RPT-PUR-001', label: '[RPT-PUR-001] Albaranes pendientes de facturar' },
+      { key: 'RPT-PUR-002', label: '[RPT-PUR-002] Facturas pendientes de pago' }
+    ]
   },
   {
     key: 'fis',
@@ -271,6 +333,10 @@ const art001 = reactive<Art001Filters>({
   active: 'ALL',
   deleted: 'NOT_DELETED'
 });
+const sal002 = reactive<Sal002Filters>({ dateTo: null, query: '' });
+const sal004 = reactive<Sal004Filters>({ dateTo: null, query: '', onlyOverdue: false });
+const pur001 = reactive<Pur001Filters>({ dateTo: null, query: '' });
+const pur002 = reactive<Pur002Filters>({ dateTo: null, query: '', onlyOverdue: false });
 const iva001 = reactive({ year: new Date().getFullYear(), quarter: Math.floor(new Date().getMonth() / 3) + 1 });
 const quarterOptions = [1, 2, 3, 4].map((value) => ({ label: `${value}º trimestre`, value }));
 const ivaSettlement = ref<VatSettlement | null>(null);
@@ -298,7 +364,7 @@ onMounted(async () => {
   }
 });
 const orderCriteria = ref<Array<{ field: string; dir: 'asc' | 'desc' }>>([{ field: 'name', dir: 'asc' }]);
-const orderFields = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_ORDER_FIELDS : selectedReport.value === 'RPT-ART-001' ? ART_001_ORDER_FIELDS : CLI_001_ORDER_FIELDS);
+const orderFields = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_ORDER_FIELDS : selectedReport.value === 'RPT-ART-001' ? ART_001_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_ORDER_FIELDS : CLI_001_ORDER_FIELDS);
 const orderLabel = (value: string) => orderFields.value.find((f) => f.value === value)?.label ?? value;
 const availableOrderFields = computed(() =>
   orderFields.value.filter((f) => visibleCols.value.includes(f.value) && !orderCriteria.value.some((c) => c.field === f.value))
@@ -310,7 +376,7 @@ function removeOrder(index: number) {
   orderCriteria.value.splice(index, 1);
 }
 /** Columnas visibles del informe activo, en orden de salida. Por defecto todas. */
-const activeColumns = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_COLUMNS : selectedReport.value === 'RPT-ART-001' ? ART_001_COLUMNS : CLI_001_COLUMNS);
+const activeColumns = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_COLUMNS : selectedReport.value === 'RPT-ART-001' ? ART_001_COLUMNS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_COLUMNS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_COLUMNS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_COLUMNS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_COLUMNS : CLI_001_COLUMNS);
 const visibleCols = ref<string[]>(CLI_001_COLUMNS.map((c) => c.key));
 const columnLabel = (key: string) => activeColumns.value.find((c) => c.key === key)?.header ?? key;
 const hiddenCols = computed(() => activeColumns.value.filter((c) => !visibleCols.value.includes(c.key)));
@@ -347,7 +413,13 @@ function dropOrder(index: number) {
 const isReport = computed(() => selectedReport.value.startsWith('RPT-'));
 /** Filtros del informe activo (CLI o ART). */
 function currentFilters() {
-  return selectedReport.value === 'RPT-IVA-001' ? iva001 : selectedReport.value === 'RPT-ART-001' ? art001 : cli001;
+  if (selectedReport.value === 'RPT-IVA-001') return iva001;
+  if (selectedReport.value === 'RPT-ART-001') return art001;
+  if (selectedReport.value === 'RPT-SAL-002') return sal002;
+  if (selectedReport.value === 'RPT-SAL-004') return sal004;
+  if (selectedReport.value === 'RPT-PUR-001') return pur001;
+  if (selectedReport.value === 'RPT-PUR-002') return pur002;
+  return cli001;
 }
 function resetFilters() {
   cli001.dateFrom = null;
@@ -361,6 +433,16 @@ function resetFilters() {
   art001.sale = 'ALL';
   art001.active = 'ALL';
   art001.deleted = 'NOT_DELETED';
+  sal002.dateTo = null;
+  sal002.query = '';
+  sal004.dateTo = null;
+  sal004.query = '';
+  sal004.onlyOverdue = false;
+  pur001.dateTo = null;
+  pur001.query = '';
+  pur002.dateTo = null;
+  pur002.query = '';
+  pur002.onlyOverdue = false;
   iva001.year = new Date().getFullYear();
   iva001.quarter = Math.floor(new Date().getMonth() / 3) + 1;
 }
@@ -378,7 +460,7 @@ function onNodeSelect(node: any) {
     orderCriteria.value = [{ field: 'name', dir: 'asc' }];
   } else {
     orderCriteria.value =
-      selectedReport.value === 'RPT-IVA-001' ? [{ field: 'dateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-ART-001' ? [{ field: 'description', dir: 'asc' }] : [{ field: 'name', dir: 'asc' }];
+      selectedReport.value === 'RPT-IVA-001' ? [{ field: 'dateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-ART-001' ? [{ field: 'description', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-002' ? [{ field: 'expectedDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-004' ? [{ field: 'dueDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-001' ? [{ field: 'createDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-002' ? [{ field: 'dueDateRaw', dir: 'asc' }] : [{ field: 'name', dir: 'asc' }];
     visibleCols.value = activeColumns.value.map((c) => c.key);
     loadSavedParams();
   }
@@ -452,7 +534,7 @@ const previewSection = ref<HTMLElement | null>(null);
 const pdfUrl = ref('');
 
 const filtersText = computed(() =>
-  selectedReport.value === 'RPT-IVA-001' ? iva001FiltersText(iva001, ivaSettlement.value) : selectedReport.value === 'RPT-ART-001' ? art001FiltersText(art001) : cli001FiltersText(cli001)
+  selectedReport.value === 'RPT-IVA-001' ? iva001FiltersText(iva001, ivaSettlement.value) : selectedReport.value === 'RPT-ART-001' ? art001FiltersText(art001) : selectedReport.value === 'RPT-SAL-002' ? sal002FiltersText(sal002) : selectedReport.value === 'RPT-SAL-004' ? sal004FiltersText(sal004) : selectedReport.value === 'RPT-PUR-001' ? pur001FiltersText(pur001) : selectedReport.value === 'RPT-PUR-002' ? pur002FiltersText(pur002) : cli001FiltersText(cli001)
 );
 
 async function preview() {
@@ -469,6 +551,14 @@ async function preview() {
       ivaSettlement.value = result.settlement;
       sendToAdvisor.value = Boolean(result.settlement.advisorConfigured);
       rows = result.rows;
+    } else if (selectedReport.value === 'RPT-SAL-002') {
+      rows = await fetchSal002(sal002);
+    } else if (selectedReport.value === 'RPT-SAL-004') {
+      rows = await fetchSal004(sal004);
+    } else if (selectedReport.value === 'RPT-PUR-001') {
+      rows = await fetchPur001(pur001);
+    } else if (selectedReport.value === 'RPT-PUR-002') {
+      rows = await fetchPur002(pur002);
     } else {
       const isArt = selectedReport.value === 'RPT-ART-001';
       rows = isArt ? await fetchArt001(art001) : await fetchCli001(cli001);
@@ -487,12 +577,13 @@ async function preview() {
     pdfUrl.value = await buildReportPdf({
       code: selectedReport.value,
       title: selectedTitle.value,
+      subtitle: selectedReport.value === 'RPT-IVA-001' && ivaSettlement.value?.settlement ? `Liquidación ${ivaSettlement.value.settlement.label} · v${ivaSettlement.value.settlement.version} ${ivaSettlement.value.settlement.status === 'PRESENTED' ? '· Presentada' : ivaSettlement.value.settlement.outdated ? '· Desactualizada' : '· Preparada'}` : undefined,
       filtersText: filtersText.value,
       columns: effectiveColumns,
       rows: previewRows.value,
       sections: selectedReport.value === 'RPT-IVA-001' ? vatSections(previewRows.value, effectiveColumns) : undefined,
       dottedRows: selectedReport.value === 'RPT-IVA-001',
-      redWhen: (r) => selectedReport.value === 'RPT-IVA-001' ? r.hasReview === true : r.deleted === true,
+      redWhen: (r) => selectedReport.value === 'RPT-IVA-001' ? r.hasReview === true : r.deleted === true || r.overdue === true,
       company: {
         name: companyStore.companyInfo.nameCompany,
         slogan: companyStore.companyInfo.sloganCompany,
@@ -509,8 +600,46 @@ async function preview() {
   }
 }
 
-async function prepareSettlement(regularization = false) {
-  settlementBusy.value = true;
+const versionLoading = ref(false);
+/** Carga la fotografía de una versión concreta (ver/descargar versiones anteriores). */
+async function viewVersion(version: number) {
+  if (versionLoading.value) return;
+  versionLoading.value = true;
+  previewError.value = '';
+  try {
+    const result = await fetchIvaVersion(iva001.year, iva001.quarter, version);
+    ivaSettlement.value = result.settlement;
+    sendToAdvisor.value = Boolean(result.settlement.advisorConfigured);
+    const columns = visibleCols.value.flatMap((key) => {
+      const col = activeColumns.value.find((c) => c.key === key);
+      return col ? [col] : [];
+    });
+    const effectiveColumns = columns.length ? columns : [...activeColumns.value];
+    previewRows.value = sortReportRows(result.rows, orderCriteria.value.map((c) => ({ key: c.field, dir: c.dir })));
+    if (pdfUrl.value) URL.revokeObjectURL(pdfUrl.value);
+    pdfUrl.value = await buildReportPdf({
+      code: selectedReport.value,
+      title: selectedTitle.value,
+      subtitle: result.settlement?.settlement ? `Liquidación ${result.settlement.settlement.label} · v${result.settlement.settlement.version} ${result.settlement.settlement.status === 'PRESENTED' ? '· Presentada' : result.settlement.settlement.status === 'PREPARED' ? '· Preparada' : '· Sustituida'}` : undefined,
+      filtersText: filtersText.value,
+      columns: effectiveColumns,
+      rows: previewRows.value,
+      sections: vatSections(previewRows.value, effectiveColumns),
+      dottedRows: true,
+      redWhen: (r) => r.hasReview === true,
+      company: { name: companyStore.companyInfo.nameCompany, slogan: companyStore.companyInfo.sloganCompany, logoUrl: companyStore.companyInfo.urlLogo }
+    });
+    previewDone.value = true;
+    await nextTick();
+    previewSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e: any) {
+    previewError.value = typeof e.response?.data === 'string' ? e.response.data : 'No se pudo cargar la versión.';
+  } finally {
+    versionLoading.value = false;
+  }
+}
+
+async function prepareSettlement(regularization = false) {  settlementBusy.value = true;
   try {
     await prepareIva001(iva001, regularization);
     toast.add({ severity: 'success', summary: regularization ? 'Regularización preparada' : 'Preliquidación guardada', detail: regularization ? `Se ha creado una nueva versión de T${iva001.quarter}/${iva001.year}; la presentada original permanece conservada.` : `T${iva001.quarter}/${iva001.year} queda preparada con su relación de facturas.`, life: 5000 });
@@ -657,11 +786,13 @@ const selectedTitle = computed(() => {
 .ven-card--main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .ven-toolbar { padding: 13px 17px; border: 0; border-bottom: 1px solid #e8ecf0; border-radius: 0; background: #fff; }
 .ven-toolbar :deep(.p-toolbar-start) { display: flex; align-items: center; gap: .6rem; }
-.ven-toolbar :deep(.p-toolbar-end) { display: flex; gap: .5rem; }
+.report-footer { flex-shrink: 0; padding: 0 17px 14px; background: #fff; }
+.report-footer .kiwik-separator { width: 100%; margin: 0 0 14px; }
+.report-footer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
 .ven-report-name { color: #344054; font-size: .95rem; }
 .ven-main-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 14px; overflow: hidden; background: #f7f9f5; }
 .ven-params, .ven-preview { border: 1px solid #e1e6eb; border-radius: 13px; background: #fff; box-shadow: 0 3px 11px rgba(30,41,59,.04); padding: 20px; }
-.ven-preview { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.ven-preview { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 .section-heading { display: flex; align-items: center; gap: 11px; }
 .section-heading > span { display: grid; width: 37px; height: 37px; place-items: center; border-radius: 9px; color: #66810a; background: #eef5dc; }
 .section-heading h2 { margin: 0; font-size: 1rem; color: #273244; }
@@ -669,6 +800,7 @@ const selectedTitle = computed(() => {
 .params-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 17px 22px; margin-top: 16px; }
 .params-grid .field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
 .params-grid .field > span { color: #596577; font-size: .78rem; font-weight: 750; }
+.params-grid .check-row { display: flex; align-items: center; gap: .5rem; min-height: 2.5rem; color: #344054; font-size: .86rem; }
 .params-grid--iva { grid-template-columns: minmax(180px, .5fr) minmax(220px, .7fr) minmax(300px, 1.8fr); align-items: end; }
 .vat-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
 .vat-summary article { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 12px 14px; border: 1px solid #e2e8d2; border-radius: 10px; background: #f8faF2; }
@@ -680,6 +812,9 @@ const selectedTitle = computed(() => {
 .vat-summary span { color: #6b7585; font-size: .72rem; }
 .vat-summary em { overflow: hidden; color: #8791a0; font-size: .67rem; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
 .advisor-send-option{display:flex;align-items:flex-start;gap:.75rem;margin-top:14px;padding:13px 14px;border:1px solid #dfe7cc;border-radius:10px;background:#f8fbed;cursor:pointer}.advisor-send-option span,.advisor-send-option strong,.advisor-send-option small{display:block}.advisor-send-option strong{color:#354321;font-size:.88rem}.advisor-send-option small{margin-top:3px;color:#75806d;font-size:.75rem}.advisor-send-option.disabled{border-color:#e5e7eb;background:#f7f7f7;cursor:not-allowed;opacity:.78}
+.dialog-footer{width:100%}
+.dialog-footer-separator{width:100%;min-height:1px;margin:0 0 .75rem}
+.dialog-footer-actions{display:flex;justify-content:flex-end;gap:.5rem;width:100%}
 .vat-settlement-state { display:flex; align-items:center; gap:10px; margin:0 0 12px; padding:10px 12px; border:1px solid #e3e8d8; border-radius:10px; background:#fbfcf8; }
 .vat-settlement-state span { color:#657080; font-size:.77rem; line-height:1.4; }
 .vat-version-history { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:0 0 12px; color:#687383; font-size:.72rem; }
@@ -696,12 +831,12 @@ const selectedTitle = computed(() => {
 .order-chip--off { opacity: .75; border-style: dashed; }
 .order-box .field { display: flex; min-width: 180px; flex: 1; flex-direction: column; gap: 7px; }
 .order-box .field > span { color: #596577; font-size: .78rem; font-weight: 750; }
-.rep-body { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 14px; overflow: hidden; }
+.rep-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; margin-top: 14px; overflow: visible; }
 .rep-loading { display: flex; align-items: center; justify-content: center; gap: .6rem; padding: 2rem; color: #687386; }
 .rep-meta { display: flex; align-items: baseline; gap: 1rem; margin-bottom: .6rem; color: #344054; }
 .rep-meta span { color: #7d8797; font-size: .82rem; }
 .rep-empty { color: #7d8797; font-size: .88rem; }
-.rep-pdf { flex: 1; min-height: 0; width: 100%; border: 1px solid #e8ecf0; border-radius: 8px; background: #fff; }
+.rep-pdf { flex: none; height: 78vh; min-height: 620px; width: 100%; border: 1px solid #e8ecf0; border-radius: 8px; background: #fff; }
 @media (max-width: 900px) { .params-grid,.params-grid--iva { grid-template-columns: repeat(2,minmax(0,1fr)); } .vat-summary { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .params-grid { grid-template-columns: 1fr; } }
 .ven-tree { border: 0; padding: 0; }

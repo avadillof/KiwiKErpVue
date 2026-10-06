@@ -5,7 +5,7 @@ import { backendUrl } from '@/services/backendUrl';
 import { useAuthStore } from '@/stores/authStore';
 
 export interface SalesCalendarEvent {
-  type: 'invoice' | 'order' | 'quote' | 'delivery' | 'task';
+  type: 'invoice' | 'order' | 'quote' | 'delivery' | 'task' | 'purchase_invoice' | 'purchase_delivery';
   pkid: number;
   code: string;
   date: string;
@@ -19,16 +19,29 @@ export const CALENDAR_TYPES: Record<string, { label: string; icon: string; color
   order: { label: 'Entregas', icon: 'pi pi-shopping-cart', color: '#d9822b', route: 'Pedidos' },
   quote: { label: 'Presupuestos', icon: 'pi pi-file-edit', color: '#7c5cbf', route: 'Presupuestos' },
   delivery: { label: 'Albaranes', icon: 'pi pi-box', color: '#2875b6', route: 'Albaranes' },
+  purchase_invoice: { label: 'Pagos', icon: 'pi pi-wallet', color: '#b74267', route: 'FacturasCompra' },
+  purchase_delivery: { label: 'Recepciones', icon: 'pi pi-truck', color: '#c96a1e', route: 'AlbaranesCompra' },
   task: { label: 'Vencimientos', icon: 'pi pi-clipboard', color: '#648506', route: 'Tareas' }
 };
 
 export const CALENDAR_WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+export const CALENDAR_AREAS = [
+  { label: 'Ventas', types: ['invoice', 'order', 'quote', 'delivery'] },
+  { label: 'Compras', types: ['purchase_invoice', 'purchase_delivery'] },
+  { label: 'Tareas', types: ['task'] }
+];
+
+const SALES_AREA_TYPES = ['invoice', 'order', 'quote', 'delivery'];
+const PURCHASES_AREA_TYPES = ['purchase_invoice', 'purchase_delivery'];
 
 const EVENT_QUERY_KEYS: Record<SalesCalendarEvent['type'], string> = {
   quote: 'quoteId',
   order: 'orderId',
   invoice: 'invoiceId',
   delivery: 'deliveryId',
+  purchase_invoice: 'purchaseInvoiceId',
+  purchase_delivery: 'purchaseDeliveryId',
   task: 'taskId'
 };
 
@@ -50,14 +63,17 @@ export function useSalesCalendar() {
 
   const anchor = ref<Date>(startOfMonth(new Date()));
   const events = ref<SalesCalendarEvent[]>([]);
-  const loading = ref(false);
-  const error = ref('');
-  const panelVisible = ref(false);
-  const panelDate = ref<string | null>(null);
+  const area = ref<'all' | 'sales' | 'purchases'>('all');
+
+  const visibleEvents = computed(() => {
+    if (area.value === 'sales') return events.value.filter((item) => SALES_AREA_TYPES.includes(item.type) || item.type === 'task');
+    if (area.value === 'purchases') return events.value.filter((item) => PURCHASES_AREA_TYPES.includes(item.type) || item.type === 'task');
+    return events.value;
+  });
 
   const byDay = computed(() => {
     const map = new Map<string, SalesCalendarEvent[]>();
-    for (const item of events.value) {
+    for (const item of visibleEvents.value) {
       if (!item || !item.date) continue;
       const list = map.get(item.date) ?? [];
       list.push(item);
@@ -65,6 +81,11 @@ export function useSalesCalendar() {
     }
     return map;
   });
+
+  const loading = ref(false);
+  const error = ref('');
+  const panelVisible = ref(false);
+  const panelDate = ref<string | null>(null);
 
   const monthsModel = computed(() => [buildMonth(anchor.value), buildMonth(addMonths(anchor.value, 1))]);
 
@@ -199,6 +220,7 @@ export function useSalesCalendar() {
 
   return {
     anchor,
+    area,
     events,
     loading,
     error,

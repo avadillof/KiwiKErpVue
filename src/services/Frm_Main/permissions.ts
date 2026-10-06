@@ -121,6 +121,7 @@ export const PERM = {
   PURCHASE_NAV_INVOICES: 'PURCHASE_GEN_0004',
   PURCHASE_NAV_CREDIT: 'PURCHASE_GEN_0005',
   PURCHASE_DIARY: 'PURCHASE_GEN_0006', // diario de compras (informes)
+  PURCHASE_SETTINGS: 'PURCHASE_GEN_0007', // ajustes de compras (series)
 
   // ---------- PURCHASES · cat 2001 Pedidos de compra (fase 2) ----------
   PURCHASE_ORDER_EDIT: 'PURCHASE_GEN_PO0007',

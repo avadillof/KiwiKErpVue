@@ -61,6 +61,11 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       {
+        path: '/autoayuda',
+        name: 'Autoayuda',
+        component: () => import('./views/Help/Frm_HelpCenter.vue')
+      },
+      {
         path: '', // Ruta por defecto dentro de Frm_Main
         name: 'Dashboard',
         component: Pn_DashBoard
@@ -148,6 +153,12 @@ const routes = [
         name: 'FacturasCompra',
         meta: { perm: PERM.PURCHASE_NAV_INVOICES },
         component: Frm_FacturasCompra
+      },
+      {
+        path: '/compras/ajustes',
+        name: 'AjustesCompras',
+        meta: { perm: PERM.PURCHASE_SETTINGS },
+        component: () => import('./views/Compras/Frm_AjustesCompras.vue')
       },
       {
         path: '/tareas',

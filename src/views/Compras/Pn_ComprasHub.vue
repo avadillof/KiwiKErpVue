@@ -246,13 +246,32 @@ const gruposCompras: Array<{
       },
     ],
   },
+  {
+    id: "configuracion",
+    nombre: "Configuración de compras",
+    icono: "pi pi-sliders-h",
+    descripcion: "Parámetros que determinan el funcionamiento del circuito de compras.",
+    opciones: [
+      {
+        id: "ajustes",
+        nombre: "Ajustes de Compras",
+        descripcion: "Series de numeración de albaranes y facturas de proveedor.",
+        icono: "pi pi-cog",
+        ruta: "AjustesCompras",
+        color: "#ffffff",
+        fondo: "linear-gradient(135deg, #87909f, #596273)",
+        disponible: true,
+        funciones: ["Series por documento"],
+      },
+    ],
+  },
 ];
 
 const RUTA_PERM: Record<string, string> = {
   AlbaranesCompra: PERM.PURCHASE_NAV_DELIVERY,
   FacturasCompra: PERM.PURCHASE_NAV_INVOICES,
   PedidosCompra: PERM.PURCHASE_NAV_ORDERS,
-  InformesVentas: PERM.PURCHASE_DIARY,
+  AjustesCompras: PERM.PURCHASE_SETTINGS,
 };
 function opcionVisible(o: OpcionCompra): boolean {
   if (o.ruta === "Productos") return auth.user?.admin === true || securityStore.hasModule("PRODUCTS");
