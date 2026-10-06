@@ -31,9 +31,11 @@
                 </template>
             </Toolbar>
 
-            <GenericDataTable :key="tableKey" endpoint="WebGetProducts" :showPaginator="true" :filterable="true"
-                :showActions="true" @edit="editProduct" @delete="deleteProduct" ref="tableRef" dataKey="pkid"
+                <GenericDataTable :key="tableKey" endpoint="WebGetProducts" :showPaginator="true" :filterable="true"
+                :showActions="true" :params="{ familyId: selectedFamily ?? undefined, usage: selectedUsage ?? undefined }" @edit="editProduct" @delete="deleteProduct" ref="tableRef" dataKey="pkid"
                 selectionMode="single" v-model:selection="productSelected">
+
+                <template #panelOptions><div class="products-filters"><Select v-model="selectedFamily" :options="families" optionLabel="description" optionValue="pkid" showClear filter placeholder="Familia: Todas" class="family-filter" /><Select v-model="selectedUsage" :options="usages" optionLabel="label" optionValue="value" showClear placeholder="Uso: Todos" class="usage-filter"><template #value="{ value, placeholder }"><span v-if="value" class="usage-value"><i :class="'usage-dot usage-' + value" />{{ usages.find(u => u.value === value)?.label ?? value }}</span><span v-else>{{ placeholder }}</span></template><template #option="{ option }"><span class="usage-value"><i :class="'usage-dot usage-' + option.value" />{{ option.label }}</span></template></Select></div></template>
 
 
                 <template #headerActions>
@@ -43,7 +45,7 @@
                 </template>
 
                 <Column field="code" sortField="productProductDsCode" sortable header="Código" style="width: 16%">
-                    <template #body="{ data }"><span class="code-with-attachments"><span class="product-code">{{ data.code }}</span><Tag v-if="Number(data.attachmentCount || 0) > 0" :value="String(data.attachmentCount)" icon="pi pi-paperclip" severity="info" rounded title="Documentos adjuntos" /><i v-if="data.hasNotes" class="pi pi-comment notes-indicator" title="Tiene observaciones"></i></span></template>
+                    <template #body="{ data }"><span class="code-with-attachments"><span class="product-code" :class="data.sale && data.purchase ? 'code-both' : data.sale ? 'code-sale' : data.purchase ? 'code-purchase' : 'code-none'" :title="data.sale && data.purchase ? 'Compra y venta' : data.sale ? 'Venta' : data.purchase ? 'Compra' : 'Ni compra ni venta'">{{ data.code }}</span><Tag v-if="Number(data.attachmentCount || 0) > 0" :value="String(data.attachmentCount)" icon="pi pi-paperclip" severity="info" rounded title="Documentos adjuntos" /><i v-if="data.hasNotes" class="pi pi-comment notes-indicator" title="Tiene observaciones"></i></span></template>
                 </Column>
 
                 <Column field="description" sortField="productProductDsDescriptionSp" header="Descripción" sortable />
@@ -147,13 +149,27 @@
 .workspace-heading span { color: #344054; font-size: 1rem; font-weight: 800; }
 .workspace-heading small { color: #8a93a2; font-size: .82rem; }
 .code-with-attachments { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem .45rem; min-width:0; }.product-code { font-size:.96rem; line-height:1.25; overflow-wrap:anywhere; }.code-with-attachments :deep(.p-tag) { flex:0 0 auto; font-size:.72rem; padding:.15rem .4rem; }
+.product-code[class*="code-"] { display:inline-flex; align-items:center; gap:.35rem; padding:.12rem .55rem .12rem .45rem; border:1px solid transparent; border-radius:999px; font-weight:700; }
+.product-code[class*="code-"]::before { content:""; width:.5rem; height:.5rem; flex:0 0 auto; border-radius:50%; background:currentColor; }
+.product-code.code-both { color:#4c6b06; border-color:#d3e19a; background:#f0f6da; }
+.product-code.code-sale { color:#2875b6; border-color:#bcd9f2; background:#e9f4fc; }
+.product-code.code-purchase { color:#c65d16; border-color:#f3cfae; background:#fff2e8; }
+.product-code.code-none { color:#667085; border-color:#e1e4e8; background:#f2f4f6; }
 .notes-indicator { flex:0 0 auto; color:#7b8f22; font-size:.95rem; }
 .products-toolbar :deep(.new-document) { border-color: var(--kiwi); background: var(--kiwi); color: #253000; }
 .products-toolbar :deep(.new-document:hover) { border-color: #8bad09; background: #8bad09; color: #253000; }
+.products-toolbar :deep(.family-filter), .products-workspace :deep(.family-filter) { min-width: 220px; }
+.products-filters { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.products-workspace :deep(.usage-filter) { min-width: 190px; }
+.usage-value { display: inline-flex; align-items: center; gap: .45rem; }
+.usage-dot { width: .55rem; height: .55rem; flex: 0 0 auto; border-radius: 50%; }
+.usage-dot.usage-sale { background: #2875b6; }
+.usage-dot.usage-purchase { background: #c65d16; }
+.usage-dot.usage-both { background: #4c6b06; }
 .products-workspace :deep(.table-container) { min-height: 0; flex: 1; border: 0; border-radius: 0; }
 .products-workspace :deep(.p-datatable-header) { border-color: #e8ecf0; background: #fafbfc; }
-.products-workspace :deep(.p-datatable-thead > tr > th) { padding-block: .78rem; color: #596579; background: #f5f7f9; font-size: .875rem; }
-.products-workspace :deep(.p-datatable-tbody > tr > td) { padding-block: .72rem; border-color: #eef1f4; font-size: .875rem; }
+.products-workspace :deep(.p-datatable-thead > tr > th) { padding-block: .78rem; color: #596579; background: #f5f7f9; font-size: .95rem; }
+.products-workspace :deep(.p-datatable-tbody > tr > td) { padding-block: .72rem; border-color: #eef1f4; font-size: 1rem; }
 .products-workspace :deep(.p-datatable-tbody > tr:hover) { background: #fbfdef; }
 .products-workspace :deep(.p-tag) { font-size: .72rem; }
 .product-stats-card{margin-top:14px;overflow:hidden;border:1px solid #dfe4ea;border-radius:14px;background:#fff;box-shadow:0 5px 18px rgba(30,41,59,.045)}
@@ -180,6 +196,8 @@ import Menu from 'primevue/menu';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Column from 'primevue/column';
+import Select from 'primevue/select';
+import axios from 'axios';
 import ConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -219,6 +237,24 @@ const showAttachments = ref(false);
 const showNotes = ref(false);
 const tableKey = ref(0);
 const products = ref([]);
+const selectedFamily = ref<number | null>(null);
+const families = ref<any[]>([]);
+const usages = [
+    { label: 'Solo venta', value: 'sale' },
+    { label: 'Solo compra', value: 'purchase' },
+    { label: 'Compra y venta', value: 'both' }
+];
+const selectedUsage = ref<string | null>(null);
+const loadFamilies = async () => {
+    try {
+        const { data } = await axios.get(backendUrl(`/WebGetProductFamilies`), { params: { page: 0, size: 200 } });
+        families.value = data?.content ?? data ?? [];
+    } catch {
+        families.value = [];
+    }
+};
+const applyFamilyFilter = () => { tableRef.value?.refreshWithQuery('', { familyId: selectedFamily.value ?? undefined, usage: selectedUsage.value ?? undefined }); };
+watch([selectedFamily, selectedUsage], applyFamilyFilter);
 const openMenuTable = (event: Event) => menuTable.value.toggle(event);
 
 const statisticsExpanded = ref(true);
@@ -245,7 +281,7 @@ const loadStatistics = async (productId?: number | null) => {
     }
 };
 
-onMounted(() => loadStatistics());
+onMounted(() => { loadStatistics(); loadFamilies(); });
 watch(productSelected, value => loadStatistics(value?.pkid ?? null));
 
 const refreshTable = async () => { await tableRef.value?.refresh(); await loadStatistics(productSelected.value?.pkid ?? null); };
