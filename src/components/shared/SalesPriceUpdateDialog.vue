@@ -40,7 +40,7 @@
             <Select v-model="form.direction" :options="directions" optionLabel="label" optionValue="value" :disabled="busy" />
           </label>
           <label>Porcentaje
-            <InputNumber v-model="form.percent" :min="0.0001" :max="form.direction === 'DOWN' ? 100 : 1000" :maxFractionDigits="4" suffix=" %" locale="es-ES" :disabled="busy" />
+            <InputNumber v-model="form.percent" :min="0.0001" :max="form.direction === 'DOWN' ? 100 : 1000" :maxFractionDigits="4" suffix=" %" locale="de-DE" :useGrouping="true" :disabled="busy" />
           </label>
           <label>Decimales del nuevo precio
             <Select v-model="form.decimals" :options="[0, 1, 2, 3, 4, 5, 6]" :disabled="busy" />
@@ -226,7 +226,9 @@ const confirmRevert = ref(false);
 const canPreview = computed(() => catalogLoaded.value && canEdit.value && !!form.value.reason.trim() && !!form.value.percent && (form.value.mode === 'BASE' ? canEditBase.value : !!form.value.tarifaId));
 const zeroCount = computed(() => batch.value?.preview.rows.filter(row => row.before === 0).length || 0);
 const selectedChanges = computed(() => selected.value.filter(row => row.before !== row.after));
-const number = (value: number | null) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(value ?? 0);
+// Match the tariff editor: grouping starts at 1.000, including four-digit amounts.
+const priceNumberFormat = new Intl.NumberFormat('de-DE', { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 6 });
+const number = (value: number | null) => priceNumberFormat.format(value ?? 0);
 const date = (value: string) => value ? new Date(value).toLocaleString('es-ES') : '—';
 const familyLabels = (ids: number[]) => ids.length ? ids.map(id => families.value.find(f => f.id === id)?.label || `Familia ${id}`).join(', ') : 'Todas';
 const categoryLabel = (id: number | null) => categories.value.find(c => c.id === id)?.label || (id ? `Clase ${id}` : 'Todas');

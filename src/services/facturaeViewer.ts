@@ -2,7 +2,28 @@
 export type XmlField = { label: string; value: string };
 export type XmlTable = { title: string; headers: string[]; rows: string[][] };
 export type FacturaeView = ReturnType<typeof parseFacturae>;
-export type ArchivedFacturae = { blob: Blob; filename: string };
+export type ArchivedFacturae = {
+  blob: Blob;
+  filename: string;
+  signature?: FacturaeSignatureInfo | null;
+};
+
+/** Información de firma del documento archivado, extraída en el ERP. */
+export type FacturaeSignatureInfo = {
+  signed: boolean;
+  version?: number;
+  invoiceCode?: string;
+  operation?: string;
+  archivedAt?: string | null;
+  signatureMethod?: string;
+  digestMethod?: string;
+  certSubject?: string;
+  certIssuer?: string;
+  certSerial?: string;
+  certNotBefore?: number;
+  certNotAfter?: number;
+  parseError?: boolean;
+};
 
 function children(node: Element | null, name: string): Element[] {
   return node

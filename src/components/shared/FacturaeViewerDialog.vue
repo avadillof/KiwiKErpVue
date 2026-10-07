@@ -41,6 +41,13 @@
             @click="tab = 'invoice'"
           />
           <Button
+            label="Firma"
+            icon="pi pi-shield"
+            :outlined="tab !== 'signature'"
+            :aria-pressed="tab === 'signature'"
+            @click="tab = 'signature'"
+          />
+          <Button
             label="XML original"
             icon="pi pi-code"
             :outlined="tab !== 'xml'"
@@ -200,6 +207,67 @@
           <p class="additional-info">{{ invoice.information }}</p>
         </section>
       </article>
+      <section v-else-if="tab === 'signature'" class="signature-panel">
+        <p v-if="!signature">
+          No se pudo recuperar la información de firma de este documento.
+        </p>
+        <template v-else>
+          <Message v-if="!signature.signed" severity="warn" :closable="false"
+            >Documento sin firma archivada. Las facturas emitidas antes de
+            activar la firma, o con error al firmar, se archivan sin
+            `<code>Signature</code>`.</Message
+          >
+          <dl class="signature-fields">
+            <div>
+              <dt>Estado</dt>
+              <dd>{{ signature.signed ? "Firmado" : "Sin firmar" }}</dd>
+            </div>
+            <div v-if="signature.archivedAt">
+              <dt>{{ signature.signed ? "Firmado el" : "Archivado el" }}</dt>
+              <dd>{{ formatDateTime(signature.archivedAt) }}</dd>
+            </div>
+            <div v-if="signature.operation">
+              <dt>Origen</dt>
+              <dd>
+                {{ operationLabel(signature.operation) }} · versión
+                {{ signature.version ?? "—" }}
+              </dd>
+            </div>
+            <div v-if="signature.signed">
+              <dt>Método de firma</dt>
+              <dd>{{ signature.signatureMethod || "—" }}</dd>
+            </div>
+            <div v-if="signature.signed">
+              <dt>Huella (digest)</dt>
+              <dd>{{ signature.digestMethod || "—" }}</dd>
+            </div>
+            <div v-if="signature.certSubject">
+              <dt>Titular del certificado</dt>
+              <dd>{{ shortName(signature.certSubject) }}</dd>
+            </div>
+            <div v-if="signature.certIssuer">
+              <dt>Emisor del certificado</dt>
+              <dd>{{ shortName(signature.certIssuer) }}</dd>
+            </div>
+            <div v-if="signature.certSerial">
+              <dt>Nº serie</dt>
+              <dd>{{ signature.certSerial }}</dd>
+            </div>
+            <div v-if="signature.certNotBefore">
+              <dt>Válido desde</dt>
+              <dd>{{ formatDateTime(signature.certNotBefore) }}</dd>
+            </div>
+            <div v-if="signature.certNotAfter">
+              <dt>Válido hasta</dt>
+              <dd>{{ formatDateTime(signature.certNotAfter) }}</dd>
+            </div>
+          </dl>
+          <p v-if="signature.parseError" class="viewer-note">
+            La firma no se pudo analizar del todo; la descarga conserva el
+            archivo original.
+          </p>
+        </template>
+      </section>
       <section v-else-if="tab === 'xml'" class="xml-panel">
         <p>
           Contenido XML con sangría para facilitar la lectura. La descarga
@@ -244,6 +312,7 @@ import {
   facturaeError,
   parseFacturae,
   type ArchivedFacturae,
+  type FacturaeSignatureInfo,
   type FacturaeView,
 } from "@/services/facturaeViewer";
 
@@ -252,8 +321,9 @@ const loading = ref(false);
 const error = ref("");
 const document = shallowRef<ArchivedFacturae | null>(null);
 const parsed = shallowRef<FacturaeView | null>(null);
+const signature = shallowRef<FacturaeSignatureInfo | null>(null);
 const xml = ref("");
-const tab = ref<"invoice" | "xml">("invoice");
+const tab = ref<"invoice" | "signature" | "xml">("invoice");
 const invoiceIndex = ref(0);
 const invoice = computed(() => parsed.value?.invoices[invoiceIndex.value]);
 let requestId = 0;
@@ -262,11 +332,36 @@ function reset() {
   ++requestId;
   document.value = null;
   parsed.value = null;
+  signature.value = null;
   xml.value = "";
   error.value = "";
   loading.value = false;
   invoiceIndex.value = 0;
   tab.value = "invoice";
+}
+
+function formatDateTime(value: string | number): string {
+  const date = typeof value === "number" ? new Date(value) : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function shortName(dn: string): string {
+  const cn = dn.match(/(?:^|[,/])\s*CN\s*=\s*([^,/]+)/i)?.[1]?.trim();
+  return cn || dn;
+}
+
+function operationLabel(operation: string): string {
+  if (operation === "ISSUE") return "Emisión";
+  if (operation === "CORRECTION") return "Subsanación";
+  if (operation === "REGENERATE") return "Regeneración";
+  return operation;
 }
 
 // El proveedor de datos establece la autorización; el visor no depende de rutas del ERP.
@@ -279,6 +374,7 @@ async function open(load: () => Promise<ArchivedFacturae>) {
     const archived = await load();
     if (current !== requestId) return;
     document.value = archived;
+    signature.value = archived.signature ?? null;
     if (archived.blob.size > 5 * 1024 * 1024) {
       throw new Error(
         "El XML supera los 5 MB del visor. Puedes descargar el archivo original.",
@@ -515,8 +611,32 @@ th:not(:first-child) {
   font-size: 0.85rem;
   tab-size: 2;
 }
+.signature-panel {
+  background: white;
+  color: #253000;
+  border: 1px solid #dce4cf;
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+.signature-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1rem 0 0;
+}
+.signature-fields > div {
+  border: 1px solid #e2e8d8;
+  background: #fafcf6;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .viewer-footer {
   width: 100%;
+}
+.viewer-footer .kiwik-separator {
+  margin-bottom: 1rem;
 }
 .viewer-actions {
   justify-content: flex-end;

@@ -1,0 +1,10 @@
+<!doctype html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="app"></div><script type="module">
+import {createApp, h, ref} from '/node_modules/.vite/deps/vue.js';
+import PrimeVue from '/node_modules/primevue/config/index.mjs';
+import Theme from '/src/theme/KiwiKTheme.ts';
+import Viewer from '/src/components/shared/FacturaeViewerDialog.vue';
+import '/src/assets/styles/global.css';
+import '/node_modules/primeicons/primeicons.css';
+const app=createApp({setup(){const viewer=ref();window.openViewer=(loader)=>viewer.value.open(loader);return ()=>h(Viewer,{ref:viewer});}});
+app.use(PrimeVue,{theme:{preset:Theme}});app.mount('#app');
+</script></body></html>

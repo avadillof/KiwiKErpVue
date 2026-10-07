@@ -589,7 +589,52 @@
         ><Message v-if="detail.manualInvoice" severity="info" :closable="false"
           >Factura manual sin pedido ni albarán: no modifica cantidades del
           circuito de entrega.</Message
-        >
+        ><Message
+          v-if="
+            detail.canCorrectVerifactu &&
+            securityStore.hasPermission(PERM.INV_VERIFACTU)
+          "
+          severity="error"
+          :closable="false"
+          ><b>{{ detail.verifactuStatusLabel }} · {{ detail.code }}</b
+          ><br /><small>{{
+            detail.verifactuResponse ||
+            "Corrige primero los datos maestros afectados y registra después la subsanación."
+          }}</small
+          ><br /><Button
+            label="Subsanar VeriFactu"
+            icon="pi pi-wrench"
+            severity="danger"
+            size="small"
+            @click="openCorrection(detail)"
+        /></Message>
+        <Message
+          v-if="
+            detail.canRetryVerifactu &&
+            securityStore.hasPermission(PERM.INV_VERIFACTU)
+          "
+          severity="warn"
+          :closable="false"
+          ><b>{{ detail.verifactuStatusLabel }} · {{ detail.code }}</b
+          ><br /><small>{{
+            detail.verifactuResponse ||
+            "El envío falló por un error técnico y no llegó a VeriFactu."
+          }}</small
+          ><br /><Button
+            label="Reintentar envío"
+            icon="pi pi-refresh"
+            severity="warn"
+            size="small"
+            outlined
+            @click="issueInvoice(detail, true)"
+          />
+          <Button
+            label="Regenerar y reencolar"
+            icon="pi pi-wrench"
+            severity="warn"
+            size="small"
+            @click="openRegenerate(detail)"
+        /></Message>
         <div class="summary">
           <div>
             <small>Cliente</small><b>{{ detail.entityName || "-" }}</b>
@@ -1262,6 +1307,36 @@
           :disabled="!correctionReason.trim() || !correctionPassword"
           @click="submitCorrection" /></template
     ></Dialog>
+    <Dialog
+      v-model:visible="regenerateVisible"
+      modal
+      header="Regenerar y reencolar VeriFactu"
+      :style="{ width: 'min(620px,95vw)' }"
+      ><Message severity="warn" :closable="false"
+        >Se regeneran el PDF y el XML Facturae firmado desde los datos actuales
+        y se vuelve a encolar el envío, sin marcar subsanación. Solo para error
+        técnico: si AEAT ya tuviera el registro, usa la subsanación.</Message
+      ><label class="correction-field"
+        ><span>Contraseña del certificado VeriFactu</span
+        ><Password
+          v-model="regeneratePassword"
+          toggleMask
+          :feedback="false"
+          fluid /></label
+      ><template #footer
+        ><Button
+          label="Volver"
+          text
+          severity="secondary"
+          :disabled="regenerating"
+          @click="regenerateVisible = false" /><Button
+          label="Regenerar y reencolar"
+          icon="pi pi-refresh"
+          severity="warn"
+          :loading="regenerating"
+          :disabled="!regeneratePassword"
+          @click="submitRegenerate" /></template
+    ></Dialog>
     <VeriFactuQueuePanel @open-invoice="openDetail" @processed="onQueueProcessed" />
     <VeriFactuChainPanel ref="chainPanel" />
     <AeatCasesDialog ref="aeatCasesRef" />
@@ -1362,6 +1437,52 @@ const correctionVisible = ref(false),
   correctionPassword = ref(""),
   correctionTarget = ref<any>(null),
   correcting = ref(false);
+const regenerateVisible = ref(false),
+  regeneratePassword = ref(""),
+  regenerateTarget = ref<any>(null),
+  regenerating = ref(false);
+const openRegenerate = (item: any) => {
+  if (invoiceProtected(item) || issuing.value) return;
+  regenerateTarget.value = item;
+  regeneratePassword.value = "";
+  regenerateVisible.value = true;
+};
+const submitRegenerate = async () => {
+  const item = regenerateTarget.value;
+  if (!item?.pkid || !regeneratePassword.value) return;
+  regenerating.value = true;
+  try {
+    await axios.post(
+      backendUrl(`/WebRegenerateSalesInvoiceVeriFactu/${item.pkid}`),
+      { certificatePassword: regeneratePassword.value },
+      auth.portalRequestConfig(),
+    );
+    regenerateVisible.value = false;
+    toast.add({
+      severity: "success",
+      summary: "Artefactos regenerados",
+      detail:
+        "Se ha firmado de nuevo el XML y el envío queda pendiente en la cola.",
+      life: 5000,
+    });
+    await refresh();
+    if (detailVisible.value && detail.value?.pkid === item.pkid)
+      await openDetail(detail.value);
+  } catch (e: any) {
+    toast.add({
+      severity: "error",
+      summary: "No se pudo regenerar",
+      detail: Array.isArray(e.response?.data?.errors)
+        ? e.response.data.errors.map((error: any) => error.message).join(" ")
+        : typeof e.response?.data === "string"
+          ? e.response.data
+          : "Revisa el certificado y los datos de la factura.",
+      life: 6000,
+    });
+  } finally {
+    regenerating.value = false;
+  }
+};
 const openCorrection = (item: any) => {
   if (invoiceProtected(item) || issuing.value) return;
   correctionTarget.value = item;
@@ -1396,6 +1517,8 @@ const submitCorrection = async () => {
       life: 5000,
     });
     await refresh();
+    if (detailVisible.value && detail.value?.pkid === item.pkid)
+      await openDetail(detail.value);
   } catch (e: any) {
     toast.add({
       severity: "error",
@@ -1418,6 +1541,7 @@ import {
   downloadArchivedFacturae,
   facturaeError,
   type ArchivedFacturae,
+  type FacturaeSignatureInfo,
 } from "@/services/facturaeViewer";
 const facturaeViewer = ref<InstanceType<typeof FacturaeViewerDialog>>();
 import InvoiceEmailDialog from "./InvoiceEmailDialog.vue";
@@ -2406,6 +2530,13 @@ const noteRequest = {
             icon: "pi pi-refresh",
             command: () => issueInvoice(selected.value, true),
           },
+          {
+            label: "Regenerar y reencolar",
+            visible: securityStore.hasPermission(PERM.INV_VERIFACTU),
+            disabled: invoiceProtected(selected.value) || issuing.value,
+            icon: "pi pi-wrench",
+            command: () => openRegenerate(selected.value),
+          },
         ]
       : []),
     { separator: true },
@@ -2588,7 +2719,17 @@ const loadArchivedFacturae = async (id: number): Promise<ArchivedFacturae> => {
   );
   const filename = response.headers["content-disposition"]
     ?.match(/filename="([a-zA-Z0-9_.-]+)"/)?.[1];
-  return { blob: response.data, filename: filename || `FACTURAE_${id}.xml` };
+  let signature: FacturaeSignatureInfo | null = null;
+  try {
+    const info = await axios.get(
+      backendUrl(`/WebGetSalesInvoiceFacturaeInfo/${id}`),
+      auth.portalRequestConfig(),
+    );
+    signature = info.data;
+  } catch {
+    signature = null;
+  }
+  return { blob: response.data, filename: filename || `FACTURAE_${id}.xml`, signature };
 };
 const downloadFacturae = async (item: any) => {
   if (!item?.pkid || isDraft(item.state) || downloadingFacturae.value) return;
@@ -3327,9 +3468,9 @@ const downloadFacturae = async (item: any) => {
 }
 .correction-banner {
   position: fixed;
-  z-index: 20;
+  z-index: 30;
   right: 1rem;
-  bottom: 1rem;
+  bottom: 5rem;
   width: min(720px, calc(100vw - 2rem));
   box-shadow: 0 10px 30px rgba(80, 20, 20, 0.2);
 }
