@@ -1186,7 +1186,9 @@
     </Dialog><InvoiceEmailDialog
       ref="invoiceEmailDialog"
       @sent="refresh"
-    /><InvoiceAuditDialog ref="invoiceAuditDialog" /><ManualInvoiceDialog
+    /><InvoiceAuditDialog ref="invoiceAuditDialog" />
+    <FacturaeViewerDialog ref="facturaeViewer" />
+    <ManualInvoiceDialog
       ref="manualInvoiceDialog"
       @saved="onManualInvoiceCreated"
     /><InvoiceDuesDialog ref="duesDialog" /><InvoicePaymentsDialog
@@ -1411,6 +1413,13 @@ const submitCorrection = async () => {
 };
 import ManualInvoiceDialog from "./ManualInvoiceDialog.vue";
 import InvoiceAuditDialog from "./InvoiceAuditDialog.vue";
+import FacturaeViewerDialog from "@/components/shared/FacturaeViewerDialog.vue";
+import {
+  downloadArchivedFacturae,
+  facturaeError,
+  type ArchivedFacturae,
+} from "@/services/facturaeViewer";
+const facturaeViewer = ref<InstanceType<typeof FacturaeViewerDialog>>();
 import InvoiceEmailDialog from "./InvoiceEmailDialog.vue";
 const invoiceEmailDialog = ref<any>();
 import { useAuthStore } from "@/stores/authStore";
@@ -2368,6 +2377,16 @@ const noteRequest = {
       command: () => openInvoicePdf(selected.value),
     },
     {
+      label: "Ver factura electrónica",
+      visible: securityStore.hasPermission(PERM.INV_PRINT),
+      icon: "pi pi-file",
+      disabled: !selected.value?.pkid || isDraft(selected.value?.state),
+      command: () => {
+        const id = selected.value?.pkid;
+        if (id) facturaeViewer.value?.open(() => loadArchivedFacturae(id));
+      },
+    },
+    {
       label: "Descargar XML Facturae",
       visible: securityStore.hasPermission(PERM.INV_PRINT),
       icon: "pi pi-download",
@@ -2561,42 +2580,26 @@ const openInvoicePdf = (item: any) => {
   }
 };
 const downloadingFacturae = ref(false);
+// El visor y la descarga usan el mismo documento protegido por la sesión del ERP.
+const loadArchivedFacturae = async (id: number): Promise<ArchivedFacturae> => {
+  const response = await axios.get(
+    backendUrl(`/WebGetSalesInvoiceFacturae/${id}`),
+    { ...auth.portalRequestConfig(), responseType: "blob" },
+  );
+  const filename = response.headers["content-disposition"]
+    ?.match(/filename="([a-zA-Z0-9_.-]+)"/)?.[1];
+  return { blob: response.data, filename: filename || `FACTURAE_${id}.xml` };
+};
 const downloadFacturae = async (item: any) => {
   if (!item?.pkid || isDraft(item.state) || downloadingFacturae.value) return;
   downloadingFacturae.value = true;
   try {
-    // La descarga conserva los bytes y la versión archivados, sin regenerar la factura.
-    const response = await axios.get(
-      backendUrl(`/WebGetSalesInvoiceFacturae/${item.pkid}`),
-      { ...auth.portalRequestConfig(), responseType: "blob" },
-    );
-    const url = URL.createObjectURL(response.data);
-    const link = document.createElement("a");
-    link.href = url;
-    const archivedName = response.headers["content-disposition"]
-      ?.match(/filename="([a-zA-Z0-9_.-]+)"/)?.[1];
-    link.download = archivedName || `FACTURAE_${item.pkid}.xml`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadArchivedFacturae(await loadArchivedFacturae(item.pkid));
   } catch (error: any) {
-    let message = "No se pudo recuperar el XML Facturae archivado.";
-    if (error.response?.data instanceof Blob) {
-      const body = await error.response.data.text();
-      if (error.response.data.type.startsWith("text/plain") && body.trim()) {
-        message = body;
-      }
-    } else if (!error.response && error.message) {
-      message = error.message;
-    }
-    if (error.response?.status === 401) {
-      message = "Vuelve a iniciar sesión para descargar la factura.";
-    }
     toast.add({
       severity: "error",
       summary: "Descarga de Facturae",
-      detail: message,
+      detail: await facturaeError(error),
       life: 6000,
     });
   } finally {

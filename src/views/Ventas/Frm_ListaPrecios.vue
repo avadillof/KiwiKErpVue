@@ -8,7 +8,19 @@
     <section class="list-card">
       <Toolbar class="list-toolbar">
         <template #start><div class="workspace-heading"><span>Listado de tarifas</span><small>Consulta y gestiona las condiciones de precios de tus clientes.</small></div></template>
-        <template #end><Button v-if="securityStore.hasPermission(PERM.PRICELIST_EDIT)" class="new-document" label="Nueva tarifa" icon="pi pi-plus" size="small" :disabled="loading || !catalog" @click="create"/></template>
+        <template #end>
+          <div class="flex gap-2 flex-wrap">
+            <Button
+              class="price-update-action"
+              label="Actualizar precios / Historial"
+              icon="pi pi-percentage"
+              size="small"
+              :disabled="loading || !catalog"
+              @click="priceUpdateVisible = true"
+            />
+            <Button v-if="securityStore.hasPermission(PERM.PRICELIST_EDIT)" class="new-document" label="Nueva tarifa" icon="pi pi-plus" size="small" :disabled="loading || !catalog" @click="create" />
+          </div>
+        </template>
       </Toolbar>
     <GenericDataTable ref="ratesTable" class="rates-table" dataKey="id" selectionMode="single" v-model:selection="selectedRate" endpoint="WebSalesPriceLists" :requestConfig="auth.portalRequestConfig" :showPaginator="true" :filterable="true" :showActions="true" @load-error="error=pricingErrorMessage($event)">
       <template #panelOptions><span class="rule-count">{{ruleCount}} reglas guardadas</span></template>
@@ -54,6 +66,7 @@
       </div>
       <template #footer><div class="w-full"><div class="kiwik-separator mb-3"/><div class="flex justify-content-end gap-2"><Button label="Cerrar" text severity="secondary" :disabled="saving" @click="dialog=false"/><Button label="Guardar tarifa" icon="pi pi-save" :loading="saving" @click="save"/></div></div></template>
     </Dialog>
+    <SalesPriceUpdateDialog v-if="catalog" v-model:visible="priceUpdateVisible" :catalog="catalog" @updated="refresh" />
   </main>
 </template>
 <script setup lang="ts">
@@ -67,12 +80,14 @@ import {useToast} from 'primevue/usetoast';
 import GenericDataTable from '@/components/shared/GenericDataTable.vue';
 import Menu from 'primevue/menu';
 import ProductLookup from '@/components/shared/ProductLookup.vue';
+import SalesPriceUpdateDialog from '@/components/shared/SalesPriceUpdateDialog.vue';
 import {useAuthStore} from '@/stores/authStore';
 import { useSecurityStore } from '@/stores/securityStore';
 import { PERM } from '@/services/Frm_Main/permissions';
 import {pricingErrorMessage} from '@/services/salesPricing';
 const auth=useAuthStore();
 const securityStore = useSecurityStore();
+const priceUpdateVisible = ref(false);
 const router=useRouter(),toast=useToast(),catalog=ref<any>(null),loading=ref(false),saving=ref(false),savingSettings=ref(false),dialog=ref(false),error=ref(''),editError=ref(''),baseConfigured=ref(false),rulesTable=ref<any>();
 const configExpanded=ref(false),ratesTable=ref<any>(),selectedRate=ref<any>(null);
 const rowMenu=ref<InstanceType<typeof Menu>>(),menuRate=ref<any>(null);
@@ -131,4 +146,36 @@ onMounted(load);
 .config-card{margin-top:14px;border:1px solid #dfe4ea;border-radius:14px;background:white;box-shadow:0 5px 18px rgba(30,41,59,.045)}.config-heading{display:flex;align-items:center;justify-content:space-between;padding:13px 16px}.config-heading h2{margin:0 0 .2rem;color:#344054;font-size:.98rem}.config-heading i{color:#7d9e0b;margin-right:.4rem}.config-heading small,.config-body small{color:#7d8797;font-size:.82rem}.config-body{padding:0 16px 18px;border-top:1px solid #e8ecf0}.config-body p{color:#707b8c;font-size:.9rem}.config-body label{display:flex;flex-direction:column;gap:.4rem;min-width:220px;font-size:.875rem}.config-body>small{display:block;margin-top:.75rem}
 .editor{display:flex;flex-direction:column;gap:1rem;height:100%;min-height:0;overflow:auto;padding-right:.25rem}.editor>*{flex-shrink:0}.editor .rules-table{flex:0 0 260px;height:260px}.editor h2{font-size:1.05rem;margin:.25rem 0;color:#344054}.fields{display:grid;grid-template-columns:1fr 2fr 1fr;gap:1rem;padding:1rem;background:#f7faf7;border:1px solid #e3ead8;border-radius:10px}.fields label{display:flex;flex-direction:column;gap:.4rem;font-size:.875rem}.preview{border-top:1px solid #e5e7eb;padding-top:.5rem}.preview h3{font-size:1rem;margin:.4rem 0}.preview small{display:block;margin-top:.4rem;color:#7d8797}
 @media(max-width:800px){.prices-page{padding:12px 10px 66px}.page-header{align-items:flex-start;gap:8px;padding:14px}.page-heading p{display:none}.header-actions :deep(.p-button-label){display:none}.workspace-heading small{display:none}.fields{grid-template-columns:1fr}.table-tools{flex-wrap:wrap}.table-tools input{flex:1;min-width:140px}.table-tools span{font-size:.75rem}.list-card{height:520px}.config-body label{min-width:0;width:100%}.preview>.flex{flex-wrap:wrap}}
+/* Destaca la actualización masiva como acción principal del listado. */
+.list-toolbar :deep(.price-update-action) {
+  padding: .65rem 1rem;
+  gap: .65rem;
+  border: 1px solid #8bad09;
+  border-radius: 10px;
+  background: #9cc10a;
+  color: #253000;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgb(92 116 0 / 18%);
+  transition: background-color .15s ease, box-shadow .15s ease;
+}
+.list-toolbar :deep(.price-update-action .p-button-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 30%);
+  font-size: 1rem;
+}
+.list-toolbar :deep(.price-update-action:not(:disabled):hover) {
+  background: #8bad09;
+  border-color: #7d9d08;
+  color: #253000;
+  box-shadow: 0 4px 12px rgb(92 116 0 / 25%);
+}
+.list-toolbar :deep(.price-update-action:focus-visible) {
+  outline: 3px solid #536900;
+  outline-offset: 3px;
+}
 </style>
