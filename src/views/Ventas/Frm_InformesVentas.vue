@@ -17,12 +17,12 @@
 
     <Tabs value="VEN" class="reports-tabs">
       <TabList>
-        <Tab value="VEN"><i class="pi pi-briefcase" /> Reportes de Ventas</Tab>
+        <Tab value="VEN"><i class="pi pi-chart-bar" /> Informes del ERP</Tab>
       </TabList>
       <TabPanels>
         <TabPanel value="VEN" class="ven-panel">
           <div class="ven-body">
-            <section class="ven-card ven-card--side" aria-label="Catálogo de informes de ventas">
+            <section class="ven-card ven-card--side" aria-label="Catálogo de informes del ERP">
               <Tree
                 v-model:selectionKeys="selection"
                 v-model:expandedKeys="expanded"
@@ -84,6 +84,25 @@
                     <label class="field"><span>Fecha hasta</span><DatePicker v-model="pur002.dateTo" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
                     <label class="field"><span>Buscar (factura, proveedor)</span><InputText v-model="pur002.query" placeholder="Texto libre" fluid /></label>
                     <label class="field field--check"><span>Vencidas</span><span class="check-row"><Checkbox v-model="pur002.onlyOverdue" binary /> Solo vencidas</span></label>
+                  </div>
+                  <div v-if="selectedReport === 'RPT-TAS-001'" class="params-grid">
+                    <label class="field"><span>Inicio desde</span><DatePicker v-model="tas001.dateFrom" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
+                    <label class="field"><span>Vencimiento hasta</span><DatePicker v-model="tas001.dateTo" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
+                    <label class="field"><span>Estado</span><Select v-model="tas001.state" :options="taskStateOptions" optionLabel="label" optionValue="value" fluid /></label>
+                    <label class="field"><span>Prioridad</span><Select v-model="tas001.priority" :options="taskPriorityOptions" optionLabel="label" optionValue="value" fluid /></label>
+                    <label class="field"><span>Responsable</span><Select v-model="tas001.userPkid" :options="taskUserOptions" optionLabel="label" optionValue="value" filter fluid /></label>
+                    <label class="field"><span>Cliente</span><CustomerLookup v-model="tas001.entitiePkid" :label="tas001.entitieLabel" @selected="selectTaskEntity(tas001, $event)" @cleared="clearTaskEntity(tas001)" /></label>
+                    <label class="field"><span>Buscar</span><InputText v-model="tas001.query" placeholder="Código, tarea, cliente…" fluid /></label>
+                    <label class="field field--check"><span>Situación</span><span class="check-row"><Checkbox v-model="tas001.overdueOnly" binary /> Solo vencidas</span></label>
+                    <label class="field field--check"><span>Histórico</span><span class="check-row"><Checkbox v-model="tas001.includeArchived" binary /> Incluir finalizadas y descartadas</span></label>
+                  </div>
+                  <div v-if="selectedReport === 'RPT-TAS-002'" class="params-grid">
+                    <label class="field"><span>Fecha desde</span><DatePicker v-model="tas002.dateFrom" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
+                    <label class="field"><span>Fecha hasta</span><DatePicker v-model="tas002.dateTo" dateFormat="dd/mm/yy" showIcon placeholder="Sin límite" fluid /></label>
+                    <label class="field"><span>Empleado</span><Select v-model="tas002.userPkid" :options="taskUserOptions" optionLabel="label" optionValue="value" filter fluid /></label>
+                    <label class="field"><span>Cliente</span><CustomerLookup v-model="tas002.entitiePkid" :label="tas002.entitieLabel" @selected="selectTaskEntity(tas002, $event)" @cleared="clearTaskEntity(tas002)" /></label>
+                    <label class="field"><span>Buscar</span><InputText v-model="tas002.query" placeholder="Tarea, cliente, trabajo…" fluid /></label>
+                    <label class="field field--check"><span>Facturación</span><span class="check-row"><Checkbox v-model="tas002.pendingOnly" binary /> Solo horas pendientes</span></label>
                   </div>
                   <div v-if="selectedReport === 'RPT-TAR-001'" class="params-grid">
                     <label class="field"><span>Tarifa</span><Select v-model="tar001.tarifaId" :options="tarifaRateOptions" optionLabel="label" optionValue="value" filter fluid /></label>
@@ -209,8 +228,10 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useSecurityStore } from '@/stores/securityStore';
+import { useAuthStore } from '@/stores/authStore';
 import { PERM } from '@/services/Frm_Main/permissions';
 const securityStore = useSecurityStore();
+const authStore = useAuthStore();
 
 import { useCompanyStore } from '@/stores/companyStore';
 import { buildReportPdf, exportReportExcel, sortReportRows, type ReportRow } from '@/services/Informes/reportEngine';
@@ -273,6 +294,8 @@ import Tabs from 'primevue/tabs';
 import Tag from 'primevue/tag';
 import Toolbar from 'primevue/toolbar';
 import Tree from 'primevue/tree';
+import CustomerLookup from '@/components/shared/CustomerLookup.vue';
+import { getUsers } from '@/services/Tasks/taskService';
 import { useToast } from 'primevue/usetoast';
 import { IVA_001_COLUMNS, IVA_001_ORDER_FIELDS, fetchIva001, fetchIvaVersion, iva001FiltersText, prepareIva001, presentIva001, type VatSettlement } from '@/services/Informes/reports/rptIva001';
 import {
@@ -284,6 +307,8 @@ import {
   tarifaOptions,
   type Tar001Filters
 } from '@/services/Informes/reports/rptTar001';
+import { TAS_001_COLUMNS, TAS_001_ORDER_FIELDS, fetchTas001, tas001FiltersText, type Tas001Filters } from '@/services/Informes/reports/rptTas001';
+import { TAS_002_COLUMNS, TAS_002_ORDER_FIELDS, fetchTas002, tas002FiltersText, type Tas002Filters } from '@/services/Informes/reports/rptTas002';
 
 const router = useRouter();
 const companyStore = useCompanyStore();
@@ -322,6 +347,14 @@ const salesNodes = ref([
     children: [
       { key: 'RPT-IVA-001', label: '[RPT-IVA-001] Preliquidación trimestral de IVA' }
     ]
+  },
+  {
+    key: 'tas',
+    label: 'Tareas y partes',
+    children: [
+      { key: 'RPT-TAS-001', label: '[RPT-TAS-001] Seguimiento de tareas' },
+      { key: 'RPT-TAS-002', label: '[RPT-TAS-002] Horas e imputaciones' }
+    ]
   }
 ]);
 const selection = ref<Record<string, boolean>>({ 'RPT-CLI-001': true });
@@ -355,6 +388,14 @@ const pur002 = reactive<Pur002Filters>({ dateTo: null, query: '', onlyOverdue: f
 const tar001 = reactive<Tar001Filters>({ tarifaId: 0, includeClients: true, onlyWithRules: false });
 const tarifaRateOptions = ref<Array<{ label: string; value: number }>>([{ label: 'Todas', value: 0 }]);
 const iva001 = reactive({ year: new Date().getFullYear(), quarter: Math.floor(new Date().getMonth() / 3) + 1 });
+const requesterPkid = computed(() => authStore.user?.admin || securityStore.hasPermission(PERM.TASK_VIEW_ALL) ? undefined : authStore.user?.pkid);
+const tas001 = reactive<Tas001Filters>({ dateFrom: null, dateTo: null, state: 'ALL', priority: 'ALL', userPkid: 0, entitiePkid: null, entitieLabel: '', overdueOnly: false, includeArchived: false, query: '', requesterPkid: requesterPkid.value });
+const tas002 = reactive<Tas002Filters>({ dateFrom: null, dateTo: null, userPkid: 0, entitiePkid: null, entitieLabel: '', pendingOnly: false, query: '', requesterPkid: requesterPkid.value });
+const taskUserOptions = ref<Array<{ label: string; value: number }>>([{ label: 'Todos', value: 0 }]);
+const taskStateOptions = [{ label: 'Todos', value: 'ALL' }, { label: 'Planificada', value: 'PLANIFICADA' }, { label: 'En curso', value: 'EN_CURSO' }, { label: 'Finalizada', value: 'FINALIZADA' }, { label: 'Descartada', value: 'DESCARTADA' }];
+const taskPriorityOptions = [{ label: 'Todas', value: 'ALL' }, { label: 'Baja', value: 'BAJA' }, { label: 'Media', value: 'MEDIA' }, { label: 'Alta', value: 'ALTA' }, { label: 'Urgente', value: 'URGENTE' }];
+function selectTaskEntity(target: Tas001Filters | Tas002Filters, entity: any) { target.entitiePkid = Number(entity?.pkid ?? entity?.entitiePkId ?? entity?.id) || null; target.entitieLabel = entity?.name ?? entity?.entitieDsName ?? ''; }
+function clearTaskEntity(target: Tas001Filters | Tas002Filters) { target.entitiePkid = null; target.entitieLabel = ''; }
 const quarterOptions = [1, 2, 3, 4].map((value) => ({ label: `${value}º trimestre`, value }));
 const ivaSettlement = ref<VatSettlement | null>(null);
 const settlementBusy = ref(false);
@@ -384,9 +425,13 @@ onMounted(async () => {
   } catch {
     /* sin tarifas: queda "Todas" */
   }
+  try {
+    const users = await getUsers();
+    taskUserOptions.value = [{ label: 'Todos', value: 0 }, ...users.map((u: any) => ({ label: u.userDsName || u.name || u.userDsCode || `Usuario ${u.pkid ?? u.userKyId}`, value: Number(u.pkid ?? u.userKyId ?? u.id) })).filter((u: any) => Number.isFinite(u.value))];
+  } catch { /* se mantiene la opción Todos */ }
 });
 const orderCriteria = ref<Array<{ field: string; dir: 'asc' | 'desc' }>>([{ field: 'name', dir: 'asc' }]);
-const orderFields = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_ORDER_FIELDS : selectedReport.value === 'RPT-TAR-001' ? TAR_001_ORDER_FIELDS : selectedReport.value === 'RPT-ART-001' ? ART_001_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_ORDER_FIELDS : CLI_001_ORDER_FIELDS);
+const orderFields = computed(() => selectedReport.value === 'RPT-TAS-001' ? TAS_001_ORDER_FIELDS : selectedReport.value === 'RPT-TAS-002' ? TAS_002_ORDER_FIELDS : selectedReport.value === 'RPT-IVA-001' ? IVA_001_ORDER_FIELDS : selectedReport.value === 'RPT-TAR-001' ? TAR_001_ORDER_FIELDS : selectedReport.value === 'RPT-ART-001' ? ART_001_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_ORDER_FIELDS : CLI_001_ORDER_FIELDS);
 const orderLabel = (value: string) => orderFields.value.find((f) => f.value === value)?.label ?? value;
 const availableOrderFields = computed(() =>
   orderFields.value.filter((f) => visibleCols.value.includes(f.value) && !orderCriteria.value.some((c) => c.field === f.value))
@@ -398,7 +443,7 @@ function removeOrder(index: number) {
   orderCriteria.value.splice(index, 1);
 }
 /** Columnas visibles del informe activo, en orden de salida. Por defecto todas. */
-const activeColumns = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_COLUMNS : selectedReport.value === 'RPT-TAR-001' ? TAR_001_COLUMNS : selectedReport.value === 'RPT-ART-001' ? ART_001_COLUMNS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_COLUMNS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_COLUMNS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_COLUMNS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_COLUMNS : CLI_001_COLUMNS);
+const activeColumns = computed(() => selectedReport.value === 'RPT-TAS-001' ? TAS_001_COLUMNS : selectedReport.value === 'RPT-TAS-002' ? TAS_002_COLUMNS : selectedReport.value === 'RPT-IVA-001' ? IVA_001_COLUMNS : selectedReport.value === 'RPT-TAR-001' ? TAR_001_COLUMNS : selectedReport.value === 'RPT-ART-001' ? ART_001_COLUMNS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_COLUMNS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_COLUMNS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_COLUMNS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_COLUMNS : CLI_001_COLUMNS);
 const visibleCols = ref<string[]>(CLI_001_COLUMNS.map((c) => c.key));
 const columnLabel = (key: string) => activeColumns.value.find((c) => c.key === key)?.header ?? key;
 const hiddenCols = computed(() => activeColumns.value.filter((c) => !visibleCols.value.includes(c.key)));
@@ -435,6 +480,8 @@ function dropOrder(index: number) {
 const isReport = computed(() => selectedReport.value.startsWith('RPT-'));
 /** Filtros del informe activo (CLI o ART). */
 function currentFilters() {
+  if (selectedReport.value === 'RPT-TAS-001') return tas001;
+  if (selectedReport.value === 'RPT-TAS-002') return tas002;
   if (selectedReport.value === 'RPT-IVA-001') return iva001;
   if (selectedReport.value === 'RPT-TAR-001') return tar001;
   if (selectedReport.value === 'RPT-ART-001') return art001;
@@ -471,6 +518,8 @@ function resetFilters() {
   tar001.onlyWithRules = false;
   iva001.year = new Date().getFullYear();
   iva001.quarter = Math.floor(new Date().getMonth() / 3) + 1;
+  Object.assign(tas001, { dateFrom: null, dateTo: null, state: 'ALL', priority: 'ALL', userPkid: 0, entitiePkid: null, entitieLabel: '', overdueOnly: false, includeArchived: false, query: '', requesterPkid: requesterPkid.value });
+  Object.assign(tas002, { dateFrom: null, dateTo: null, userPkid: 0, entitiePkid: null, entitieLabel: '', pendingOnly: false, query: '', requesterPkid: requesterPkid.value });
 }
 function onNodeSelect(node: any) {
   selectedReport.value = node?.key ?? '';
@@ -486,7 +535,7 @@ function onNodeSelect(node: any) {
     orderCriteria.value = [{ field: 'name', dir: 'asc' }];
   } else {
     orderCriteria.value =
-      selectedReport.value === 'RPT-IVA-001' ? [{ field: 'dateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-TAR-001' ? [{ field: 'tarifaCode', dir: 'asc' }] : selectedReport.value === 'RPT-ART-001' ? [{ field: 'description', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-002' ? [{ field: 'expectedDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-004' ? [{ field: 'dueDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-001' ? [{ field: 'createDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-002' ? [{ field: 'dueDateRaw', dir: 'asc' }] : [{ field: 'name', dir: 'asc' }];
+      selectedReport.value === 'RPT-TAS-001' ? [{ field: 'dueDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-TAS-002' ? [{ field: 'workDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-IVA-001' ? [{ field: 'dateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-TAR-001' ? [{ field: 'tarifaCode', dir: 'asc' }] : selectedReport.value === 'RPT-ART-001' ? [{ field: 'description', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-002' ? [{ field: 'expectedDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-004' ? [{ field: 'dueDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-001' ? [{ field: 'createDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-002' ? [{ field: 'dueDateRaw', dir: 'asc' }] : [{ field: 'name', dir: 'asc' }];
     visibleCols.value = activeColumns.value.map((c) => c.key);
     loadSavedParams();
   }
@@ -560,7 +609,7 @@ const previewSection = ref<HTMLElement | null>(null);
 const pdfUrl = ref('');
 
 const filtersText = computed(() =>
-  selectedReport.value === 'RPT-IVA-001' ? iva001FiltersText(iva001, ivaSettlement.value) : selectedReport.value === 'RPT-TAR-001' ? tar001FiltersText(tar001, tarifaRateOptions.value.find((o) => o.value === tar001.tarifaId)?.label ?? '') : selectedReport.value === 'RPT-ART-001' ? art001FiltersText(art001) : selectedReport.value === 'RPT-SAL-002' ? sal002FiltersText(sal002) : selectedReport.value === 'RPT-SAL-004' ? sal004FiltersText(sal004) : selectedReport.value === 'RPT-PUR-001' ? pur001FiltersText(pur001) : selectedReport.value === 'RPT-PUR-002' ? pur002FiltersText(pur002) : cli001FiltersText(cli001)
+  selectedReport.value === 'RPT-TAS-001' ? tas001FiltersText(tas001) : selectedReport.value === 'RPT-TAS-002' ? tas002FiltersText(tas002) : selectedReport.value === 'RPT-IVA-001' ? iva001FiltersText(iva001, ivaSettlement.value) : selectedReport.value === 'RPT-TAR-001' ? tar001FiltersText(tar001, tarifaRateOptions.value.find((o) => o.value === tar001.tarifaId)?.label ?? '') : selectedReport.value === 'RPT-ART-001' ? art001FiltersText(art001) : selectedReport.value === 'RPT-SAL-002' ? sal002FiltersText(sal002) : selectedReport.value === 'RPT-SAL-004' ? sal004FiltersText(sal004) : selectedReport.value === 'RPT-PUR-001' ? pur001FiltersText(pur001) : selectedReport.value === 'RPT-PUR-002' ? pur002FiltersText(pur002) : cli001FiltersText(cli001)
 );
 
 async function preview() {
@@ -572,7 +621,13 @@ async function preview() {
   previewRows.value = [];
   try {
     let rows: ReportRow[];
-    if (selectedReport.value === 'RPT-IVA-001') {
+    tas001.requesterPkid = requesterPkid.value;
+    tas002.requesterPkid = requesterPkid.value;
+    if (selectedReport.value === 'RPT-TAS-001') {
+      rows = await fetchTas001(tas001);
+    } else if (selectedReport.value === 'RPT-TAS-002') {
+      rows = await fetchTas002(tas002);
+    } else if (selectedReport.value === 'RPT-IVA-001') {
       const result = await fetchIva001(iva001);
       ivaSettlement.value = result.settlement;
       sendToAdvisor.value = Boolean(result.settlement.advisorConfigured);
@@ -609,7 +664,7 @@ async function preview() {
       filtersText: filtersText.value,
       columns: effectiveColumns,
       rows: previewRows.value,
-      sections: selectedReport.value === 'RPT-IVA-001' ? vatSections(previewRows.value, effectiveColumns) : undefined,
+      sections: selectedReport.value === 'RPT-IVA-001' ? vatSections(previewRows.value, effectiveColumns) : selectedReport.value === 'RPT-TAS-002' ? taskTimeSections(previewRows.value, effectiveColumns) : undefined,
       dottedRows: selectedReport.value === 'RPT-IVA-001',
       redWhen: (r) => selectedReport.value === 'RPT-IVA-001' ? r.hasReview === true : r.deleted === true || r.overdue === true,
       company: {
@@ -730,7 +785,7 @@ function exportExcel() {
     const col = activeColumns.value.find((c) => c.key === key);
     return col ? [col] : [];
   });
-  exportReportExcel({ code: selectedReport.value, columns, rows: previewRows.value, sections: selectedReport.value === 'RPT-IVA-001' ? vatSections(previewRows.value, columns) : undefined });
+  exportReportExcel({ code: selectedReport.value, columns, rows: previewRows.value, sections: selectedReport.value === 'RPT-IVA-001' ? vatSections(previewRows.value, columns) : selectedReport.value === 'RPT-TAS-002' ? taskTimeSections(previewRows.value, columns) : undefined });
 }
 const reportMoney = (value: unknown) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(Number(value ?? 0));
 const reportNumber = (value: unknown) => new Intl.NumberFormat('es-ES', { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value ?? 0));
@@ -777,6 +832,31 @@ const vatSections = (rows: ReportRow[], columns: typeof IVA_001_COLUMNS) => {
     { title: 'Compras · IVA soportado', rows: purchaseRows, columns: purchaseColumns, footerRows: [totalRow(purchaseRows, purchaseColumns, 'TOTALES COMPRAS')], bodyFontSize: 6.35 },
     { title: 'Resumen final · Ventas agrupadas por cliente', rows: customerRows, columns: summaryColumns, bodyFontSize: 6.5 },
     { title: 'Resumen final · Compras agrupadas por proveedor', rows: supplierRows, columns: [{ ...summaryColumns[0], header: 'Proveedor' }, ...summaryColumns.slice(1)], bodyFontSize: 6.5 }
+  ];
+};
+
+/** El parte detallado termina con resúmenes útiles para dirección y facturación. */
+const taskTimeSections = (rows: ReportRow[], columns: typeof TAS_002_COLUMNS) => {
+  const aggregate = (key: 'userName' | 'company', emptyLabel: string) => {
+    const groups = new Map<string, { label: string; entries: number; hours: number; invoiced: number; pending: number; amount: number }>();
+    for (const row of rows) {
+      const label = String(row[key] || emptyLabel);
+      const group = groups.get(label) ?? { label, entries: 0, hours: 0, invoiced: 0, pending: 0, amount: 0 };
+      group.entries += 1; group.hours += Number(row.hoursRaw ?? 0); group.invoiced += Number(String(row.invoicedHours ?? '0').replace(/\./g, '').replace(',', '.'));
+      group.pending += Number(String(row.pendingHours ?? '0').replace(/\./g, '').replace(',', '.')); group.amount += Number(row.pendingAmountRaw ?? 0);
+      groups.set(label, group);
+    }
+    return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label, 'es')).map((g) => ({ label: g.label, entries: g.entries, hours: reportNumber(g.hours), invoiced: reportNumber(g.invoiced), pending: reportNumber(g.pending), amount: reportNumber(g.amount) }));
+  };
+  const summaryColumns = [
+    { key: 'label', header: 'Agrupación' }, { key: 'entries', header: 'Partes', align: 'right' as const },
+    { key: 'hours', header: 'Horas', align: 'right' as const }, { key: 'invoiced', header: 'Facturadas', align: 'right' as const },
+    { key: 'pending', header: 'Pendientes', align: 'right' as const }, { key: 'amount', header: 'Importe pendiente', align: 'right' as const }
+  ];
+  return [
+    { title: 'Detalle de imputaciones', rows, columns, bodyFontSize: 6.4 },
+    { title: 'Resumen por empleado', rows: aggregate('userName', 'Sin empleado'), columns: summaryColumns, bodyFontSize: 7 },
+    { title: 'Resumen por cliente', rows: aggregate('company', 'Sin cliente'), columns: [{ ...summaryColumns[0], header: 'Cliente' }, ...summaryColumns.slice(1)], bodyFontSize: 7 }
   ];
 };
 
