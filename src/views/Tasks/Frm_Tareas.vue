@@ -6,7 +6,7 @@
                 <div>
                     <span class="breadcrumb">Gestión / Tareas</span>
                     <h1>Tareas</h1>
-                    <p>Tablero Kanban sencillo: planifica, ejecuta y archiva el trabajo facturable.</p>
+                    <p>Planifica, consulta y organiza el trabajo mediante Kanban, Gantt o tabla.</p>
                 </div>
             </div>
 
@@ -20,8 +20,8 @@
             <Toolbar class="entities-toolbar">
                 <template #start>
                     <div class="workspace-heading">
-                        <span>Tablero Kanban</span>
-                        <small>Arrastra una tarjeta entre columnas para cambiar su estado.</small>
+                        <span>{{ viewTitle }}</span>
+                        <small>{{ viewHelp }}</small>
                     </div>
                 </template>
                 <template #end>
@@ -35,6 +35,8 @@
                             :text="view !== 'kanban'" rounded title="Vista Kanban" @click="view = 'kanban'" />
                         <Button icon="pi pi-chart-bar" :severity="view === 'gantt' ? 'success' : 'secondary'"
                             :text="view !== 'gantt'" rounded title="Vista Gantt" @click="view = 'gantt'" />
+                        <Button icon="pi pi-table" :severity="view === 'table' ? 'success' : 'secondary'"
+                            :text="view !== 'table'" rounded title="Vista tabla" @click="view = 'table'" />
                         <Button icon="pi pi-file-excel" text rounded title="Exportar imputaciones a Excel"
                             :loading="exporting" @click="exportExcel" />
                         <Button icon="pi pi-refresh" text rounded title="Refrescar" :loading="loading"
@@ -102,6 +104,74 @@
             </div>
 
             <Frm_TaskGantt v-else-if="view === 'gantt'" :tasks="tasks" @edit="openEdit" />
+
+            <section v-else-if="view === 'table'" class="task-table-panel">
+                <DataTable :value="tasks" dataKey="pkid" class="task-table" stripedRows removableSort
+                    paginator :rows="25" :rowsPerPageOptions="[25, 50, 100]" scrollable scrollHeight="flex"
+                    sortField="dueDate" :sortOrder="1" tableStyle="min-width: 1320px"
+                    paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+                    currentPageReportTemplate="{first}–{last} de {totalRecords} tareas"
+                    @row-dblclick="openEdit($event.data)">
+                    <template #empty>
+                        <div class="table-empty"><i class="pi pi-inbox"></i><strong>Sin tareas</strong><span>No hay resultados para los filtros seleccionados.</span></div>
+                    </template>
+                    <Column field="code" header="Código" sortable frozen style="width: 115px">
+                        <template #body="{ data }"><span class="table-code">{{ data.code || '—' }}</span></template>
+                    </Column>
+                    <Column field="name" header="Tarea" sortable style="min-width: 245px">
+                        <template #body="{ data }">
+                            <button type="button" class="task-name-cell" @click="openEdit(data)">
+                                <strong>{{ data.name }}</strong>
+                                <small v-if="data.contactName"><i class="pi pi-user"></i>{{ data.contactName }}</small>
+                            </button>
+                        </template>
+                    </Column>
+                    <Column field="entitieName" header="Empresa" sortable style="min-width: 185px">
+                        <template #body="{ data }"><span class="company-cell"><i class="pi pi-building"></i>{{ data.entitieName || '—' }}</span></template>
+                    </Column>
+                    <Column field="userName" header="Asignada a" sortable style="min-width: 170px">
+                        <template #body="{ data }">
+                            <span v-if="data.userName" class="assignee-cell">
+                                <Avatar shape="circle" class="kanban-avatar">
+                                    <img v-if="data.userPkid && !photoErrors[data.userPkid]" :src="userPhotoUrl(data.userPkid)"
+                                        :alt="data.userName" @error="onPhotoError(data.userPkid)" />
+                                    <span v-else>{{ initials(data.userName) }}</span>
+                                </Avatar>{{ data.userName }}
+                            </span><span v-else>—</span>
+                        </template>
+                    </Column>
+                    <Column field="state" header="Estado" sortable style="width: 145px">
+                        <template #body="{ data }"><Tag :value="stateOf(data.state).label" :severity="stateOf(data.state).severity" rounded /></template>
+                    </Column>
+                    <Column field="priority" header="Prioridad" sortable style="width: 120px">
+                        <template #body="{ data }"><Tag :value="priorityOf(data).label" :severity="priorityOf(data).severity" rounded /></template>
+                    </Column>
+                    <Column field="startDate" header="Inicio" sortable style="width: 118px">
+                        <template #body="{ data }">{{ data.startDate ? formatTaskDate(data.startDate) : '—' }}</template>
+                    </Column>
+                    <Column field="dueDate" header="Vencimiento" sortable style="width: 135px">
+                        <template #body="{ data }"><span class="due-cell" :class="{ late: data.overdue }"><i class="pi pi-calendar"></i>{{ data.dueDate ? formatTaskDate(data.dueDate) : '—' }}</span></template>
+                    </Column>
+                    <Column field="estimatedHours" header="Previstas" sortable headerClass="numeric-head" bodyClass="numeric-cell" style="width: 105px">
+                        <template #body="{ data }">{{ numberHours(data.estimatedHours) }}</template>
+                    </Column>
+                    <Column field="totalHours" header="Registradas" sortable headerClass="numeric-head" bodyClass="numeric-cell" style="width: 115px">
+                        <template #body="{ data }">{{ numberHours(data.totalHours) }}</template>
+                    </Column>
+                    <Column field="progress" header="Progreso" sortable style="width: 145px">
+                        <template #body="{ data }"><div class="table-progress"><ProgressBar :value="Math.round(Number(data.progress || 0))" /><span>{{ Math.round(Number(data.progress || 0)) }}%</span></div></template>
+                    </Column>
+                    <Column field="billingState" header="Facturación" sortable style="width: 145px">
+                        <template #body="{ data }"><Tag :value="billingLabel(data)" :severity="billingSeverity(data)" rounded /></template>
+                    </Column>
+                    <Column field="attachmentCount" header="Docs." sortable headerClass="center-head" bodyClass="center-cell" style="width: 82px">
+                        <template #body="{ data }"><span v-if="Number(data.attachmentCount || 0)" class="attachment-cell"><i class="pi pi-paperclip"></i>{{ data.attachmentCount }}</span><span v-else>—</span></template>
+                    </Column>
+                    <Column header="Acciones" frozen alignFrozen="right" style="width: 94px">
+                        <template #body="{ data }"><div class="table-actions"><Button icon="pi pi-pencil" text rounded size="small" title="Abrir tarea" @click="openEdit(data)" /><Button v-if="securityStore.hasPermission(PERM.TASK_DELETE)" icon="pi pi-trash" text rounded size="small" severity="danger" title="Descartar" :disabled="data.state === 'DESCARTADA'" @click="askDiscard(data)" /></div></template>
+                    </Column>
+                </DataTable>
+            </section>
 
             <div v-else class="kanban-board">
                 <section v-for="col in columns" :key="col.value" class="kanban-column"
@@ -189,8 +259,10 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import Button from 'primevue/button';
 import ConfirmDialog from 'primevue/confirmdialog';
+import Column from 'primevue/column';
 import CorporateLoader from '@/components/shared/CorporateLoader.vue';
 import CustomerLookup from '@/components/shared/CustomerLookup.vue';
+import DataTable from 'primevue/datatable';
 import FloatLabel from 'primevue/floatlabel';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -236,7 +308,7 @@ const messagesStore = useMessagesStore();
 const loading = ref(false);
 const notifying = ref(false);
 const exporting = ref(false);
-const view = ref<'kanban' | 'gantt'>('kanban');
+const view = ref<'kanban' | 'gantt' | 'table'>('kanban');
 const query = ref('');
 const tasks = ref<TaskDTO[]>([]);
 const dragPkid = ref<number | null>(null);
@@ -271,6 +343,34 @@ const hasFilters = computed(() =>
     !!query.value || !!filterState.value || filterUser.value != null || filterEntitie.value != null
     || !!filterPriority.value || mineOnly.value || overdueOnly.value || archiveMode.value
 );
+const viewTitle = computed(() => view.value === 'kanban' ? 'Tablero Kanban' : view.value === 'gantt' ? 'Planificación Gantt' : 'Listado de tareas');
+const viewHelp = computed(() => view.value === 'kanban'
+    ? 'Arrastra una tarjeta entre columnas para cambiar su estado.'
+    : view.value === 'gantt'
+        ? 'Revisa la duración y el solapamiento temporal de las tareas.'
+        : 'Ordena, compara y abre las tareas desde una vista compacta.');
+
+function stateOf(state: string) {
+    return TASK_STATES.find((item) => item.value === state) ?? { label: state || 'Sin estado', severity: 'secondary' };
+}
+
+function numberHours(value: unknown): string {
+    const hours = Number(value || 0);
+    return hours > 0 ? `${hours.toLocaleString('es-ES', { maximumFractionDigits: 2 })} h` : '—';
+}
+
+function billingLabel(task: TaskDTO): string {
+    if (!task.billable) return 'No facturable';
+    if (Number(task.pendingHours || 0) > 0) return `${numberHours(task.pendingHours)} pendientes`;
+    if (task.billingState === 'FACTURADA' || task.billingState === 'INVOICED') return 'Facturada';
+    return task.billingState || 'Facturable';
+}
+
+function billingSeverity(task: TaskDTO): string {
+    if (!task.billable) return 'secondary';
+    if (Number(task.pendingHours || 0) > 0) return 'warn';
+    return task.billingState === 'FACTURADA' || task.billingState === 'INVOICED' ? 'success' : 'info';
+}
 
 function tasksByState(state: TaskState): TaskDTO[] {
     return tasks.value
@@ -661,7 +761,7 @@ function applyPrefs(p: TaskBoardPrefs | null) {
     mineOnly.value = !!p.mineOnly;
     overdueOnly.value = !!p.overdueOnly;
     archiveMode.value = !!p.archiveMode;
-    if (p.view === 'kanban' || p.view === 'gantt') view.value = p.view;
+    if (p.view === 'kanban' || p.view === 'gantt' || p.view === 'table') view.value = p.view;
 }
 
 let prefsTimer: ReturnType<typeof setTimeout> | undefined;
@@ -834,6 +934,64 @@ watch(
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.8rem;
 }
+.task-table-panel {
+    height: clamp(470px, calc(100vh - 365px), 760px);
+    min-height: 470px;
+    margin-top: 14px;
+    overflow: hidden;
+    border: 1px solid #e3e8d2;
+    border-radius: 14px;
+    background: #fff;
+}
+.task-table {
+    height: 100%;
+}
+.task-table :deep(.p-datatable-table-container) {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.task-table :deep(.p-datatable-thead > tr > th) {
+    padding: .72rem .7rem;
+    background: #f6f9ee;
+    color: #526029;
+    border-color: #e3e8d2;
+    font-size: .78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.task-table :deep(.p-datatable-tbody > tr > td) {
+    padding: .62rem .7rem;
+    border-color: #edf0e6;
+    color: #384253;
+    font-size: .82rem;
+    vertical-align: middle;
+}
+.task-table :deep(.p-datatable-tbody > tr:hover > td) {
+    background: #fbfdf6;
+}
+.task-table :deep(.p-paginator) {
+    min-height: 48px;
+    border-top: 1px solid #e7ebdf;
+}
+.table-code { color: #648506; font-weight: 800; white-space: nowrap; }
+.task-name-cell { display: flex; flex-direction: column; gap: .2rem; width: 100%; padding: 0; border: 0; background: transparent; color: #273142; text-align: left; cursor: pointer; }
+.task-name-cell:hover strong { color: #648506; text-decoration: underline; }
+.task-name-cell small { display: flex; align-items: center; gap: .3rem; color: #87909e; }
+.company-cell, .assignee-cell, .due-cell, .attachment-cell { display: inline-flex; align-items: center; gap: .42rem; }
+.company-cell { color: #596579; }
+.assignee-cell { white-space: nowrap; }
+.due-cell { white-space: nowrap; color: #657084; }
+.due-cell.late { color: #c0392b; font-weight: 800; }
+.table-progress { display: flex; align-items: center; gap: .45rem; min-width: 115px; }
+.table-progress :deep(.p-progressbar) { width: 75px; height: 9px; background: #e9eddf; }
+.table-progress span { min-width: 32px; color: #648506; font-size: .73rem; font-weight: 800; text-align: right; }
+.table-actions { display: flex; justify-content: flex-end; white-space: nowrap; }
+.table-empty { display: grid; justify-items: center; gap: .35rem; padding: 3rem; color: #899184; }
+.table-empty i { font-size: 1.8rem; color: #9cc10a; }
+.task-table :deep(.numeric-head .p-datatable-column-header-content) { justify-content: flex-end; }
+.task-table :deep(.numeric-cell) { text-align: right; font-variant-numeric: tabular-nums; }
+.task-table :deep(.center-head .p-datatable-column-header-content) { justify-content: center; }
+.task-table :deep(.center-cell) { text-align: center; }
 .kanban-column {
     background: #fff;
     border: 1px solid #e3e8d2;

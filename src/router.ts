@@ -208,6 +208,12 @@ const routes = [
         meta: { perm: PERM.PROD_FAMILIES_NAV },
         component: Frm_FamiliasProductos
       },
+      {
+        path: '/configuracion/etiquetas',
+        name: 'Etiquetas',
+        meta: { perm: PERM.PROD_FAMILIES_NAV },
+        component: () => import('./views/Frm_Products/Frm_Etiquetas/Frm_LabelTemplates.vue')
+      },
 
 
     ]

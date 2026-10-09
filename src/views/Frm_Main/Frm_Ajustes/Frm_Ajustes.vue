@@ -310,6 +310,12 @@
                 <span class="master-copy"><strong>Familias de productos</strong><small>Clasificación común para organizar el catálogo de productos y servicios.</small></span>
                 <span class="master-action">Gestionar <i class="pi pi-arrow-right"></i></span>
               </button>
+
+              <button v-if="can(PERM.PROD_FAMILIES_NAV)" type="button" class="master-card master-card--family" @click="router.push({name:'Etiquetas'})">
+                <span class="master-icon"><i class="pi pi-tags"></i></span>
+                <span class="master-copy"><strong>Etiquetas Zebra (ZPL)</strong><small>Diseñador de etiquetas de producto, precio, lote y ubicación.</small></span>
+                <span class="master-action">Gestionar <i class="pi pi-arrow-right"></i></span>
+              </button>
             </div>
 
             <div class="master-note"><i class="pi pi-info-circle"></i><span>Los cambios realizados en estos catálogos se aplican a los documentos y módulos que los utilizan.</span></div>

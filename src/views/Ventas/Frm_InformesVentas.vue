@@ -85,6 +85,11 @@
                     <label class="field"><span>Buscar (factura, proveedor)</span><InputText v-model="pur002.query" placeholder="Texto libre" fluid /></label>
                     <label class="field field--check"><span>Vencidas</span><span class="check-row"><Checkbox v-model="pur002.onlyOverdue" binary /> Solo vencidas</span></label>
                   </div>
+                  <div v-if="selectedReport === 'RPT-TAR-001'" class="params-grid">
+                    <label class="field"><span>Tarifa</span><Select v-model="tar001.tarifaId" :options="tarifaRateOptions" optionLabel="label" optionValue="value" filter fluid /></label>
+                    <label class="field field--check"><span>Clientes</span><span class="check-row"><Checkbox v-model="tar001.includeClients" binary /> Incluir clientes asignados</span></label>
+                    <label class="field field--check"><span>Reglas</span><span class="check-row"><Checkbox v-model="tar001.onlyWithRules" binary /> Solo tarifas con reglas</span></label>
+                  </div>
                   <div v-if="selectedReport === 'RPT-IVA-001'" class="params-grid params-grid--iva">
                     <label class="field"><span>Ejercicio</span><InputNumber v-model="iva001.year" :min="2000" :max="2200" :useGrouping="false" fluid /></label>
                     <label class="field"><span>Trimestre</span><Select v-model="iva001.quarter" :options="quarterOptions" optionLabel="label" optionValue="value" fluid /></label>
@@ -270,6 +275,15 @@ import Toolbar from 'primevue/toolbar';
 import Tree from 'primevue/tree';
 import { useToast } from 'primevue/usetoast';
 import { IVA_001_COLUMNS, IVA_001_ORDER_FIELDS, fetchIva001, fetchIvaVersion, iva001FiltersText, prepareIva001, presentIva001, type VatSettlement } from '@/services/Informes/reports/rptIva001';
+import {
+  RPT_TAR_001_CODE,
+  TAR_001_COLUMNS,
+  TAR_001_ORDER_FIELDS,
+  fetchTar001,
+  tar001FiltersText,
+  tarifaOptions,
+  type Tar001Filters
+} from '@/services/Informes/reports/rptTar001';
 
 const router = useRouter();
 const companyStore = useCompanyStore();
@@ -282,7 +296,8 @@ const salesNodes = ref([
     label: 'Maestros',
     children: [
       { key: 'RPT-CLI-001', label: '[RPT-CLI-001] Listado General de Entidades' },
-      { key: 'RPT-ART-001', label: '[RPT-ART-001] Listado de Artículos y Servicios' }
+      { key: 'RPT-ART-001', label: '[RPT-ART-001] Listado de Artículos y Servicios' },
+      { key: 'RPT-TAR-001', label: '[RPT-TAR-001] Listado de Tarifas y reglas' }
     ]
   },
   {
@@ -337,6 +352,8 @@ const sal002 = reactive<Sal002Filters>({ dateTo: null, query: '' });
 const sal004 = reactive<Sal004Filters>({ dateTo: null, query: '', onlyOverdue: false });
 const pur001 = reactive<Pur001Filters>({ dateTo: null, query: '' });
 const pur002 = reactive<Pur002Filters>({ dateTo: null, query: '', onlyOverdue: false });
+const tar001 = reactive<Tar001Filters>({ tarifaId: 0, includeClients: true, onlyWithRules: false });
+const tarifaRateOptions = ref<Array<{ label: string; value: number }>>([{ label: 'Todas', value: 0 }]);
 const iva001 = reactive({ year: new Date().getFullYear(), quarter: Math.floor(new Date().getMonth() / 3) + 1 });
 const quarterOptions = [1, 2, 3, 4].map((value) => ({ label: `${value}º trimestre`, value }));
 const ivaSettlement = ref<VatSettlement | null>(null);
@@ -362,9 +379,14 @@ onMounted(async () => {
   } catch {
     /* sin familias: queda "Todas" */
   }
+  try {
+    tarifaRateOptions.value = await tarifaOptions();
+  } catch {
+    /* sin tarifas: queda "Todas" */
+  }
 });
 const orderCriteria = ref<Array<{ field: string; dir: 'asc' | 'desc' }>>([{ field: 'name', dir: 'asc' }]);
-const orderFields = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_ORDER_FIELDS : selectedReport.value === 'RPT-ART-001' ? ART_001_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_ORDER_FIELDS : CLI_001_ORDER_FIELDS);
+const orderFields = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_ORDER_FIELDS : selectedReport.value === 'RPT-TAR-001' ? TAR_001_ORDER_FIELDS : selectedReport.value === 'RPT-ART-001' ? ART_001_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_ORDER_FIELDS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_ORDER_FIELDS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_ORDER_FIELDS : CLI_001_ORDER_FIELDS);
 const orderLabel = (value: string) => orderFields.value.find((f) => f.value === value)?.label ?? value;
 const availableOrderFields = computed(() =>
   orderFields.value.filter((f) => visibleCols.value.includes(f.value) && !orderCriteria.value.some((c) => c.field === f.value))
@@ -376,7 +398,7 @@ function removeOrder(index: number) {
   orderCriteria.value.splice(index, 1);
 }
 /** Columnas visibles del informe activo, en orden de salida. Por defecto todas. */
-const activeColumns = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_COLUMNS : selectedReport.value === 'RPT-ART-001' ? ART_001_COLUMNS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_COLUMNS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_COLUMNS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_COLUMNS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_COLUMNS : CLI_001_COLUMNS);
+const activeColumns = computed(() => selectedReport.value === 'RPT-IVA-001' ? IVA_001_COLUMNS : selectedReport.value === 'RPT-TAR-001' ? TAR_001_COLUMNS : selectedReport.value === 'RPT-ART-001' ? ART_001_COLUMNS : selectedReport.value === 'RPT-SAL-002' ? SAL_002_COLUMNS : selectedReport.value === 'RPT-SAL-004' ? SAL_004_COLUMNS : selectedReport.value === 'RPT-PUR-001' ? PUR_001_COLUMNS : selectedReport.value === 'RPT-PUR-002' ? PUR_002_COLUMNS : CLI_001_COLUMNS);
 const visibleCols = ref<string[]>(CLI_001_COLUMNS.map((c) => c.key));
 const columnLabel = (key: string) => activeColumns.value.find((c) => c.key === key)?.header ?? key;
 const hiddenCols = computed(() => activeColumns.value.filter((c) => !visibleCols.value.includes(c.key)));
@@ -414,6 +436,7 @@ const isReport = computed(() => selectedReport.value.startsWith('RPT-'));
 /** Filtros del informe activo (CLI o ART). */
 function currentFilters() {
   if (selectedReport.value === 'RPT-IVA-001') return iva001;
+  if (selectedReport.value === 'RPT-TAR-001') return tar001;
   if (selectedReport.value === 'RPT-ART-001') return art001;
   if (selectedReport.value === 'RPT-SAL-002') return sal002;
   if (selectedReport.value === 'RPT-SAL-004') return sal004;
@@ -443,6 +466,9 @@ function resetFilters() {
   pur002.dateTo = null;
   pur002.query = '';
   pur002.onlyOverdue = false;
+  tar001.tarifaId = 0;
+  tar001.includeClients = true;
+  tar001.onlyWithRules = false;
   iva001.year = new Date().getFullYear();
   iva001.quarter = Math.floor(new Date().getMonth() / 3) + 1;
 }
@@ -460,7 +486,7 @@ function onNodeSelect(node: any) {
     orderCriteria.value = [{ field: 'name', dir: 'asc' }];
   } else {
     orderCriteria.value =
-      selectedReport.value === 'RPT-IVA-001' ? [{ field: 'dateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-ART-001' ? [{ field: 'description', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-002' ? [{ field: 'expectedDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-004' ? [{ field: 'dueDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-001' ? [{ field: 'createDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-002' ? [{ field: 'dueDateRaw', dir: 'asc' }] : [{ field: 'name', dir: 'asc' }];
+      selectedReport.value === 'RPT-IVA-001' ? [{ field: 'dateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-TAR-001' ? [{ field: 'tarifaCode', dir: 'asc' }] : selectedReport.value === 'RPT-ART-001' ? [{ field: 'description', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-002' ? [{ field: 'expectedDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-SAL-004' ? [{ field: 'dueDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-001' ? [{ field: 'createDateRaw', dir: 'asc' }] : selectedReport.value === 'RPT-PUR-002' ? [{ field: 'dueDateRaw', dir: 'asc' }] : [{ field: 'name', dir: 'asc' }];
     visibleCols.value = activeColumns.value.map((c) => c.key);
     loadSavedParams();
   }
@@ -534,7 +560,7 @@ const previewSection = ref<HTMLElement | null>(null);
 const pdfUrl = ref('');
 
 const filtersText = computed(() =>
-  selectedReport.value === 'RPT-IVA-001' ? iva001FiltersText(iva001, ivaSettlement.value) : selectedReport.value === 'RPT-ART-001' ? art001FiltersText(art001) : selectedReport.value === 'RPT-SAL-002' ? sal002FiltersText(sal002) : selectedReport.value === 'RPT-SAL-004' ? sal004FiltersText(sal004) : selectedReport.value === 'RPT-PUR-001' ? pur001FiltersText(pur001) : selectedReport.value === 'RPT-PUR-002' ? pur002FiltersText(pur002) : cli001FiltersText(cli001)
+  selectedReport.value === 'RPT-IVA-001' ? iva001FiltersText(iva001, ivaSettlement.value) : selectedReport.value === 'RPT-TAR-001' ? tar001FiltersText(tar001, tarifaRateOptions.value.find((o) => o.value === tar001.tarifaId)?.label ?? '') : selectedReport.value === 'RPT-ART-001' ? art001FiltersText(art001) : selectedReport.value === 'RPT-SAL-002' ? sal002FiltersText(sal002) : selectedReport.value === 'RPT-SAL-004' ? sal004FiltersText(sal004) : selectedReport.value === 'RPT-PUR-001' ? pur001FiltersText(pur001) : selectedReport.value === 'RPT-PUR-002' ? pur002FiltersText(pur002) : cli001FiltersText(cli001)
 );
 
 async function preview() {
@@ -559,6 +585,8 @@ async function preview() {
       rows = await fetchPur001(pur001);
     } else if (selectedReport.value === 'RPT-PUR-002') {
       rows = await fetchPur002(pur002);
+    } else if (selectedReport.value === 'RPT-TAR-001') {
+      rows = await fetchTar001(tar001);
     } else {
       const isArt = selectedReport.value === 'RPT-ART-001';
       rows = isArt ? await fetchArt001(art001) : await fetchCli001(cli001);

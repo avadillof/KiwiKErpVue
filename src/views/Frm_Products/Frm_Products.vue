@@ -26,6 +26,8 @@
                     </div>
                 </template>
                 <template #end>
+                    <Button v-if="securityStore.hasPermission(PERM.PROD_EDIT)" label="Impresión etiquetas" icon="pi pi-barcode"
+                        size="small" severity="secondary" @click="openLabelBulk()" class="mr-2" />
                     <Button v-if="securityStore.hasPermission(PERM.PROD_EDIT)" class="new-document" label="Nuevo artículo" icon="pi pi-plus"
                         size="small" @click="newProduct"/>
                 </template>
@@ -128,6 +130,8 @@
         :title="`Documentos indexados a ${productSelected?.description ?? ''}`" :entityId="productSelected?.pkid" @update:visible="onAttachmentsVisible" />
     <ConfirmDialog />
     <Frm_Product ref="productFormRef" @saved="refreshTable" />
+    <Pn_LabelPrint v-model:visible="showLabelPrint" :product="productSelected" />
+    <Pn_LabelBulkPrint v-model:visible="showLabelBulk" :seed="bulkSeed" />
 
 </template>
 
@@ -208,6 +212,8 @@ import { PERM } from '@/services/Frm_Main/permissions';
 import GenericDataTable from '@/components/shared/GenericDataTable.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import Frm_Product from './Frm_Product.vue';
+import Pn_LabelPrint from './Frm_Etiquetas/Pn_LabelPrint.vue';
+import Pn_LabelBulkPrint from './Frm_Etiquetas/Pn_LabelBulkPrint.vue';
 
 const productFormRef = ref();
 const securityStore = useSecurityStore();
@@ -235,6 +241,10 @@ const toast = useToast();
 const companyStore = useCompanyStore();
 const showAttachments = ref(false);
 const showNotes = ref(false);
+const showLabelPrint = ref(false);
+const showLabelBulk = ref(false);
+const bulkSeed = ref<any>(null);
+const openLabelBulk = (seed?: any) => { bulkSeed.value = seed ?? productSelected.value ?? null; showLabelBulk.value = true; };
 const tableKey = ref(0);
 const products = ref([]);
 const selectedFamily = ref<number | null>(null);
@@ -340,6 +350,14 @@ const menuItems = computed(() => {
         icon: 'pi pi-pencil',
         command: () => editProduct(productSelected.value)
     });
+
+    if (securityStore.hasPermission(PERM.PROD_EDIT)) {
+        items.push({
+            label: 'Imprimir etiqueta',
+            icon: 'pi pi-tags',
+            command: () => { showLabelPrint.value = true; }
+        });
+    }
 
 
 
