@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue';
+import { useToast } from 'primevue/usetoast';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -70,6 +71,7 @@ import Select from 'primevue/select';
 import { labelPrinters, selectedPrinterId, printerStorageError, refreshPrinters, persistPrinters, discoverPrinters, printToConfiguredPrinter, type LabelPrinter } from '../../../services/Labels/labelPrinterService';
 
 const props = defineProps<{ zpl?: string }>();
+const toast = useToast();
 const selected = computed(() => labelPrinters.value.find(p => p.id === selectedPrinterId.value));
 const printing = ref(false);
 const message = ref('');
@@ -133,7 +135,8 @@ function save(): void {
   try {
     persistPrinters([...list, printer], printer.id);
     draft.value = printer;
-    settingsMessage.value = 'Impresora guardada y seleccionada en este navegador.';
+    settingsMessage.value = '';
+    toast.add({ severity: 'success', summary: 'Impresora guardada', detail: 'Impresora guardada y seleccionada en este navegador.', life: 3000 });
   } catch { settingsMessage.value = 'No se ha podido guardar. Comprueba el almacenamiento del navegador.'; }
 }
 function remove(): void {

@@ -89,8 +89,7 @@
 
                                     <FloatLabel variant="on" class="w-2">
 
-                                        <InputText id="code" v-model="product.code" maxlength="45" class="w-full"
-                                            :disabled="!!product.pkid" />
+                                        <InputText id="code" v-model="product.code" maxlength="45" class="w-full" />
 
                                         <label for="code">
                                             Código

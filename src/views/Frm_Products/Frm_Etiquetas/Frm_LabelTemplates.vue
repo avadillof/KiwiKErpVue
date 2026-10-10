@@ -56,10 +56,11 @@
     </div>
 
     <Dialog
-      v-model:visible="dlg"
+      :visible="dlg"
+      @update:visible="value => { if (!value) requestClose(); }"
       modal
       maximizable
-      :style="{ width: 'min(1500px, 96vw)', height: '96dvh', maxHeight: '96dvh' }"
+      :style="{ width: '98vw', height: '98dvh', maxHeight: '98dvh' }"
       :contentStyle="{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: '0' }"
       :header="draft.id ? 'Editar plantilla' : 'Nueva plantilla'"
     >
@@ -70,11 +71,17 @@
         <div class="setting-measure"><label>Alto mm</label><InputNumber v-model="draft.altoMm" :min="10" :max="250" class="w-full" size="small" /></div>
         <div class="setting-measure"><label>DPI</label><Select v-model="draft.dpi" :options="[203, 300, 600]" class="w-full" size="small" /></div>
         <div class="setting-measure"><label>Margen</label><InputNumber v-model="draft.margenMm" :min="0" :max="10" class="w-full" size="small" /></div>
+        <div class="setting-intensity">
+          <label>Intensidad</label>
+          <Select :modelValue="draft.oscuridad ?? null" :options="intensityOptions" optionLabel="label" optionValue="value"
+            class="w-full" size="small" @update:modelValue="setIntensity"
+            title="Usar impresora no envía cambios de intensidad. Un valor personalizado puede mantenerse para trabajos posteriores." />
+        </div>
       </div>
       <Tabs value="0" class="template-tabs">
         <TabList><Tab value="0">Diseñador</Tab><Tab value="1">ZPL generado</Tab></TabList>
         <TabPanels class="template-panels">
-          <TabPanel value="0"><PnLabelDesigner v-if="draft" v-model="draft" /></TabPanel>
+          <TabPanel value="0" class="designer-panel"><PnLabelDesigner v-if="draft" v-model="draft" /></TabPanel>
           <TabPanel value="1" class="zpl-panel"><pre class="zpl">{{ zplPreview }}</pre>
             <div class="flex gap-2 mt-2">
               <Button label="Descargar .zpl" icon="pi pi-download" size="small" @click="testPrint(draft)" />
@@ -88,7 +95,8 @@
         <div class="template-footer">
           <div class="kiwik-separator" />
           <div class="template-footer-actions">
-            <Button label="Cancelar" text severity="secondary" @click="dlg = false" />
+            <span v-if="hasUnsavedChanges" class="msg">Cambios sin guardar</span>
+            <Button label="Cancelar" text severity="secondary" :disabled="busy" @click="requestClose" />
             <Button label="Guardar" icon="pi pi-save" size="small" @click="save" :loading="busy" :disabled="busy || !canEdit || !draft.nombre || !draft.anchoMm" />
           </div>
         </div>
@@ -100,10 +108,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { useSecurityStore } from '@/stores/securityStore';
 import { PERM } from '@/services/Frm_Main/permissions';
-import { useRouter } from 'vue-router';
+import { useRouter, onBeforeRouteLeave } from 'vue-router';
 import Button from 'primevue/button';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -145,15 +153,48 @@ const dlg = ref(false);
 const msg = ref('');
 const kinds = [{ label: 'Productos', value: 'producto' }];
 const draft = ref<LabelTemplate>(blank());
+const intensityOptions = [
+  { label: 'Usar impresora', value: null },
+  ...Array.from({ length: 31 }, (_, value) => ({ label: String(value), value })),
+];
+function setIntensity(value: number | null): void {
+  if (value === null) delete draft.value.oscuridad;
+  else draft.value.oscuridad = value;
+}
+const savedDraft = ref('');
+const hasUnsavedChanges = computed(() => dlg.value && JSON.stringify(draft.value) !== savedDraft.value);
+function confirmDiscard(): Promise<boolean> {
+  return new Promise(resolve => confirm.require({
+    header: 'Cambios sin guardar',
+    message: 'Los cambios de esta plantilla no se han guardado. ¿Quieres descartarlos?',
+    acceptLabel: 'Descartar cambios', rejectLabel: 'Seguir editando',
+    accept: () => resolve(true), reject: () => resolve(false), onHide: () => resolve(false),
+  }));
+}
+async function requestClose(): Promise<void> {
+  if (busy.value) return;
+  if (!hasUnsavedChanges.value || await confirmDiscard()) dlg.value = false;
+}
+function beforeUnload(event: BeforeUnloadEvent): void {
+  if (!hasUnsavedChanges.value) return;
+  event.preventDefault();
+  event.returnValue = '';
+}
+onMounted(() => window.addEventListener('beforeunload', beforeUnload));
+onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
+onBeforeRouteLeave(async () => {
+  if (busy.value && dlg.value) return false;
+  return !hasUnsavedChanges.value || await confirmDiscard();
+});
 
 function blank(): LabelTemplate {
-  return { id: '', nombre: '', tipo: 'producto', anchoMm: 100, altoMm: 50, dpi: 203, orientacion: 'horizontal', margenMm: 2, elementos: [], updatedAt: new Date().toISOString() };
+  return { id: '', nombre: '', tipo: 'producto', anchoMm: 100, altoMm: 50, dpi: 203, orientacion: 'horizontal', margenMm: 2, oscuridad: 20, elementos: [], updatedAt: new Date().toISOString() };
 }
 const zplPreview = computed(() => (draft.value ? buildZpl(draft.value, LABEL_SAMPLE) : ''));
 function fmtDate(s: string): string {
   try { return new Date(s).toLocaleString('es-ES'); } catch { return s; }
 }
-function create(): void { draft.value = blank(); msg.value = ''; dlg.value = true; }
+function create(): void { draft.value = blank(); savedDraft.value = JSON.stringify(draft.value); msg.value = ''; dlg.value = true; }
 async function refresh(): Promise<void> {
   busy.value = true; error.value = ''; rowSel.value = null; sel.value = null;
   try { list.value = await loadTemplates(); }
@@ -176,7 +217,7 @@ const menuItems = computed(() => {
     { label: 'Eliminar', disabled: !canEdit.value || busy.value, icon: 'pi pi-trash', style: 'color: var(--red-500)', command: () => askDelete(t) },
   ];
 });
-function edit(t: LabelTemplate): void { draft.value = JSON.parse(JSON.stringify(t)); msg.value = ''; dlg.value = true; }
+function edit(t: LabelTemplate): void { draft.value = JSON.parse(JSON.stringify(t)); savedDraft.value = JSON.stringify(draft.value); msg.value = ''; dlg.value = true; }
 async function duplicate(t: LabelTemplate): Promise<void> {
   if (busy.value || !canEdit.value) return;
   const copy = JSON.parse(JSON.stringify(t)) as LabelTemplate;
@@ -232,6 +273,12 @@ function testPrint(t: LabelTemplate): void {
 .template-tabs { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .template-tabs :deep(.p-tablist) { flex: 0 0 auto; }
 .template-panels { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; }
+.template-panels :deep(.designer-panel[data-p-active="true"]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 300px;
+}
 /* TabPanel tiene una raíz dinámica: deep alcanza el panel real de PrimeVue. */
 .template-panels :deep(.zpl-panel[data-p-active="true"]) {
   display: flex;
@@ -243,6 +290,7 @@ function testPrint(t: LabelTemplate): void {
 .setting-name { width: 260px; max-width: 100%; }
 .setting-type { width: 155px; }
 .setting-measure { width: 100px; }
+.setting-intensity { width: 165px; }
 .template-settings :deep(.p-inputnumber-input) { width: 100%; min-width: 0; }
 .maintenance-page { --kiwi:#9cc10a; --kiwi-dark:#648506; width:100%; min-height:calc(100dvh - 66px); padding:18px 16px 72px; box-sizing:border-box; background:rgba(247,248,250,.58); }
 .page-header { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:18px; padding:15px 20px; border:1px solid #e3e8d2; border-radius:15px; background:#fff; box-shadow:0 6px 18px rgba(31,41,55,.055); }.page-header::after{content:"";position:absolute;z-index:0;width:300px;height:300px;right:20px;top:50%;transform:translateY(-50%);background:url('/logos/logo512.png') center/contain no-repeat;filter:grayscale(1);opacity:.075;pointer-events:none}.page-header>*{position:relative;z-index:1}.page-heading{display:flex;align-items:center;gap:14px}.page-icon{display:grid;width:50px;height:50px;flex:0 0 auto;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(135deg,#b1d70e,#719808);box-shadow:0 7px 15px rgba(113,152,8,.22)}.page-icon i{font-size:1.3rem}.breadcrumb{color:#8791a0;font-size:.8rem;font-weight:700}.page-heading h1{margin:3px 0 2px;color:#202939;font-size:1.38rem}.page-heading p{margin:0;color:#7a8494;font-size:.92rem}.header-actions{display:flex;align-items:center;gap:3px}

@@ -4,8 +4,7 @@
       <div class="col-12"><label>Plantilla</label>
         <Select :loading="loading" :disabled="loading" v-model="templateId" :options="templates" optionLabel="nombre" optionValue="id" class="w-full" size="small" />
       </div>
-      <div class="col-6"><label>Copias</label><InputNumber v-model="copies" :min="1" :max="999" class="w-full" size="small" /></div>
-      <div class="col-6"><label>Cantidad ({{cantidad}})</label><InputText v-model="cantidad" class="w-full" size="small" /></div>
+      <div class="col-12"><label>Copias</label><InputNumber v-model="copies" :min="1" :max="999" class="w-full" size="small" /></div>
     </div>
     <PnLabelPrinters :zpl="zpl" />
     <pre v-if="zpl" class="zpl">{{ zpl }}</pre>
@@ -30,7 +29,6 @@ import PnLabelPrinters from './Pn_LabelPrinters.vue';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
-import InputText from 'primevue/inputtext';
 import { LABEL_SAMPLE, type LabelTemplate } from '../../../libs/labels/labelTemplate';
 import { buildZpl, downloadZpl } from '../../../libs/labels/zplGenerator';
 import { loadTemplates, templateError } from '../../../services/Labels/labelTemplateService';
@@ -41,7 +39,6 @@ const templates = ref<LabelTemplate[]>([]);
 const loading = ref(false);
 const templateId = ref('');
 const copies = ref(1);
-const cantidad = ref('1');
 const msg = ref('');
 
 let loadId = 0;
@@ -64,7 +61,8 @@ const sample = computed(() => ({
   '{{producto.codigo}}': String(props.product?.code ?? LABEL_SAMPLE['{{producto.codigo}}']),
   '{{producto.descripcion}}': String(props.product?.description ?? LABEL_SAMPLE['{{producto.descripcion}}']),
   '{{producto.codigoBarras}}': String(props.product?.barcode ?? props.product?.code ?? LABEL_SAMPLE['{{producto.codigoBarras}}']),
-  '{{cantidad}}': cantidad.value || '1',
+  // Plantillas antiguas con {{cantidad}}: valor fijo para no imprimir basura.
+  '{{cantidad}}': '1',
 }));
 const tpl = computed(() => templates.value.find((t: LabelTemplate) => t.id === templateId.value));
 const zpl = computed(() => {

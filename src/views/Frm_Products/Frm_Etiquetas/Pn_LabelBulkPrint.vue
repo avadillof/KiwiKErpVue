@@ -43,9 +43,6 @@
       <Column header="Copias" style="width:110px">
         <template #body="{ data }"><InputNumber v-model="data.copies" :min="1" :max="999" size="small" class="w-full" /></template>
       </Column>
-      <Column header="Cantidad" style="width:110px">
-        <template #body="{ data }"><InputText v-model="data.cantidad" size="small" class="w-full" /></template>
-      </Column>
       <Column header="" style="width:50px">
         <template #body="{ data }"><Button icon="pi pi-trash" text rounded severity="danger" @click="removeLine(data.key)" /></template>
       </Column>
@@ -86,9 +83,9 @@ import { LABEL_SAMPLE, type LabelTemplate } from '../../../libs/labels/labelTemp
 import { buildZpl, downloadZpl } from '../../../libs/labels/zplGenerator';
 import { loadTemplates, templateError } from '../../../services/Labels/labelTemplateService';
 
-interface BulkLine { key: string; pkid: number | null; code: string; description: string; barcode: string; price?: number | null; copies: number; cantidad: string }
+interface BulkLine { key: string; pkid: number | null; code: string; description: string; barcode: string; price?: number | null; copies: number }
 
-const props = defineProps<{ seed?: any }>();
+const props = defineProps<{ seed?: any; seeds?: any[] }>();
 const visible = defineModel<boolean>('visible', { default: false });
 const MAX_LABELS = 500;
 
@@ -109,9 +106,11 @@ const msg = ref('');
 let loadId = 0;
 watch(visible, (open) => {
   if (!open) { loadId++; return; }
+  lines.value = [];
   void refreshTemplates();
   void loadFilters();
-  if (props.seed) void addLine(props.seed);
+  if (props.seeds?.length) for (const s of props.seeds) void addLine(s);
+  else if (props.seed) void addLine(props.seed);
 });
 
 async function refreshTemplates(): Promise<void> {
@@ -162,8 +161,7 @@ function toLine(p: any): BulkLine {
     description: String(p.description ?? ''),
     barcode: String(p.barcode ?? p.code ?? ''),
     price: typeof p.salePrice === 'number' ? p.salePrice : null,
-    copies: 1,
-    cantidad: '1',
+    copies: Number(p.copies) >= 1 ? Math.min(999, Math.floor(Number(p.copies))) : 1,
   };
 }
 async function resolveLinePrice(line: BulkLine): Promise<void> {
@@ -204,7 +202,8 @@ function sampleOf(l: BulkLine): Record<string, string> {
     '{{producto.descripcion}}': l.description || LABEL_SAMPLE['{{producto.descripcion}}'],
     '{{producto.codigoBarras}}': l.barcode || LABEL_SAMPLE['{{producto.codigoBarras}}'],
     '{{producto.precio}}': l.price != null ? eur(l.price) : LABEL_SAMPLE['{{producto.precio}}'],
-    '{{cantidad}}': l.cantidad || '1',
+    // Plantillas antiguas con {{cantidad}}: valor fijo para no imprimir basura.
+    '{{cantidad}}': '1',
   };
 }
 const zpl = computed(() => {

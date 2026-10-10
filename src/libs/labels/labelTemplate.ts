@@ -12,6 +12,10 @@ export interface LabelElement {
   yMm: number;
   wMm?: number;
   hMm?: number;
+  locked?: boolean;
+  qrMagnification?: number;
+  /** Las líneas antiguas siguen siendo horizontales; wMm almacena la longitud. */
+  lineDirection?: 'horizontal' | 'vertical';
   /** Texto fijo (tipo texto). */
   texto?: string;
   /** Campo dinámico {{...}} (tipos campo/barcode/qr). */

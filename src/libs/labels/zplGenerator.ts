@@ -18,6 +18,11 @@ export function buildZpl(template: LabelTemplate, sample: Record<string, string>
   const w = mmToDots(template.anchoMm, dpi);
   const h = mmToDots(template.altoMm, dpi);
   const lines: string[] = ['^XA', '^CI28', `^PW${w}`, `^LL${h}`, `^LH0,0`];
+  // Ausente: respetar la configuración actual. Cero es una intensidad explícita.
+  if (typeof template.oscuridad === 'number' && Number.isFinite(template.oscuridad)) {
+    const darkness = Math.max(0, Math.min(30, Math.round(template.oscuridad)));
+    lines.push(`~SD${String(darkness).padStart(2, '0')}`, '^MD0');
+  }
 
   for (const el of template.elementos) {
     if (el.tipo === 'barcode' && el.barcodePrint === false) continue;
@@ -44,7 +49,7 @@ export function buildZpl(template: LabelTemplate, sample: Record<string, string>
       };
       lines.push(`^FO${x},${y}^BY${module},3${commands[el.barcodeType ?? 'CODE128']}^FH_^FD${value}^FS`);
     } else if (el.tipo === 'qr') {
-      const mag = dpi >= 300 ? 4 : 3;
+      const mag = Math.max(1, Math.min(10, Math.round(el.qrMagnification ?? (dpi >= 300 ? 4 : 3))));
       lines.push(`^FO${x},${y}^BQN,2,${mag}^FH_^FDLA,${value}^FS`);
     } else if (el.tipo === 'rect') {
       const rw = mmToDots(el.wMm ?? 20, dpi);
@@ -52,7 +57,9 @@ export function buildZpl(template: LabelTemplate, sample: Record<string, string>
       lines.push(`^FO${x},${y}^GB${rw},${rh},2^FS`);
     } else if (el.tipo === 'linea') {
       const lw = mmToDots(el.wMm ?? 40, dpi);
-      lines.push(`^FO${x},${y}^GB${lw},2,2^FS`);
+      lines.push(el.lineDirection === 'vertical'
+        ? `^FO${x},${y}^GB2,${lw},2^FS`
+        : `^FO${x},${y}^GB${lw},2,2^FS`);
     }
   }
 
