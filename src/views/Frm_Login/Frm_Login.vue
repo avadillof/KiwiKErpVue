@@ -1,5 +1,6 @@
 <template>
-  <main class="login-page">
+  <Frm_TpvAccess v-if="$route.query.access === 'tpv'" />
+  <main v-else class="login-page">
     <section class="login-shell">
       <img src="../../assets/logos/corporate.png" alt="FreeLandSite" class="corporate-divider-logo" />
 
@@ -77,12 +78,13 @@
     </section>
   </main>
 
-  <ForgotPasswordDialog v-model:visible="isForgotPasswordVisible" />
+  <ForgotPasswordDialog v-if="$route.query.access !== 'tpv'" v-model:visible="isForgotPasswordVisible" />
 </template>
 
 <script setup lang="ts">
 import { loginController } from '../../services/Frm_Login/Frm_LoginController.ts';
 import ForgotPasswordDialog from './Frm_ResetPassword.vue';
+import Frm_TpvAccess from './Frm_TpvAccess.vue';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import Button from 'primevue/button';

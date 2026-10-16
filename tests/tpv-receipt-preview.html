@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Ticket de prueba</title></head><body>
+<script type="module">
+import { buildHtmlReceipt } from '../src/libs/printing/htmlReceipt.ts';
+document.open();
+document.write(buildHtmlReceipt({code:'T-123',companyName:'PRUEBA LOCAL · SIN VALIDEZ',chargedAt:'2026-10-13T10:00:00',currency:'EUR',lines:[{name:'Artículo de prueba',quantity:1,unitGross:12.1,total:12.1}],net:10,tax:2.1,total:12.1,paid:20,change:7.9,payments:[{method:'CASH',amount:20}]}));
+document.close();
+</script></body></html>

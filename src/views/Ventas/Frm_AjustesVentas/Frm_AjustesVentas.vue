@@ -110,6 +110,23 @@
       </section>
 
       <section class="settings-card">
+        <div class="section-heading"><span><i class="pi pi-key"/></span><div><h2>Certificado para TPV</h2><p>Emisor y contraseña custodiados para emitir las facturas de tickets (F1 actuales y F2 futuras). El cajero nunca los ve; solo administradores.</p></div></div>
+        <Message v-if="tpvCert.userCode" severity="success" :closable="false">Configurado para el usuario <b>{{ tpvCert.userCode }}</b>. La contraseña no se muestra.</Message>
+        <Message v-else severity="warn" :closable="false">Sin configurar: las facturas de tickets no se pueden emitir.</Message>
+        <Message v-if="tpvCertUsersError" severity="error" :closable="false">{{ tpvCertUsersError }}</Message>
+        <Message v-else-if="!tpvCertUsersLoading && !tpvCertUsers.length" severity="info" :closable="false">Ningún usuario habilitado tiene certificado VeriFactu. Súbelo primero en Certificados y vuelve aquí.</Message>
+        <div class="form-grid">
+          <label class="field"><span>Usuario emisor</span><Select v-model="tpvCertForm.userCode" :options="tpvCertUsers" optionLabel="name" optionValue="code" placeholder="Selecciona usuario con certificado" filter fluid :disabled="tpvCertBusy" :loading="tpvCertUsersLoading" /></label>
+          <label class="field"><span>Contraseña del certificado</span><Password v-model="tpvCertForm.password" toggleMask :feedback="false" fluid :disabled="tpvCertBusy" /></label>
+        </div>
+        <Message v-if="tpvCertError" severity="error" :closable="false">{{ tpvCertError }}</Message>
+        <div class="reminder-actions">
+          <Button v-if="tpvCert.userCode" label="Quitar" text severity="danger" :disabled="tpvCertBusy" @click="clearTpvCert" />
+          <Button label="Guardar y probar" icon="pi pi-save" :loading="tpvCertBusy" @click="saveTpvCert(false)" />
+        </div>
+      </section>
+
+      <section class="settings-card">
         <div class="section-heading"><span><i class="pi pi-building"/></span><div><h2>Identificación del sistema informático</h2><p>Identificación del desarrollador de KiwiKERP. Estos datos son de solo lectura y se incorporan a los registros enviados a la AEAT.</p></div></div>
         <div class="form-grid form-grid--three">
           <label class="field"><span>ID del sistema</span><InputNumber v-model="form.veriFactuSystemId" :min="1" fluid disabled/></label>
@@ -161,6 +178,7 @@ import QuoteAutomationSettings from './QuoteAutomationSettings.vue';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
+import Password from 'primevue/password';
 import InputNumber from 'primevue/inputnumber';
 import ToggleSwitch from 'primevue/toggleswitch';
 import Tag from 'primevue/tag';
@@ -216,8 +234,20 @@ const normalizeInvoiceSeries=(value:string|undefined)=>{form.invoiceSeriesPrefix
 const normalizeSeriesField=(field:'quoteSeriesPrefix'|'orderSeriesPrefix'|'deliverySeriesPrefix',value:string|undefined)=>{form[field]=String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10)};
 const seriesInfix=(value:string|undefined)=>{const clean=String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10);return clean?`${clean}-`:''};
 const load=async()=>{loading.value=true;loaded.value=false;try{Object.assign(form,(await axios.get(backendUrl(`/WebGetSalesSettings`))).data);savedReminder.value=reminderSnapshot();savedQuotes.value=quoteSnapshot();loaded.value=true}catch(e:any){toast.add({severity:'error',summary:'No se pudieron cargar los ajustes',detail:e.response?.data||'Comprueba que la migración de base de datos está aplicada.',life:5000})}finally{loading.value=false}};
+const tpvCert=ref<{userCode:string|null}>({userCode:null});
+const tpvCertUsers=ref<Array<{code:string;name:string}>>([]);
+const tpvCertUsersLoading=ref(false);
+const tpvCertUsersError=ref('');
+const tpvCertForm=ref({userCode:'',password:''});
+const tpvCertBusy=ref(false),tpvCertError=ref('');
+const loadTpvCert=async()=>{try{const {data}=await axios.get(backendUrl(`/WebGetTpvCertificate`),{...authStore.portalRequestConfig()});tpvCert.value={userCode:data?.userCode??null};if(!tpvCertForm.value.userCode)tpvCertForm.value.userCode=data?.userCode??''}catch{tpvCert.value={userCode:null}}};
+const loadTpvCertUsers=async()=>{tpvCertUsersLoading.value=true;tpvCertUsersError.value='';try{const {data}=await axios.get(backendUrl(`/WebGetTpvCertificateUsers`),{...authStore.portalRequestConfig()});tpvCertUsers.value=Array.isArray(data)?data:[]}catch(e:any){tpvCertUsers.value=[];tpvCertUsersError.value=e.response?.status===403?'Tu usuario no es administrador: entra como administrador para elegir emisor.':e.response?.data||'No se pudo cargar la lista de usuarios con certificado.'}finally{tpvCertUsersLoading.value=false}};
+const saveTpvCert=async(clear=false)=>{if(tpvCertBusy.value)return;tpvCertBusy.value=true;tpvCertError.value='';try{const {data}=await axios.post(backendUrl(`/WebSaveTpvCertificate`),clear?{userCode:'',password:''}:{userCode:tpvCertForm.value.userCode,password:tpvCertForm.value.password},{...authStore.portalRequestConfig()});tpvCert.value={userCode:data?.userCode??null};tpvCertForm.value.password='';toast.add({severity:'success',summary:clear?'Certificado TPV retirado':'Certificado TPV guardado',detail:clear?'Ya no se puede emitir desde TPV.':'Probado al guardar: abre el certificado indicado.',life:4000})}catch(e:any){tpvCertError.value=e.response?.data||'No se pudo guardar. Revisa el usuario y la contraseña.'}finally{tpvCertBusy.value=false}};
+const clearTpvCert=()=>saveTpvCert(true);
 const save=async()=>{if(saving.value||loading.value||!loaded.value||deliveryError.value||reminderBusy.value||quoteBusy.value||quoteError.value)return;saving.value=true;try{Object.assign(form,(await axios.post(backendUrl(`/WebSaveSalesSettings`),form)).data);savedReminder.value=reminderSnapshot();savedQuotes.value=quoteSnapshot();reminderResult.value=null;toast.add({severity:'success',summary:'Ajustes guardados',detail:'La configuración de Ventas y VeriFactu ya está actualizada.',life:3500})}catch(e:any){toast.add({severity:'error',summary:'No se pudieron guardar',detail:e.response?.data||'Revisa los valores introducidos.',life:5000})}finally{saving.value=false}};
 onMounted(load);
+onMounted(loadTpvCert);
+onMounted(loadTpvCertUsers);
 </script>
 
 <style scoped>

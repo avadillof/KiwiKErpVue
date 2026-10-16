@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from './stores/authStore';
 import { useSecurityStore } from './stores/securityStore';
-import { PERM } from './services/Frm_Main/permissions';
+import { PERM, TPV_GROUP_ID } from './services/Frm_Main/permissions';
 
 // 1. Importaciones tradicionales
 
@@ -42,6 +42,12 @@ const routes = [
     name: 'Installation',
     component: Frm_Installation,
     meta: { installationRoute: true }
+  },
+  {
+    path: '/tpv',
+    name: 'TPV',
+    component: () => import('./views/TPV/Frm_Tpv.vue'),
+    meta: { requiresAuth: true, perm: PERM.SALES_OPTIONS }
   },
   {
     path: '/portal',
@@ -255,6 +261,7 @@ router.beforeEach(async (to, from) => {
 
   // Si requiere autenticación y no estamos logueados, redirigimos al Login
   if (requiereAutenticacion && !authStore.isAuthenticated) {
+    if (to.name === 'TPV') return { name: 'Login', query: { access: 'tpv' } };
     return { name: 'Login' }; // Redirección moderna
   }
 
@@ -262,6 +269,21 @@ router.beforeEach(async (to, from) => {
   // Fail-closed: una ruta con permiso exigido NUNCA se abre sin seguridad
   // cargada. El Dashboard no exige permiso y queda como destino de rebote.
   const securityStore = useSecurityStore();
+  if (to.name === 'TPV' && authStore.isAuthenticated && from.name !== 'TPV') {
+    const fromErp = from.matched.some(record => record.name === 'MainPanel');
+    // Al TPV entran: el admin que viene del ERP, o un operario del grupo TPVs
+    // (acceso siempre por PIN). Nadie más, ni cambiando la URL.
+    const adminFromErp = authStore.user?.admin === true && fromErp;
+    const tpvOperator = authStore.user?.groupKyId === TPV_GROUP_ID;
+    if (!adminFromErp && !tpvOperator) {
+      return { name: 'Dashboard' };
+    }
+    authStore.tpvOpenedFromErp = fromErp && authStore.user?.admin === true;
+  }
+  if (to.name === 'TPV' && authStore.isAuthenticated && !securityStore.loaded && authStore.user) {
+    try { await securityStore.loadSecurity(authStore.user.pkid); }
+    catch { return { name: 'Dashboard' }; }
+  }
   if (requiereAutenticacion && authStore.isAuthenticated) {
     const needModule = to.matched.map((r) => (r.meta as any)?.module).find(Boolean) as string | undefined;
     const needPerm = to.matched.map((r) => (r.meta as any)?.perm).find(Boolean) as string | undefined;

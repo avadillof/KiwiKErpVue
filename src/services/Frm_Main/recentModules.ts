@@ -48,8 +48,15 @@ export function clearRecentModules() {
  */
 export function visibleRecentModules(): RecentModule[] {
   try {
-    const allowed = new Set(visibleAppModules().map((m) => m.ruta));
-    return getRecentModules().filter((item) => allowed.has(item.name));
+    const byRoute = new Map(visibleAppModules().map((m) => [m.ruta, m]));
+    return getRecentModules()
+      .filter((item) => byRoute.has(item.name))
+      .map((item) => {
+        const module = byRoute.get(item.name)!;
+        // Refrescar etiqueta, icono y color desde la definición actual del
+        // módulo: los recientes guardados pueden tener instantáneas obsoletas.
+        return { ...item, label: module.nombre, icon: module.icono, color: module.colorIcono };
+      });
   } catch {
     return [];
   }

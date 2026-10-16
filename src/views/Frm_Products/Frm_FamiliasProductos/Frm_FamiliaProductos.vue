@@ -47,7 +47,7 @@
                             <FloatLabel variant="on" class="w-full">
 
                                 <InputText :ref="(el) => setRef('code', el)" id="code" v-model="productFamily.code"
-                                    maxlength="45" class="w-full" :disabled="!!productFamily.pkid" />
+                                    maxlength="45" class="w-full" />
 
                                 <label for="code">
                                     Alias / Código
@@ -145,6 +145,51 @@
 
             </Panel>
 
+            <Panel style="margin-top: 20px;">
+
+                <template #header>
+
+                    <div class="flex align-items-center gap-2">
+
+                        <div class="flex align-items-center justify-content-center bg-primary-100 border-circle"
+                            style="width: 32px; height: 32px;">
+                            <i class="pi pi-image text-primary"></i>
+                        </div>
+
+                        <span class="font-bold">
+                            Fotografía
+                        </span>
+
+                    </div>
+
+                </template>
+
+                <div class="flex flex-column align-items-center">
+
+                    <div class="border-1 surface-border border-round-lg flex align-items-center justify-content-center"
+                        style="width: 150px; height: 150px; background: var(--surface-ground); overflow: hidden;">
+
+                        <i v-if="!productFamily.image" class="pi pi-image text-400" style="font-size: 3rem;"></i>
+
+                        <img v-else :src="productFamily.image" alt="Imagen de la familia"
+                            style="width: 100%; height: 100%; object-fit: contain;" />
+
+                    </div>
+
+                    <div class="flex gap-2 mt-2">
+                        <Button label="Seleccionar imagen" icon="pi pi-upload" severity="secondary" size="small"
+                            @click="selectImage" />
+                        <Button v-if="productFamily.image" label="Quitar" icon="pi pi-trash" severity="danger" text
+                            size="small" @click="productFamily.image = null" />
+                    </div>
+
+                    <input ref="imageInput" type="file" accept="image/*" style="display: none"
+                        @change="handleImageSelected" />
+
+                </div>
+
+            </Panel>
+
         </div>
 
 
@@ -233,6 +278,8 @@ type ProductFamily = {
     active: boolean;
     
     inventariable: boolean;
+
+    image: string | null;
 };
 
 
@@ -247,7 +294,8 @@ const createProductFamily = (): ProductFamily => ({
     description: '',
     descriptionEn: '',
     active: true,
-    inventariable: false
+    inventariable: false,
+    image: null
 
 });
 
@@ -458,6 +506,64 @@ const save = async () => {
         });
 
     }
+};
+
+
+/* =========================================================
+   IMAGEN
+========================================================= */
+
+const imageInput = ref<HTMLInputElement | null>(null);
+
+const selectImage = () => {
+
+    imageInput.value?.click();
+
+};
+
+const handleImageSelected = (event: Event) => {
+
+    const input = event.target as HTMLInputElement;
+
+    if (!input.files || input.files.length === 0) {
+        return;
+    }
+
+    const file = input.files[0];
+
+    if (!file.type.startsWith('image/')) {
+
+        toast.add({
+            severity: 'error',
+            summary: 'Imagen no válida',
+            detail: 'El archivo seleccionado no es una imagen.',
+            life: companyStore.companyInfo.toastDuration ?? 3000
+        });
+
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+
+        productFamily.value.image = reader.result as string;
+
+    };
+
+    reader.onerror = () => {
+
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'No se pudo cargar la imagen.',
+            life: companyStore.companyInfo.toastDuration ?? 3000
+        });
+
+    };
+
+    reader.readAsDataURL(file);
+
 };
 
 

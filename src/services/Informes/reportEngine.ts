@@ -152,14 +152,18 @@ export async function buildReportPdf(input: ReportPdfInput): Promise<string> {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(110);
-    doc.text(doc.splitTextToSize(input.filtersText, 230), x, 23);
-    let headerBottom = 34;
+    // Los filtros pueden ocupar varias líneas: el subtítulo baja tras ellos para no solaparse.
+    const filterLines = doc.splitTextToSize(input.filtersText, 230) as string[];
+    doc.text(filterLines, x, 23);
+    let headerBottom = 23 + filterLines.length * 4 + 7;
     if (input.subtitle) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(73, 94, 16);
-      doc.text(doc.splitTextToSize(input.subtitle, 230), x, 28);
-      headerBottom = 39;
+      const subtitleLines = doc.splitTextToSize(input.subtitle, 230) as string[];
+      const subtitleY = 23 + filterLines.length * 4 + 1;
+      doc.text(subtitleLines, x, subtitleY);
+      headerBottom = subtitleY + subtitleLines.length * 4 + 7;
     }
     doc.text(stamp, 285, 14, { align: 'right' });
     doc.setDrawColor(156, 193, 10);
@@ -192,7 +196,13 @@ export async function buildReportPdf(input: ReportPdfInput): Promise<string> {
   };
 
   const sections = input.sections?.length ? input.sections : [{ title: '', rows: input.rows }];
-  let startY = input.subtitle ? 43 : 38;
+  // Misma aritmética que drawFirstHeader para empezar bajo la cabecera real.
+  const filterCount = (doc.splitTextToSize(input.filtersText, 230) as string[]).length;
+  const subtitleCount = input.subtitle
+    ? (doc.splitTextToSize(input.subtitle, 230) as string[]).length
+    : 0;
+  let startY = 23 + filterCount * 4 + 7 + 4;
+  if (input.subtitle) startY = 23 + filterCount * 4 + 1 + subtitleCount * 4 + 7 + 4;
   for (const section of sections) {
     const columns = section.columns?.length ? section.columns : input.columns;
     if (startY > 174) { doc.addPage(); startY = 21; }

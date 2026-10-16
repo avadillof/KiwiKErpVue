@@ -8,6 +8,8 @@ interface User {
   name: string;
   admin: boolean; 
   userDsCode: string
+  groupKyId: number;
+  tpvMode: string;
   
   // Agregamos la propiedad necesaria
 }
@@ -17,21 +19,29 @@ export const useAuthStore = defineStore('auth', {
     // Actualizamos el tipo para que acepte la nueva estructura
     user: null as User | null,
     isAuthenticated: false,
+    sessionExpired: false,
     portalSession: '',
+    loginAccess: 'erp' as 'erp' | 'tpv',
+    tpvOpenedFromErp: false,
     photoTimestamp: Date.now()
   }),
   actions: {
     // Actualizamos el tipo en el parámetro para que coincida
-      setUser(userData: User, portalSession = '') {
+      setUser(userData: User, portalSession = '', loginAccess: 'erp' | 'tpv' = 'erp') {
+      this.sessionExpired = false;
       this.user = userData;
       this.portalSession = portalSession;
+      this.loginAccess = loginAccess;
+      this.tpvOpenedFromErp = false;
       this.isAuthenticated = true;      
     },
     portalRequestConfig() {
+      if (this.sessionExpired) throw new Error('La sesión del servidor ha caducado. Vuelve a iniciar sesión.');
       if (!this.isAuthenticated || !this.portalSession) throw new Error('Vuelve a iniciar sesión en el portal para autorizar esta acción.');
       return {headers: {'X-Portal-Session': this.portalSession}};
     },
     logout() {
+      this.sessionExpired = false;
       const token=this.portalSession;
       this.portalSession='';
       if(token) void fetch(backendUrl(`/WebLogoutPortalSession`), {method:'POST',headers:{'X-Portal-Session':token}}).catch(()=>{});
@@ -40,6 +50,8 @@ export const useAuthStore = defineStore('auth', {
       } catch { /* sin pinia activo: no hay seguridad que limpiar */ }
       this.user = null;
       this.isAuthenticated = false;
+      this.loginAccess = 'erp';
+      this.tpvOpenedFromErp = false;
       // Los recientes son por navegador: limpiarlos evita que el siguiente
       // usuario vea (y reabra) módulos del anterior.
       try { window.localStorage.removeItem('kiwik.menuRecents'); } catch { /* sin almacenamiento */ }

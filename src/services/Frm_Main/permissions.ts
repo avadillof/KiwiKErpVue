@@ -177,6 +177,10 @@ export const PERM = {
   // ---------- REPORTING · cat 4000 ----------
   RPT_SALES: 'REPORTING_GEN_0002', // bueno (sin typo)
   RPT_EXPORT: 'REPORTING_GEN_0004', // NUEVO (descargar/excel)
+
+  // ---------- TPV · cat 5000 General TPV (NUEVA categoría) ----------
+  TPV_CLOSE_CASH: 'TPV_GEN_0001', // cerrar caja (termina la apertura)
+  TPV_REFUND: 'TPV_GEN_0002', // devolver tickets (total o parcial)
 } as const;
 
 export type PermissionCode = (typeof PERM)[keyof typeof PERM];
@@ -202,3 +206,6 @@ export const MODULES = {
 } as const;
 
 export type ModuleCode = (typeof MODULES)[keyof typeof MODULES];
+
+/** Grupo "Usuarios / TPVs": el único que entra al TPV, siempre por PIN. */
+export const TPV_GROUP_ID = 3;

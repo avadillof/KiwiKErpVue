@@ -1081,7 +1081,7 @@
         >Datos comprobados. Al emitir se validarán de nuevo antes de asignar
         número. Esta comprobación no acredita el alta censal ni VIES.</Message
       ><label
-        v-if="!validatingIssue && !issueValidationErrors.length"
+        v-if="!validatingIssue && !issueValidationErrors.length && issueTarget?.tpvChargeId == null"
         class="verifactu-password"
         ><span>Contraseña del certificado VeriFactu</span
         ><Password
@@ -1091,6 +1091,11 @@
           :feedback="false"
           fluid
           autofocus /></label
+      ><Message
+        v-else-if="!validatingIssue && !issueValidationErrors.length && issueTarget?.tpvChargeId != null"
+        severity="info"
+        :closable="false"
+        >Se usará el certificado configurado para TPV. No hace falta contraseña.</Message
       ><template #footer
         ><div class="issue-dialog-footer">
           <div class="issue-dialog-separator"></div>
@@ -1107,7 +1112,7 @@
               severity="success"
               :loading="issuing"
               :disabled="
-                !issuePassword ||
+                (!issuePassword && issueTarget?.tpvChargeId == null) ||
                 validatingIssue ||
                 issueValidationErrors.length > 0
               "
@@ -1837,11 +1842,18 @@ const validateIssueTarget = async () => {
   const item = issueTarget.value;
   if (!item?.pkid || issuing.value || validatingIssue.value || issueRetry.value)
     return;
-  validatingIssue.value = true;
-  issueValidationErrors.value = [];
-  try {
-    if (detail.value.pkid !== item.pkid || !(await saveDetail()))
-      throw new Error("Guarda y revisa el borrador antes de emitir.");
+    validatingIssue.value = true;
+    issueValidationErrors.value = [];
+    try {
+      // Borrador TPV: importes y destinatario congelados desde el ticket; el
+      // guardado lo rechaza el servidor por diseño, así que se valida directo.
+      const tpvDraft =
+        detail.value.pkid === item.pkid && detail.value.tpvChargeId != null;
+      if (
+        !tpvDraft &&
+        (detail.value.pkid !== item.pkid || !(await saveDetail()))
+      )
+        throw new Error("Guarda y revisa el borrador antes de emitir.");
     const { data } = await axios.get(
       backendUrl(`/WebValidateSalesInvoice/${item.pkid}`),
     );
@@ -1902,7 +1914,7 @@ const confirmIssue = async () => {
   const item = issueTarget.value;
   if (
     !item?.pkid ||
-    !issuePassword.value ||
+    (!issuePassword.value && item.tpvChargeId == null) ||
     issuing.value ||
     validatingIssue.value ||
     issueValidationErrors.value.length > 0 ||
@@ -1921,7 +1933,9 @@ const confirmIssue = async () => {
   let submitted = false;
   try {
     const requestConfig = auth.portalRequestConfig();
-    if (!retry && !(await saveDetail(true))) return;
+    // Borrador TPV: congelado por diseño, el guardado lo rechaza el servidor.
+    if (!retry && item.tpvChargeId == null && !(await saveDetail(true)))
+      return;
     if (!beginInvoiceIssue(item.pkid)) return;
     submitted = true;
     const endpoint = retry

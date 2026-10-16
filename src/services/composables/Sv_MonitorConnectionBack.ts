@@ -1,5 +1,6 @@
 import { backendUrl } from '@/services/backendUrl';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { useAuthStore } from '../../stores/authStore';
 import { useRoute } from 'vue-router';
 
 // Exportamos estos valores fuera de la función para que sean GLOBALES
@@ -15,6 +16,9 @@ export const onReconnected = ref(0);
  */
 export function useConnectionMonitor(enabled = true) {
     const route = useRoute();
+    const auth = useAuthStore();
+    let checking = false;
+    let disposed = false;
     let intervalId: any = null;
 
     const isExcludedRoute = () => {
@@ -28,15 +32,24 @@ export function useConnectionMonitor(enabled = true) {
     const connectionLost = computed(() => enabled && !isOnline.value && !isExcludedRoute());
 
     const checkConnection = async () => {
-        if (!enabled || document.hidden) return;
+        if (!enabled || document.hidden || checking || disposed) return;
+        checking = true;
+        const token = auth.isAuthenticated ? auth.portalSession : "";
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         try {
             const response = await fetch(backendUrl(`/WebPing`), {
                 method: 'GET',
                 cache: 'no-store',
+                headers: token ? { 'X-Portal-Session': token } : {},
                 signal: controller.signal
             });
+
+            if (disposed) return;
+            // A late response from a previous login must not expire the new session.
+            if (response.status === 401 && token && token === auth.portalSession && auth.isAuthenticated) {
+                auth.sessionExpired = true;
+            }
 
             // Distinguir "red caída" de "back que responde con error HTTP":
             // - Si hay respuesta HTTP, el TCP del back está vivo. Un 404 (endpoint
@@ -47,16 +60,17 @@ export function useConnectionMonitor(enabled = true) {
             const onlineNow = !gatewayDown;
 
             // Si estábamos desconectados y ahora hay respuesta útil, disparamos la reconexión
-            if (!isOnline.value && onlineNow) {
+            if (!isOnline.value && onlineNow && !auth.sessionExpired) {
                 onReconnected.value++;
             }
 
             isOnline.value = onlineNow;
         } catch (error) {
             // Solo el fallo de red (TypeError / Abort) marca offline.
-            isOnline.value = false;
+            if (!disposed) isOnline.value = false;
         } finally {
             clearTimeout(timeoutId);
+            checking = false;
         }
     };
 
@@ -69,6 +83,7 @@ export function useConnectionMonitor(enabled = true) {
     });
 
     onUnmounted(() => {
+        disposed = true;
         clearInterval(intervalId);
     });
 

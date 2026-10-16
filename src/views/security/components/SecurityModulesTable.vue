@@ -84,6 +84,7 @@ const moduleNames: Record<string, string> = {
   REPORTING: "Informes",
   TASKS: "Tareas",
   SYSTEM: "Sistema",
+  TPV: "TPV",
   SITES: "Sitios",
   MANUFACTER: "Fabricación",
   MESSAGES: "Mensajes",
@@ -103,6 +104,7 @@ const moduleIcons: Record<string, string> = {
   DOCUMENTUM: "pi pi-folder",
   INVENTARY: "pi pi-barcode",
   SYSTEM: "pi pi-cog",
+  TPV: "pi pi-desktop",
 };
 
 const moduleLabel = (code: string) => moduleNames[code] || code;

@@ -44,6 +44,8 @@ export function startIdleWatcher() {
         warningOpen = false;
         confirm.close();
         clear();
+        // El operario TPV entra por PIN: devolverlo al login del ERP lo bloquea.
+        const wasTpv = authStore.loginAccess === 'tpv';
         authStore.logout();
         toast.add({
             severity: 'info',
@@ -51,7 +53,9 @@ export function startIdleWatcher() {
             detail,
             life: companyStore.companyInfo.toastDuration ?? 3000
         });
-        router.push({ name: 'Login' });
+        router.push(
+            wasTpv ? { name: 'Login', query: { access: 'tpv' } } : { name: 'Login' }
+        );
     };
 
     const arm = () => {

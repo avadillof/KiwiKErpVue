@@ -12,6 +12,7 @@ export function loginController() {
     const isDataLoaded = ref(false);
     const toast = useToast();
     const companyStore = useCompanyStore();
+    const router = useRouter();
 
     const isForgotPasswordVisible = ref(false);
     const frontVersion = FRONT_VERSION;
@@ -35,10 +36,9 @@ export function loginController() {
             return '';
         }
     })();
-    const loginData = ref({ username: lastUsername, password: '' });
+    const loginData = ref({ username: router.currentRoute.value.query.switchUser === '1' ? '' : lastUsername, password: '' });
     const isLoading = ref(false);
     const errorMessage = ref('');
-    const router = useRouter();
 
     const initialLogoUrl = companyStore.companyInfo.urlLogo || '';
 
@@ -163,7 +163,7 @@ export function loginController() {
             if (response.ok) {
                 const userDTO = await response.json();
                 const authStore = useAuthStore();
-                authStore.setUser(userDTO, response.headers.get('X-Portal-Session') || '');
+                authStore.setUser(userDTO, response.headers.get('X-Portal-Session') || '', router.currentRoute.value.query.access === 'tpv' ? 'tpv' : 'erp');
                 try {
                     localStorage.setItem(LAST_USERNAME_KEY, loginData.value.username.trim());
                 } catch {
@@ -176,7 +176,7 @@ export function loginController() {
                     detail: `Acceso correcto. Hola ${userDTO.name}`,
                     life: toastLife
                 });
-                router.push('/Frm_Main');
+                router.push(router.currentRoute.value.query.access === 'tpv' ? '/tpv' : '/Frm_Main');
             } else if (response.status === 404) {
                 errorMessage.value = "Credenciales incorrectas.";
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Usuario o contraseña inválidos.', life: toastLife });

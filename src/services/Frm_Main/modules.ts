@@ -24,6 +24,22 @@ export interface AppModule {
 
 export const APP_MODULES: AppModule[] = [
   {
+    id: 'tpv',
+    nombre: 'TPV',
+    descripcion: 'Prepara ventas con familias, productos con foto y ticket visible. Cobro fiscal pendiente de habilitar.',
+    funcionalidades: ['Botonera por familias', 'Búsqueda y código de barras', 'Ticket en preparación'],
+    icono: 'pi pi-desktop',
+    ruta: 'TPV',
+    colorIcono: '#648506',
+    bgIcono: '#eef4d8',
+    disponible: true,
+    dashboardLevel: true,
+    requiredPermission: 'SALES',
+    // Solo los administradores ven el TPV dentro del ERP.
+    // Los operarios entran directos por /tpv (login con access=tpv).
+    adminOnly: true
+  },
+  {
     id: 'autoayuda',
     nombre: 'Autoayuda',
     descripcion: 'Aprende a utilizar KiwiKERP con tutoriales en vídeo y el manual de usuario.',
@@ -119,6 +135,8 @@ export function visibleAppModules(): AppModule[] {
   const authStore = useAuthStore();
   const securityStore = useSecurityStore();
   return APP_MODULES.filter((module) => {
+    // TPV exige administrador real; SYS_ACCESS no sustituye este requisito.
+    if (module.id === 'tpv' && authStore.user?.admin !== true) return false;
     if (module.hidden) return false;
     if (module.adminOnly) {
       if (authStore.user?.admin === true) return true;
