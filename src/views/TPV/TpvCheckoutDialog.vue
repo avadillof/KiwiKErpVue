@@ -162,6 +162,7 @@
 </template>
 
 <script setup lang="ts">
+import { createUuid } from "@/libs/createUuid";
 import { computed, nextTick, ref, watch } from "vue";
 import axios from "axios";
 import Button from "primevue/button";
@@ -315,7 +316,7 @@ async function confirm() {
         : [{ method: "CASH", amount: tendered.value }];
     if (!pendingRequest.value)
       pendingRequest.value = {
-        operationKey: crypto.randomUUID(),
+        operationKey: createUuid(),
         openingId: props.openingId,
         tableId: props.tableId ?? null,
         partial: props.partial === true,

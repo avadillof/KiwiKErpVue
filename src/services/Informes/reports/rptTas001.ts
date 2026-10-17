@@ -28,7 +28,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const day = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const fmtDate = (v: unknown) => v ? String(v).slice(0, 10).split('-').reverse().join('/') : '—';
 const fmt = (v: unknown) => Number(v ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const labels: Record<string, string> = { PLANIFICADA: 'Planificada', EN_CURSO: 'En curso', FINALIZADA: 'Finalizada', DESCARTADA: 'Descartada' };
+const labels: Record<string, string> = { PLANIFICADA: 'Planificada', EN_CURSO: 'En curso', EN_VALIDACION: 'En validación', FINALIZADA: 'Finalizada', DESCARTADA: 'Descartada' };
 
 export function tas001FiltersText(f: Tas001Filters) {
   const dates = f.dateFrom && f.dateTo ? `${fmtDate(day(f.dateFrom))} - ${fmtDate(day(f.dateTo))}` : 'Sin límite';

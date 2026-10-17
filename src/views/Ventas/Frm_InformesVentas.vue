@@ -392,7 +392,7 @@ const requesterPkid = computed(() => authStore.user?.admin || securityStore.hasP
 const tas001 = reactive<Tas001Filters>({ dateFrom: null, dateTo: null, state: 'ALL', priority: 'ALL', userPkid: 0, entitiePkid: null, entitieLabel: '', overdueOnly: false, includeArchived: false, query: '', requesterPkid: requesterPkid.value });
 const tas002 = reactive<Tas002Filters>({ dateFrom: null, dateTo: null, userPkid: 0, entitiePkid: null, entitieLabel: '', pendingOnly: false, query: '', requesterPkid: requesterPkid.value });
 const taskUserOptions = ref<Array<{ label: string; value: number }>>([{ label: 'Todos', value: 0 }]);
-const taskStateOptions = [{ label: 'Todos', value: 'ALL' }, { label: 'Planificada', value: 'PLANIFICADA' }, { label: 'En curso', value: 'EN_CURSO' }, { label: 'Finalizada', value: 'FINALIZADA' }, { label: 'Descartada', value: 'DESCARTADA' }];
+const taskStateOptions = [{ label: 'Todos', value: 'ALL' }, { label: 'Planificada', value: 'PLANIFICADA' }, { label: 'En curso', value: 'EN_CURSO' }, { label: 'En validación', value: 'EN_VALIDACION' }, { label: 'Finalizada', value: 'FINALIZADA' }, { label: 'Descartada', value: 'DESCARTADA' }];
 const taskPriorityOptions = [{ label: 'Todas', value: 'ALL' }, { label: 'Baja', value: 'BAJA' }, { label: 'Media', value: 'MEDIA' }, { label: 'Alta', value: 'ALTA' }, { label: 'Urgente', value: 'URGENTE' }];
 function selectTaskEntity(target: Tas001Filters | Tas002Filters, entity: any) { target.entitiePkid = Number(entity?.pkid ?? entity?.entitiePkId ?? entity?.id) || null; target.entitieLabel = entity?.name ?? entity?.entitieDsName ?? ''; }
 function clearTaskEntity(target: Tas001Filters | Tas002Filters) { target.entitiePkid = null; target.entitieLabel = ''; }

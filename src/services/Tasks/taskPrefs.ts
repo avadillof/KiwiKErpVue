@@ -21,7 +21,8 @@ export interface TaskBoardPrefs {
   mineOnly?: boolean;
   overdueOnly?: boolean;
   archiveMode?: boolean;
-  view?: 'kanban' | 'gantt' | 'table';
+  view?: 'kanban' | 'gantt' | 'table' | 'calendar';
+  compact?: boolean;
 }
 
 function localGet(): TaskBoardPrefs | null {

@@ -69,7 +69,9 @@
             </div>
 
             <div class="installation-grid">
-              <label class="span-2">Razón social <InputText v-model.trim="company.legalName" required fluid /></label>
+              <label class="span-2">Razón social <InputText v-model.trim="company.legalName" required fluid />
+                <small class="installation-hint"><i class="pi pi-info-circle"></i> Debe coincidir exactamente con el titular que figura en el certificado de VeriFactu; si no coincide, la AEAT rechazará los envíos.</small>
+              </label>
               <label>Nombre comercial <InputText v-model.trim="company.tradeName" fluid /></label>
               <label>NIF/CIF <InputText v-model.trim="company.taxId" required fluid /></label>
               <label>Correo electrónico <InputText v-model.trim="company.email" type="email" required fluid /></label>

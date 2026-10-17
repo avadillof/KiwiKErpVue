@@ -244,6 +244,22 @@
                         </template>
                     </DataTable>
 
+                    <div v-if="form.pkid && form.state === 'EN_CURSO'" class="time-timer">
+                        <i class="pi pi-stopwatch"></i>
+                        <template v-if="isTimerRunning(form.pkid)">
+                            <span class="timer-elapsed">{{ formatElapsed(timerElapsed(form.pkid)) }}</span>
+                            <span class="timer-caption">Cronómetro en marcha para esta tarea</span>
+                            <Button label="Parar y guardar" icon="pi pi-stop" size="small" @click="stopTimerAndSave" />
+                            <Button icon="pi pi-times" text rounded size="small" title="Descartar cronómetro"
+                                @click="clearTimer(form.pkid)" />
+                        </template>
+                        <template v-else>
+                            <span class="timer-caption">Sin cronómetro activo</span>
+                            <Button label="Iniciar cronómetro" icon="pi pi-play" size="small" outlined
+                                @click="startTimerForTask" />
+                            <small v-if="runningCount" class="timer-other">+{{ runningCount }} en otras tareas</small>
+                        </template>
+                    </div>
                     <div v-if="form.state === 'EN_CURSO'" class="time-add">
                         <div class="time-add-date">
                             <FloatLabel variant="on" class="w-full">
@@ -437,6 +453,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useSecurityStore } from '@/stores/securityStore';
 import { PERM } from '@/services/Frm_Main/permissions';;
 import { useFormValidator } from '@/libs/HelperView';
+import { clearTimer, formatElapsed, isTimerRunning, runningCount, startTimer, stopTimer, timerElapsed } from '@/services/Tasks/taskTimer';
 import {
     TASK_PRIORITIES,
     TASK_STATES,
@@ -780,6 +797,19 @@ async function save() {
     }
 }
 
+function startTimerForTask() {
+    if (form.value.pkid) startTimer(form.value);
+}
+
+async function stopTimerAndSave() {
+    if (!form.value.pkid) return;
+    const hours = stopTimer(form.value.pkid);
+    newTimeDate.value = new Date();
+    newTimeMemo.value = 'Cronometrado';
+    newTimeHours.value = hours;
+    await addTime();
+}
+
 async function addTime() {
     if (!canAddTime.value || !form.value.pkid) return;
     try {
@@ -893,6 +923,36 @@ async function unlinkInvoice(linkPkid: number) {
 .time-add .p-button {
     flex: 0 0 auto;
     margin-top: 0.15rem;
+}
+.time-timer {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: 0.9rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid #f2d48a;
+    border-radius: 12px;
+    background: #fff9ec;
+}
+.time-timer > i {
+    color: #d99a06;
+    font-size: 1.1rem;
+}
+.timer-elapsed {
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: #b06f00;
+}
+.timer-caption {
+    flex: 1;
+    min-width: 0;
+    color: #7a5a12;
+    font-size: 0.85rem;
+}
+.timer-other {
+    color: #b7791f;
+    font-size: 0.75rem;
 }
 .task-dialog-scroll {
     max-height: 78vh;

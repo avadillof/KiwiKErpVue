@@ -138,6 +138,7 @@
   </Dialog>
 </template>
 <script setup lang="ts">
+import { createUuid } from "@/libs/createUuid";
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
 import axios from "axios";
 import Button from "primevue/button";
@@ -269,7 +270,7 @@ watch(
 function startCreate() {
   creating.value = true;
   error.value = "";
-  operationKey = crypto.randomUUID();
+  operationKey = createUuid();
   for (const f of fields) form[f.key] = f.key === "country" ? "España" : "";
   nextTick(() => document.getElementById("tpv-contact-name")?.focus());
 }

@@ -360,6 +360,7 @@
 </template>
 
 <script setup lang="ts">
+import { createUuid } from "@/libs/createUuid";
 import { computed, ref, watch } from "vue";
 import axios from "axios";
 import TpvInvoiceDialog from "./TpvInvoiceDialog.vue";
@@ -665,7 +666,7 @@ async function confirm() {
   error.value = "";
   try {
     const payload: Record<string, unknown> = {
-      operationKey: crypto.randomUUID(),
+      operationKey: createUuid(),
       openingId: props.openingId,
       chargeId: selected.value.chargeId,
       method: method.value,

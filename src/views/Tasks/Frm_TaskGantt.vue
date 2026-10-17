@@ -43,7 +43,8 @@
                     <div class="gantt-timeline gantt-track">
                         <span v-for="d in days" :key="d.key" class="gantt-cell"
                             :class="{ weekend: d.weekend }" :style="{ width: dayWidth + 'px' }"></span>
-                        <div class="gantt-bar" :style="barStyle(row)" :title="barTitle(row.task)">
+                        <div class="gantt-bar" :class="{ timing: isTimerRunning(row.task.pkid) }"
+                            :style="barStyle(row)" :title="barTitle(row.task)">
                             <div class="gantt-fill" :style="{ width: progressPct(row.task) + '%' }"></div>
                             <span v-if="barWide(row)" class="gantt-pct">{{ progressPct(row.task) }} %</span>
                             <span class="gantt-after">
@@ -54,7 +55,10 @@
                                     <span v-else class="gantt-who-initials">{{ initials(assigneeName(row.task)) }}</span>
                                 </span>
                                 <span class="gantt-who-name">{{ assigneeName(row.task) }}</span>
-                                <span v-if="!barWide(row)" class="gantt-after-pct">{{ progressPct(row.task) }} %</span>
+                                <span v-if="isTimerRunning(row.task.pkid)" class="gantt-timer-chip">
+                                    <i class="pi pi-stopwatch"></i>{{ formatElapsed(timerElapsed(row.task.pkid)) }}
+                                </span>
+                                <span v-else-if="!barWide(row)" class="gantt-after-pct">{{ progressPct(row.task) }} %</span>
                             </span>
                             <span v-if="row.task.overdue" class="gantt-flag">Vencida</span>
                         </div>
@@ -81,6 +85,7 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import Button from 'primevue/button';
 import ToggleButton from 'primevue/togglebutton';
 import { backendUrl } from '@/services/backendUrl';
+import { formatElapsed, isTimerRunning, timerElapsed } from '@/services/Tasks/taskTimer';
 import type { TaskDTO } from '@/services/Tasks/taskService';
 
 const emit = defineEmits(['edit']);
@@ -103,7 +108,7 @@ const onPhotoError = (userPkid: number) => {
 };
 
 function isOpen(task: TaskDTO): boolean {
-    return task.state === 'PLANIFICADA' || task.state === 'EN_CURSO';
+    return task.state === 'PLANIFICADA' || task.state === 'EN_CURSO' || task.state === 'EN_VALIDACION';
 }
 
 const ZOOM_LEVELS = [12, 18, 26, 38, 54];
@@ -138,6 +143,7 @@ onMounted(() => nextTick(() => scrollToToday(false)));
 const legend = [
     { label: 'Planificado', color: '#7fb3d5' },
     { label: 'Realizándose', color: '#f0b429' },
+    { label: 'En validación', color: '#9b7fd4' },
     { label: 'Hecho', color: '#7fb069' },
     { label: 'Descartado', color: '#c9ccd1' },
     { label: 'Vencida', color: '#e05252' }
@@ -253,6 +259,7 @@ function barColor(task: TaskDTO): string {
     if (task.overdue) return '#e05252';
     switch (task.state) {
         case 'EN_CURSO': return '#f0b429';
+        case 'EN_VALIDACION': return '#9b7fd4';
         case 'FINALIZADA': return '#7fb069';
         case 'DESCARTADA': return '#c9ccd1';
         default: return '#7fb3d5';
@@ -284,7 +291,15 @@ function barTitle(task: TaskDTO): string {
 
 function progressPct(task: TaskDTO): number {
     if (task.state === 'FINALIZADA') return 100;
-    return Math.min(100, Math.max(0, Math.round(Number((task as any).progress ?? 0))));
+    const base = Math.min(100, Math.max(0, Math.round(Number((task as any).progress ?? 0))));
+    if (isTimerRunning(task.pkid)) {
+        const estimate = Number(task.estimatedHours ?? 0);
+        if (estimate > 0) {
+            const elapsed = timerElapsed(task.pkid) / 3600000;
+            return Math.min(100, Math.round(base + elapsed / estimate * 100));
+        }
+    }
+    return base;
 }
 </script>
 
@@ -496,6 +511,29 @@ function progressPct(task: TaskDTO): number {
     font-weight: 800;
     color: #344054;
     white-space: nowrap;
+}
+.gantt-timer-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #7a4d00;
+    background: #ffe9a8;
+    border: 1px solid #f2d48a;
+    border-radius: 6px;
+    padding: 1px 6px;
+    white-space: nowrap;
+}
+.gantt-bar.timing {
+    outline: 2px solid rgba(242, 178, 41, 0.7);
+    outline-offset: 1px;
+    animation: gantt-timing-pulse 1.6s ease-in-out infinite;
+}
+@keyframes gantt-timing-pulse {
+    0%, 100% { outline-color: rgba(242, 178, 41, 0.35); }
+    50% { outline-color: rgba(242, 178, 41, 0.9); }
 }
 .gantt-zoom {
     margin-left: auto;

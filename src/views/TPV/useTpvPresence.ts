@@ -1,3 +1,4 @@
+import { createUuid } from "@/libs/createUuid";
 import { computed, onBeforeUnmount, ref, watch, type Ref } from "vue";
 import axios from "axios";
 import { backendUrl } from "../../services/backendUrl";
@@ -10,7 +11,7 @@ export function useTpvPresence(
   draft: Ref<boolean>,
 ) {
   const auth = useAuthStore(),
-    terminalId = crypto.randomUUID();
+    terminalId = createUuid();
   const invalid = ref(false),
     warning = ref("");
   const context = computed(

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { backendUrl } from '@/services/backendUrl';
 
-export type TaskState = 'PLANIFICADA' | 'EN_CURSO' | 'FINALIZADA' | 'DESCARTADA';
+export type TaskState = 'PLANIFICADA' | 'EN_CURSO' | 'EN_VALIDACION' | 'FINALIZADA' | 'DESCARTADA';
 
 export type TaskPriority = 'BAJA' | 'MEDIA' | 'ALTA' | 'URGENTE';
 
@@ -74,9 +74,16 @@ export interface TaskCommentDTO {
 export const TASK_STATES: { value: TaskState; label: string; severity: string }[] = [
   { value: 'PLANIFICADA', label: 'Planificado', severity: 'info' },
   { value: 'EN_CURSO', label: 'Realizándose', severity: 'warn' },
+  { value: 'EN_VALIDACION', label: 'En validación', severity: 'contrast' },
   { value: 'FINALIZADA', label: 'Hecho', severity: 'success' },
   { value: 'DESCARTADA', label: 'Descartado', severity: 'danger' }
 ];
+
+export const TASK_OPEN_STATES: TaskState[] = ['PLANIFICADA', 'EN_CURSO', 'EN_VALIDACION'];
+
+export function isOpenState(state: string | null | undefined): boolean {
+  return !!state && TASK_OPEN_STATES.includes(state as TaskState);
+}
 
 export const TASK_PRIORITIES: { value: TaskPriority; label: string; severity: string }[] = [
   { value: 'BAJA', label: 'Baja', severity: 'secondary' },

@@ -277,6 +277,7 @@
 </template>
 
 <script setup lang="ts">
+import { createUuid } from "@/libs/createUuid";
 import { computed, nextTick, onMounted, ref } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
@@ -473,7 +474,7 @@ function chooseDevice(uid: string) {
 function save() {
   const profile = {
     ...draft.value,
-    id: draft.value.id || crypto.randomUUID(),
+    id: draft.value.id || createUuid(),
     name: draft.value.name.trim(),
     queue: draft.value.queue.trim(),
     host: draft.value.host.trim(),

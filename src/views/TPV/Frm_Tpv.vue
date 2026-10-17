@@ -1465,6 +1465,7 @@
 </template>
 
 <script setup lang="ts">
+import { createUuid } from "@/libs/createUuid";
 import {
   computed,
   nextTick,
@@ -1920,7 +1921,7 @@ async function separatePreparationUnit() {
     remaining.preparation = line.preparation;
     remaining.savedLineId = line.savedLineId;
     remaining.uiKey = line.uiKey;
-    unit.uiKey = crypto.randomUUID();
+    unit.uiKey = createUuid();
     unit.preparation = JSON.parse(
       JSON.stringify(
         line.preparation || { destination: "NONE", modifiers: [], note: "" },
@@ -2516,7 +2517,7 @@ async function updateLine(product: Product, quantity: number) {
     line.preparation = lines.value[index].preparation;
     line.savedLineId = lines.value[index].savedLineId;
     line.uiKey = lines.value[index].uiKey;
-  } else line.uiKey = crypto.randomUUID();
+  } else line.uiKey = createUuid();
   if (index < 0) lines.value.push(line);
   else lines.value[index] = line;
   beep();

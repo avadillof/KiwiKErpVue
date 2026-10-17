@@ -173,7 +173,7 @@ export function useSalesCalendar() {
       });
       const list: any[] = Array.isArray(data) ? data : (data?.content ?? []);
       return list
-        .filter((t) => t?.dueDate && (t.state === 'PLANIFICADA' || t.state === 'EN_CURSO'))
+        .filter((t) => t?.dueDate && (t.state === 'PLANIFICADA' || t.state === 'EN_CURSO' || t.state === 'EN_VALIDACION'))
         .map((t) => ({
           type: 'task' as const,
           pkid: Number(t.pkid),

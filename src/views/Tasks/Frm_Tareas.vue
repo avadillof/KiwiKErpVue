@@ -37,6 +37,15 @@
                             :text="view !== 'gantt'" rounded title="Vista Gantt" @click="view = 'gantt'" />
                         <Button icon="pi pi-table" :severity="view === 'table' ? 'success' : 'secondary'"
                             :text="view !== 'table'" rounded title="Vista tabla" @click="view = 'table'" />
+                        <Button icon="pi pi-calendar" :severity="view === 'calendar' ? 'success' : 'secondary'"
+                            :text="view !== 'calendar'" rounded title="Vista calendario" @click="view = 'calendar'" />
+                        <Button :icon="compact ? 'pi pi-list' : 'pi pi-bars'"
+                            :severity="compact ? 'success' : 'secondary'" text rounded
+                            :title="compact ? 'Densidad cómoda' : 'Densidad compacta'"
+                            @click="compact = !compact" />
+                        <Tag v-if="runningCount" severity="warn" rounded icon="pi pi-stopwatch"
+                            :value="String(runningCount)"
+                            :title="`${runningCount} cronómetro${runningCount === 1 ? '' : 's'} en marcha`" />
                         <Button icon="pi pi-file-excel" text rounded title="Exportar imputaciones a Excel"
                             :loading="exporting" @click="exportExcel" />
                         <Button icon="pi pi-refresh" text rounded title="Refrescar" :loading="loading"
@@ -99,11 +108,48 @@
                 <small v-else-if="!archiveMode" class="archive-hint">Hechas/descartadas recientes ({{ ARCHIVE_DAYS }} días)</small>
             </div>
 
-            <div v-if="loading" class="kanban-loading">
+            <section class="task-kpis" aria-label="Resumen de tareas">
+                <article class="kpi" :class="{ clickable: true, selected: filterState === null && !overdueOnly }"
+                    title="Ver todas" @click="clearFilters">
+                    <i class="pi pi-clipboard kpi-icon"></i>
+                    <div><strong>{{ kpis.abiertas }}</strong><span>Abiertas</span></div>
+                </article>
+                <article class="kpi doing" :class="{ clickable: true, selected: filterState === 'EN_CURSO' }"
+                    title="Ver las que se están realizando" @click="filterState = 'EN_CURSO'; load()">
+                    <i class="pi pi-hourglass kpi-icon"></i>
+                    <div><strong>{{ kpis.enCurso }}</strong><span>En curso</span></div>
+                </article>
+                <article class="kpi overdue" :class="{ clickable: true, selected: overdueOnly }"
+                    title="Ver solo vencidas" @click="overdueOnly = !overdueOnly; load()">
+                    <i class="pi pi-exclamation-triangle kpi-icon"></i>
+                    <div><strong>{{ kpis.vencidas }}</strong><span>Vencidas</span></div>
+                </article>
+                <article class="kpi unassigned" title="Tareas abiertas sin responsable">
+                    <i class="pi pi-user-minus kpi-icon"></i>
+                    <div><strong>{{ kpis.sinAsignar }}</strong><span>Sin asignar</span></div>
+                </article>
+                <article class="kpi hours" title="Horas imputadas en la vista">
+                    <i class="pi pi-clock kpi-icon"></i>
+                    <div><strong>{{ kpis.horas }}</strong><span>Horas imputadas</span></div>
+                </article>
+            </section>
+
+            <div v-if="loading && view === 'kanban'" class="kanban-skeleton" aria-hidden="true">
+                <section v-for="n in 5" :key="n" class="skeleton-column">
+                    <div class="skeleton-line w40"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card short"></div>
+                </section>
+            </div>
+
+            <div v-else-if="loading" class="kanban-loading">
                 <CorporateLoader label="Cargando tareas…" />
             </div>
 
             <Frm_TaskGantt v-else-if="view === 'gantt'" :tasks="tasks" @edit="openEdit" />
+
+            <Frm_TaskCalendar v-else-if="view === 'calendar'" :tasks="tasks" @edit="openEdit" />
 
             <section v-else-if="view === 'table'" class="task-table-panel">
                 <DataTable :value="tasks" dataKey="pkid" class="task-table" stripedRows removableSort
@@ -173,20 +219,24 @@
                 </DataTable>
             </section>
 
-            <div v-else class="kanban-board">
+            <div v-else class="kanban-board" :class="{ compact }">
                 <section v-for="col in columns" :key="col.value" class="kanban-column"
                     :class="{ 'drop-target': dropState === col.value }" @dragover.prevent="dropState = col.value"
                     @dragleave="dropState = null" @drop="onDrop(col.value)">
                     <header class="kanban-column-header">
                         <Tag :value="col.label" :severity="col.severity" rounded />
                         <span class="kanban-count">{{ tasksByState(col.value).length }}</span>
+                        <span v-if="columnHours(col.value) > 0" class="kanban-hours-total"
+                            :title="`${columnHours(col.value)} h imputadas`">
+                            <i class="pi pi-clock"></i>{{ columnHours(col.value) }}h
+                        </span>
                         <Button icon="pi pi-plus" text rounded size="small" title="Nueva en esta columna"
                             @click="openNew(col.value)" />
                     </header>
 
                     <div class="kanban-cards">
                         <article v-for="(task, idx) in tasksByState(col.value)" :key="task.pkid ?? task.code" class="kanban-card"
-                            :class="{ overdue: task.overdue, dragging: dragPkid === task.pkid, 'drop-before': isDropHint(col.value, idx, false), 'drop-after': isDropHint(col.value, idx, true) }"
+                            :class="[{ overdue: task.overdue, dragging: dragPkid === task.pkid, unassigned: isUnassigned(task), timing: isTimerRunning(task.pkid), 'drop-before': isDropHint(col.value, idx, false), 'drop-after': isDropHint(col.value, idx, true) }, 'prio-' + (task.priority || 'MEDIA')]"
                             :draggable="!isLockedState(task)" @dragstart="onDragStart(task)" @dragend="onDragEnd"
                             @dragover.prevent="onCardOver($event, col.value, idx)" @drop.stop="onCardDrop(col.value, idx)"
                             @click="openEdit(task)">
@@ -226,12 +276,25 @@
                                     <i class="pi pi-calendar"></i>{{ formatTaskDate(task.dueDate) }}
                                 </span>
                                 <Tag v-if="task.overdue" value="Vencida" severity="danger" rounded />
+                                <Tag v-if="isUnassigned(task)" value="Sin asignar" severity="warn" rounded />
                             </div>
                             <div class="kanban-progress">
                                 <ProgressBar :value="Math.round(Number(task.progress ?? 0))" />
                                 <span>{{ Math.round(Number(task.progress ?? 0)) }} %</span>
                             </div>
+                            <div v-if="isTimerRunning(task.pkid)" class="card-timer">
+                                <i class="pi pi-stopwatch"></i>
+                                <span class="card-timer-elapsed">{{ formatElapsed(timerElapsed(task.pkid)) }}</span>
+                                <Button label="Parar" icon="pi pi-stop" size="small" severity="danger"
+                                    @click.stop="stopRunningTimer(task)" />
+                            </div>
                             <footer class="kanban-card-footer">
+                                <Button v-if="task.state === 'EN_CURSO' && !isTimerRunning(task.pkid)"
+                                    icon="pi pi-play" text rounded size="small" severity="success"
+                                    title="Iniciar cronómetro" @click.stop="beginTimer(task)" />
+                                <Button v-if="task.state !== 'FINALIZADA'" icon="pi pi-check" text rounded
+                                    size="small" severity="success" title="Marcar como hecho"
+                                    @click.stop="quickComplete(task)" />
                                 <Button icon="pi pi-pencil" text rounded size="small" title="Editar"
                                     @click.stop="openEdit(task)" />
                                 <Button icon="pi pi-trash" text rounded size="small" severity="danger"
@@ -281,17 +344,21 @@ import { loadTaskBoardPrefs, saveTaskBoardPrefs, type TaskBoardPrefs } from '@/s
 import Avatar from 'primevue/avatar';
 import Frm_TaskForm from './Frm_TaskForm.vue';
 import Frm_TaskGantt from './Frm_TaskGantt.vue';
+import Frm_TaskCalendar from './Frm_TaskCalendar.vue';
+import { formatElapsed, isTimerRunning, runningCount, startTimer, stopTimer, timerElapsed } from '@/services/Tasks/taskTimer';
 import {
+    TASK_OPEN_STATES,
     TASK_PRIORITIES,
     TASK_STATES,
-    deleteTask,
     exportTaskTimesToExcel,
     formatTaskDate,
     getTasksPage,
     getUsers,
+    isOpenState,
     notifyOverdueTasks as notifyOverdueApi,
     priorityOf,
     saveTaskOrder,
+    saveTaskTime,
     type TaskDTO,
     type TaskQuery,
     type TaskState
@@ -308,7 +375,8 @@ const messagesStore = useMessagesStore();
 const loading = ref(false);
 const notifying = ref(false);
 const exporting = ref(false);
-const view = ref<'kanban' | 'gantt' | 'table'>('kanban');
+const view = ref<'kanban' | 'gantt' | 'table' | 'calendar'>('kanban');
+const compact = ref(false);
 const query = ref('');
 const tasks = ref<TaskDTO[]>([]);
 const dragPkid = ref<number | null>(null);
@@ -343,12 +411,39 @@ const hasFilters = computed(() =>
     !!query.value || !!filterState.value || filterUser.value != null || filterEntitie.value != null
     || !!filterPriority.value || mineOnly.value || overdueOnly.value || archiveMode.value
 );
-const viewTitle = computed(() => view.value === 'kanban' ? 'Tablero Kanban' : view.value === 'gantt' ? 'Planificación Gantt' : 'Listado de tareas');
+const viewTitle = computed(() => view.value === 'kanban' ? 'Tablero Kanban' : view.value === 'gantt' ? 'Planificación Gantt' : view.value === 'calendar' ? 'Calendario de vencimientos' : 'Listado de tareas');
 const viewHelp = computed(() => view.value === 'kanban'
     ? 'Arrastra una tarjeta entre columnas para cambiar su estado.'
     : view.value === 'gantt'
         ? 'Revisa la duración y el solapamiento temporal de las tareas.'
-        : 'Ordena, compara y abre las tareas desde una vista compacta.');
+        : view.value === 'calendar'
+            ? 'Consulta las tareas ordenadas por su fecha de vencimiento.'
+            : 'Ordena, compara y abre las tareas desde una vista compacta.');
+
+const kpis = computed(() => {
+    const t = tasks.value;
+    const open = t.filter((x) => isOpenState(x.state)).length;
+    const doing = t.filter((x) => x.state === 'EN_CURSO').length;
+    const overdue = t.filter((x) => x.overdue).length;
+    const unassigned = t.filter((x) => isOpenState(x.state) && !x.userPkid && !x.contactPkid).length;
+    const hours = t.reduce((acc, x) => acc + Number(x.totalHours || 0), 0);
+    return {
+        abiertas: open,
+        enCurso: doing,
+        vencidas: overdue,
+        sinAsignar: unassigned,
+        horas: hours > 0 ? hours.toLocaleString('es-ES', { maximumFractionDigits: 2 }) : '0'
+    };
+});
+
+function isUnassigned(task: TaskDTO): boolean {
+    return !task.userPkid && !task.contactPkid && isOpenState(task.state);
+}
+
+function columnHours(state: TaskState): number {
+    const total = tasksByState(state).reduce((acc, t) => acc + Number(t.totalHours || 0), 0);
+    return Math.round(total * 100) / 100;
+}
 
 function stateOf(state: string) {
     return TASK_STATES.find((item) => item.value === state) ?? { label: state || 'Sin estado', severity: 'secondary' };
@@ -413,7 +508,7 @@ async function load(quiet = false) {
             if (terminal && res.total > res.items.length) archiveTruncated.value = res.total;
         } else {
             const [open, done] = await Promise.all([
-                getTasksPage({ ...common, states: 'PLANIFICADA,EN_CURSO', size: 2000 }),
+                getTasksPage({ ...common, states: TASK_OPEN_STATES.join(','), size: 2000 }),
                 archiveMode.value
                     ? getTasksPage({ ...common, states: 'FINALIZADA,DESCARTADA', size: 2000 })
                     : getTasksPage({ ...common, states: 'FINALIZADA,DESCARTADA', updatedSince: recentSince(), size: 500 })
@@ -595,6 +690,56 @@ function lockedToast(task: TaskDTO) {
     });
 }
 
+async function quickComplete(task: TaskDTO) {
+    if (task.state === 'FINALIZADA') return;
+    if (isLockedState(task)) {
+        lockedToast(task);
+        return;
+    }
+    const target = tasksByState('FINALIZADA').filter((t) => t.pkid !== task.pkid);
+    await moveTaskTo(task, task.state, 'FINALIZADA', target, target.length);
+}
+
+function beginTimer(task: TaskDTO) {
+    startTimer(task);
+    toast.add({
+        severity: 'info',
+        summary: `Cronómetro iniciado · ${task.code}`,
+        detail: 'Se contará el tiempo hasta que lo pares.',
+        life: companyStore.companyInfo.toastDuration ?? 3000
+    });
+}
+
+async function stopRunningTimer(task: TaskDTO) {
+    if (!task.pkid) return;
+    const hours = stopTimer(task.pkid);
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    try {
+        await saveTaskTime({
+            pkid: null,
+            taskPkid: task.pkid,
+            userPkid: currentUserPkid.value ?? null,
+            workDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+            hours,
+            memo: 'Cronometrado'
+        });
+        toast.add({
+            severity: 'success',
+            summary: `Anotadas ${hours} h en ${task.code}`,
+            life: companyStore.companyInfo.toastDuration ?? 3000
+        });
+        void load(true);
+    } catch (e: any) {
+        toast.add({
+            severity: 'error',
+            summary: 'No se pudo registrar el tiempo',
+            detail: e.response?.data?.message ?? 'Inténtalo desde la ficha de la tarea',
+            life: companyStore.companyInfo.toastDuration ?? 3000
+        });
+    }
+}
+
 function askDiscard(task: TaskDTO) {
     confirm.require({
         message: `¿Descartar la tarea "${task.name}"? Podrás indicar el motivo en la ficha.`,
@@ -605,21 +750,6 @@ function askDiscard(task: TaskDTO) {
         accept: () => openEdit(task),
         reject: () => void load()
     });
-}
-
-async function discardNow(task: TaskDTO) {
-    if (!task.pkid) return;
-    try {
-        await deleteTask(task.pkid);
-        await load();
-    } catch (e: any) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: e.response?.data?.message ?? 'No se pudo descartar',
-            life: companyStore.companyInfo.toastDuration ?? 3000
-        });
-    }
 }
 
 function onFilterEntitie(customer: any) {
@@ -746,7 +876,8 @@ function prefsSnapshot(): TaskBoardPrefs {
         mineOnly: mineOnly.value,
         overdueOnly: overdueOnly.value,
         archiveMode: archiveMode.value,
-        view: view.value
+        view: view.value,
+        compact: compact.value
     };
 }
 
@@ -761,12 +892,13 @@ function applyPrefs(p: TaskBoardPrefs | null) {
     mineOnly.value = !!p.mineOnly;
     overdueOnly.value = !!p.overdueOnly;
     archiveMode.value = !!p.archiveMode;
-    if (p.view === 'kanban' || p.view === 'gantt' || p.view === 'table') view.value = p.view;
+    compact.value = !!p.compact;
+    if (p.view === 'kanban' || p.view === 'gantt' || p.view === 'table' || p.view === 'calendar') view.value = p.view;
 }
 
 let prefsTimer: ReturnType<typeof setTimeout> | undefined;
 watch(
-    [query, filterState, filterUser, filterEntitie, filterEntitieLabel, filterPriority, mineOnly, overdueOnly, archiveMode, view],
+    [query, filterState, filterUser, filterEntitie, filterEntitieLabel, filterPriority, mineOnly, overdueOnly, archiveMode, view, compact],
     () => {
         clearTimeout(prefsTimer);
         prefsTimer = setTimeout(() => void saveTaskBoardPrefs(prefsSnapshot()), 600);
@@ -919,6 +1051,122 @@ watch(
     color: #9aa0ad;
     font-size: 0.72rem;
 }
+.card-timer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.45rem;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #f2d48a;
+    border-radius: 9px;
+    background: #fff9ec;
+}
+.card-timer > i {
+    color: #d99a06;
+    font-size: 0.95rem;
+}
+.card-timer-elapsed {
+    flex: 1;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #b06f00;
+}
+.kanban-card.timing {
+    border-color: #f2d48a;
+    box-shadow: 0 0 0 2px rgba(242, 212, 138, 0.45);
+}
+.task-kpis {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.7rem;
+}
+.task-kpis .kpi {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid #e3e8d2;
+    border-radius: 13px;
+    background: #fff;
+}
+.task-kpis .kpi.clickable {
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.task-kpis .kpi.clickable:hover {
+    border-color: var(--kiwi);
+    transform: translateY(-1px);
+}
+.task-kpis .kpi.selected {
+    border-color: var(--kiwi);
+    box-shadow: inset 0 0 0 1px var(--kiwi);
+    background: #fbfdf3;
+}
+.task-kpis .kpi-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    font-size: 1.05rem;
+    color: #648506;
+    background: #eef4d8;
+}
+.task-kpis .kpi div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.task-kpis .kpi strong {
+    color: #293444;
+    font-size: 1.25rem;
+    line-height: 1.1;
+}
+.task-kpis .kpi span {
+    color: #7d8797;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.task-kpis .kpi.doing .kpi-icon { color: #b7791f; background: #fdf3e0; }
+.task-kpis .kpi.overdue .kpi-icon { color: #c53030; background: #fdecec; }
+.task-kpis .kpi.unassigned .kpi-icon { color: #718096; background: #eef1f5; }
+.task-kpis .kpi.hours .kpi-icon { color: #2b6cb0; background: #e8f0fa; }
+.kanban-skeleton {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+.skeleton-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 320px;
+    padding: 0.7rem;
+    border: 1px solid #e3e8d2;
+    border-radius: 14px;
+    background: #fff;
+}
+.skeleton-line,
+.skeleton-card {
+    border-radius: 10px;
+    background: linear-gradient(90deg, #eef1ea 25%, #f6f8f3 37%, #eef1ea 63%);
+    background-size: 400% 100%;
+    animation: skeleton-pulse 1.4s ease infinite;
+}
+.skeleton-line { height: 20px; margin-bottom: 0.2rem; }
+.skeleton-line.w40 { width: 40%; }
+.skeleton-card { height: 88px; }
+.skeleton-card.short { height: 62px; }
+@keyframes skeleton-pulse {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
 .kanban-loading {
     margin-top: 14px;
     display: flex;
@@ -931,7 +1179,7 @@ watch(
 .kanban-board {
     margin-top: 14px;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.8rem;
 }
 .task-table-panel {
@@ -1014,6 +1262,44 @@ watch(
     font-weight: 800;
     color: #687386;
     font-size: 0.85rem;
+}
+.kanban-hours-total {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22rem;
+    margin-left: auto;
+    margin-right: 0.15rem;
+    color: #648506;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+.kanban-card.unassigned {
+    background: #fffdf6;
+}
+.kanban-card.prio-BAJA { border-left: 4px solid #b7c4d4; }
+.kanban-card.prio-MEDIA { border-left: 4px solid #7fb3d5; }
+.kanban-card.prio-ALTA { border-left: 4px solid #f0b429; }
+.kanban-card.prio-URGENTE { border-left: 4px solid #e05252; }
+.kanban-board.compact .kanban-card {
+    padding: 0.5rem 0.55rem;
+}
+.kanban-board.compact .kanban-card h3 {
+    margin: 0.15rem 0;
+    font-size: 0.88rem;
+}
+.kanban-board.compact .kanban-client,
+.kanban-board.compact .kanban-user,
+.kanban-board.compact .kanban-creator {
+    display: none;
+}
+.kanban-board.compact .kanban-meta {
+    margin-top: 0.2rem;
+}
+.kanban-board.compact .kanban-progress {
+    margin-top: 0.3rem;
+}
+.kanban-board.compact .kanban-card-footer {
+    margin-top: 0.15rem;
 }
 .kanban-cards {
     display: flex;
@@ -1163,13 +1449,21 @@ watch(
     font-size: 0.8rem;
 }
 @media (max-width: 1100px) {
-    .kanban-board {
+    .kanban-board,
+    .kanban-skeleton {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .task-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 @media (max-width: 640px) {
-    .kanban-board {
+    .kanban-board,
+    .kanban-skeleton {
         grid-template-columns: 1fr;
+    }
+    .task-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 </style>
