@@ -23,6 +23,8 @@ export interface TaskBoardPrefs {
   archiveMode?: boolean;
   view?: 'kanban' | 'gantt' | 'table' | 'calendar';
   compact?: boolean;
+  hideDoneColumn?: boolean;
+  hideDiscardedColumn?: boolean;
 }
 
 function localGet(): TaskBoardPrefs | null {

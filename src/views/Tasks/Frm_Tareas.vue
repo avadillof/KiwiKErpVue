@@ -43,6 +43,18 @@
                             :severity="compact ? 'success' : 'secondary'" text rounded
                             :title="compact ? 'Densidad cómoda' : 'Densidad compacta'"
                             @click="compact = !compact" />
+                        <Button v-if="view === 'kanban'"
+                            :icon="hideDoneColumn ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                            :label="hideDoneColumn ? 'Mostrar Hecho' : 'Ocultar Hecho'"
+                            severity="secondary" outlined size="small"
+                            :title="hideDoneColumn ? 'Volver a mostrar la columna Hecho' : 'Ocultar la columna Hecho'"
+                            @click="hideDoneColumn = !hideDoneColumn" />
+                        <Button v-if="view === 'kanban'"
+                            :icon="hideDiscardedColumn ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                            :label="hideDiscardedColumn ? 'Mostrar Descartado' : 'Ocultar Descartado'"
+                            severity="secondary" outlined size="small"
+                            :title="hideDiscardedColumn ? 'Volver a mostrar la columna Descartado' : 'Ocultar la columna Descartado'"
+                            @click="hideDiscardedColumn = !hideDiscardedColumn" />
                         <Tag v-if="runningCount" severity="warn" rounded icon="pi pi-stopwatch"
                             :value="String(runningCount)"
                             :title="`${runningCount} cronómetro${runningCount === 1 ? '' : 's'} en marcha`" />
@@ -134,8 +146,9 @@
                 </article>
             </section>
 
-            <div v-if="loading && view === 'kanban'" class="kanban-skeleton" aria-hidden="true">
-                <section v-for="n in 5" :key="n" class="skeleton-column">
+            <div v-if="loading && view === 'kanban'" class="kanban-skeleton"
+                :style="{ '--kanban-columns': columns.length }" aria-hidden="true">
+                <section v-for="col in columns" :key="col.value" class="skeleton-column">
                     <div class="skeleton-line w40"></div>
                     <div class="skeleton-card"></div>
                     <div class="skeleton-card"></div>
@@ -219,7 +232,8 @@
                 </DataTable>
             </section>
 
-            <div v-else class="kanban-board" :class="{ compact }">
+            <div v-else class="kanban-board" :class="{ compact }"
+                :style="{ '--kanban-columns': columns.length }">
                 <section v-for="col in columns" :key="col.value" class="kanban-column"
                     :class="{ 'drop-target': dropState === col.value }" @dragover.prevent="dropState = col.value"
                     @dragleave="dropState = null" @drop="onDrop(col.value)">
@@ -377,6 +391,8 @@ const notifying = ref(false);
 const exporting = ref(false);
 const view = ref<'kanban' | 'gantt' | 'table' | 'calendar'>('kanban');
 const compact = ref(false);
+const hideDoneColumn = ref(false);
+const hideDiscardedColumn = ref(false);
 const query = ref('');
 const tasks = ref<TaskDTO[]>([]);
 const dragPkid = ref<number | null>(null);
@@ -401,7 +417,10 @@ const ARCHIVE_DAYS = 60;
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
-const columns = computed(() => TASK_STATES);
+const columns = computed(() => TASK_STATES.filter((column) =>
+    !(hideDoneColumn.value && column.value === 'FINALIZADA')
+    && !(hideDiscardedColumn.value && column.value === 'DESCARTADA')
+));
 const stateOptions = computed(() => TASK_STATES.map((s) => ({ label: s.label, value: s.value })));
 const priorityOptions = computed(() => TASK_PRIORITIES.map((p) => ({ label: p.label, value: p.value })));
 const currentUserPkid = computed(() => authStore.user?.pkid ?? null);
@@ -877,7 +896,9 @@ function prefsSnapshot(): TaskBoardPrefs {
         overdueOnly: overdueOnly.value,
         archiveMode: archiveMode.value,
         view: view.value,
-        compact: compact.value
+        compact: compact.value,
+        hideDoneColumn: hideDoneColumn.value,
+        hideDiscardedColumn: hideDiscardedColumn.value
     };
 }
 
@@ -893,12 +914,14 @@ function applyPrefs(p: TaskBoardPrefs | null) {
     overdueOnly.value = !!p.overdueOnly;
     archiveMode.value = !!p.archiveMode;
     compact.value = !!p.compact;
+    hideDoneColumn.value = !!p.hideDoneColumn;
+    hideDiscardedColumn.value = !!p.hideDiscardedColumn;
     if (p.view === 'kanban' || p.view === 'gantt' || p.view === 'table' || p.view === 'calendar') view.value = p.view;
 }
 
 let prefsTimer: ReturnType<typeof setTimeout> | undefined;
 watch(
-    [query, filterState, filterUser, filterEntitie, filterEntitieLabel, filterPriority, mineOnly, overdueOnly, archiveMode, view, compact],
+    [query, filterState, filterUser, filterEntitie, filterEntitieLabel, filterPriority, mineOnly, overdueOnly, archiveMode, view, compact, hideDoneColumn, hideDiscardedColumn],
     () => {
         clearTimeout(prefsTimer);
         prefsTimer = setTimeout(() => void saveTaskBoardPrefs(prefsSnapshot()), 600);
@@ -1139,7 +1162,7 @@ watch(
 .kanban-skeleton {
     margin-top: 14px;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--kanban-columns, 5), minmax(0, 1fr));
     gap: 0.8rem;
 }
 .skeleton-column {
@@ -1179,7 +1202,7 @@ watch(
 .kanban-board {
     margin-top: 14px;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--kanban-columns, 5), minmax(0, 1fr));
     gap: 0.8rem;
 }
 .task-table-panel {
