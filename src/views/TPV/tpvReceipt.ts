@@ -56,10 +56,17 @@ export interface TpvRefundLine {
   unitGross?: number;
   tax?: number;
   total?: number;
+  net?: number;
+  taxAmount?: number;
 }
 
 /** Resguardo de devolución devuelto por POST /WebTpv/refund. */
 export interface TpvRefund {
+  fiscalCode?: string;
+  originalFiscalCode?: string;
+  verifactuStatus?: string;
+  qrUrl?: string;
+  qrPng?: string;
   refundId?: number;
   code?: string;
   chargeCode?: string;
@@ -104,6 +111,7 @@ export interface TpvCharge {
   change?: number;
   payments?: TpvReceiptPayment[];
   refundedTotal?: number;
+  refunds?: TpvRefund[];
   lines?: Array<
     TpvRefundLine & { refundedQty?: number; remainingQty?: number }
   >;

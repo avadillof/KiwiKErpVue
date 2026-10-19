@@ -26,11 +26,41 @@
           <strong>{{ document.code }}</strong
           ><span>{{ document.customerName }}</span
           ><span>{{ document.state }}</span>
+          <span v-if="document.substitutedCode">
+            Factura F3 · Sustituye al ticket {{ document.substitutedCode }}
+          </span>
         </div>
       </div>
+      <div
+        v-for="canje in canjeDocuments.filter((item) => item.refundId)"
+        :key="canje.invoiceId"
+        class="document"
+      >
+        <i class="pi pi-file" />
+        <div>
+          <strong>{{ canje.code }} · {{ money(canje.total) }}</strong>
+          <span>Factura F3 · Canje de {{ canje.substitutedCode }}</span>
+          <span>{{
+            canje.verifactuStatus === "ACCEPTED" ||
+            canje.verifactuStatus === "ACCEPTED_WITH_ERRORS"
+              ? "Aceptada"
+              : canje.verifactuStatus || "Borrador"
+          }}</span>
+        </div>
+      </div>
+      <Message
+        v-if="canjeDocuments.length > 1"
+        severity="info"
+        :closable="false"
+      >
+        {{ canjeDocuments.length }} facturas · Importe conjunto
+        {{ money(canjeDocuments.reduce((sum, item) => sum + item.total, 0)) }}.
+        La F3 del ticket y las F3 negativas de sus devoluciones se entregan
+        juntas. No hay otro cobro ni abono.
+      </Message>
       <p>
         Puedes emitirla aquí mismo con el certificado configurado para TPV y
-        descargar el PDF para imprimirlo al cliente.
+        descargar el PDF conjunto para imprimirlo al cliente.
       </p>
       <p
         v-if="job && (job.state === 'issuing' || job.state === 'polling')"
@@ -129,8 +159,12 @@
         </div>
       </div>
       <p>
-        Se creará un borrador en el ERP. Las devoluciones de este ticket se
-        vincularán a rectificativas en borrador. No se realiza otro cobro.
+        <!-- El ticket F2 conserva su identidad y su cobro al sustituirse por F3. -->
+        Se creará un borrador en el ERP. Si el ticket ya es una factura
+        simplificada, se emitirá una factura completa F3 que lo sustituya, con
+        los datos del cliente y la referencia al ticket original. Si tiene
+        devoluciones R5, se preparará también una F3 negativa por cada una,
+        conservando sus importes. No se realiza otro cobro ni abono.
       </p>
     </template>
     <Message v-if="error" severity="error" :closable="false">{{
@@ -188,6 +222,7 @@ import {
   invoiceJobs,
   requestInvoice,
 } from "./tpvInvoiceQueue";
+import type { InvoiceDocument } from "./tpvInvoiceQueue";
 import type { TpvCharge } from "./tpvReceipt";
 interface InvoiceStatus {
   invoiceId: number | null;
@@ -198,6 +233,10 @@ interface InvoiceStatus {
   customerEmail?: string;
   state?: string;
   verifactuStatus?: string;
+  fiscalType?: "F1" | "F3";
+  substitutedCode?: string;
+  documents?: InvoiceDocument[];
+  groupTotal?: number;
   rectifications?: { code: string; state: string; total: number }[];
 }
 const props = defineProps<{
@@ -249,12 +288,29 @@ const emailTo = ref("");
 const emailBusy = ref(false);
 const emailSent = ref(false);
 /** Trabajo en segundo plano de este ticket (sobrevive al cierre del diálogo). */
-const pdfReady = computed(
-  () =>
-    job.value?.state === "done" ||
-    ["ACCEPTED", "ACCEPTED_WITH_ERRORS"].includes(
-      document.value?.verifactuStatus ?? "",
-    ),
+const canjeDocuments = computed(() => {
+  const saved = document.value?.documents ?? [];
+  const current = job.value?.documents;
+  if (
+    current?.length &&
+    saved.every((item) =>
+      current.some((candidate) => candidate.invoiceId === item.invoiceId),
+    )
+  )
+    return current;
+  return saved;
+});
+const pdfReady = computed(() =>
+  canjeDocuments.value.length
+    ? canjeDocuments.value.every((item) =>
+        ["ACCEPTED", "ACCEPTED_WITH_ERRORS"].includes(
+          item.verifactuStatus ?? "",
+        ),
+      )
+    : job.value?.state === "done" ||
+      ["ACCEPTED", "ACCEPTED_WITH_ERRORS"].includes(
+        document.value?.verifactuStatus ?? "",
+      ),
 );
 const job = computed(
   () => invoiceJobs.value.get(props.charge?.chargeId ?? -1) ?? null,
@@ -284,6 +340,13 @@ watch(
         },
       );
       if (token === generation) {
+        if (
+          job.value?.state === "done" &&
+          !["ACCEPTED", "ACCEPTED_WITH_ERRORS"].includes(
+            data.verifactuStatus ?? "",
+          )
+        )
+          invoiceJobs.value.delete(props.charge!.chargeId!);
         document.value = data;
         customer.value = data.customer ?? null;
         error.value = data.customerWarning ?? "";

@@ -286,6 +286,7 @@ import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
 import Checkbox from "primevue/checkbox";
 import Message from "primevue/message";
+import { useToast } from "primevue/usetoast";
 import {
   printers,
   printerSelections,
@@ -313,6 +314,7 @@ const props = withDefaults(
   }>(),
   { language: "ZPL", registerId: "", disabled: false, showSettings: true },
 );
+const toast = useToast();
 const compatible = computed(() =>
   printers.value.filter(
     (p) =>
@@ -516,8 +518,14 @@ function save() {
       selections[key.value] = profile.id;
     persistPrintSettings(list, selections);
     draft.value = profile;
-    settingsMessage.value =
-      "Impresora guardada. No se ha enviado ningún trabajo.";
+    settingsMessage.value = "";
+    settings.value = false;
+    toast.add({
+      severity: "success",
+      summary: "Impresora guardada",
+      detail: "No se ha enviado ningún trabajo.",
+      life: 3000,
+    });
   } catch (e) {
     settingsMessage.value = detail(e);
   }

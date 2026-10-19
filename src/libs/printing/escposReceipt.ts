@@ -218,7 +218,14 @@ export function buildEscposRefund(
   line("KiwiKERP · TPV");
   if (clean(refund.companyName)) line(refund.companyName);
   if (clean(refund.companyCif)) line("N.I.F: " + clean(refund.companyCif));
-  line("DEVOLUCIÓN " + clean(refund.code));
+  line(
+    refund.fiscalCode
+      ? "RECTIFICATIVA SIMPLIFICADA R5"
+      : "DEVOLUCIÓN " + clean(refund.code),
+  );
+  if (refund.fiscalCode) line(clean(refund.fiscalCode));
+  if (refund.originalFiscalCode)
+    line("Rectifica: " + clean(refund.originalFiscalCode));
   chunks.push("\x1bE\x00");
 
   chunks.push("\x1bE\x00");
@@ -232,7 +239,10 @@ export function buildEscposRefund(
   chunks.push("\x1ba\x00");
   line("-".repeat(width));
   for (const item of refund.lines ?? []) {
-    line(item.name || item.code || "Artículo");
+    line(
+      (item.name || item.code || "Artículo") +
+        (refund.fiscalCode ? ` · IVA ${Number(item.tax || 0)}%` : ""),
+    );
     const quantity = new Intl.NumberFormat("de-DE", {
       maximumFractionDigits: 3,
     }).format(Number(item.quantity) || 0);
@@ -241,6 +251,19 @@ export function buildEscposRefund(
   line("-".repeat(width));
   chunks.push("\x1bE\x01");
   pair("TOTAL DEVUELTO", money(refund.total));
+  if (refund.fiscalCode) {
+    const net = (refund.lines ?? []).reduce(
+      (sum, line) =>
+        sum +
+        Number(
+          line.net ??
+            Number(line.total || 0) / (1 + Number(line.tax || 0) / 100),
+        ),
+      0,
+    );
+    pair("Base rectificada", money(-net));
+    pair("IVA rectificado", money(-(Number(refund.total) - net)));
+  }
   chunks.push("\x1bE\x00");
   pair(
     "Método",
@@ -252,7 +275,11 @@ export function buildEscposRefund(
   );
   line("-".repeat(width));
   chunks.push("\x1ba\x01");
-  line("Documento no válido como factura");
+  if (refund.fiscalCode) {
+    pair("IMPORTE RECTIFICADO", money(-Number(refund.total)));
+    line("VERI*FACTU");
+    if (clean(refund.qrUrl)) chunks.push(qrEscpos(clean(refund.qrUrl)));
+  } else line("Documento no válido como factura");
   chunks.push("\x1ba\x00", "\n\n\n");
   if (layout.cut) chunks.push("\x1dV\x01");
   return chunks.join("");

@@ -105,10 +105,18 @@ ${prebill ? "" : ticketBarcodeSvg(receipt.code)}
 /** Resguardo de devolución en HTML (impresión por controlador). */
 export function buildHtmlRefund(refund: TpvRefund): string {
   const currency = refund.currency || "EUR";
+  const net = (refund.lines ?? []).reduce(
+    (sum, line) =>
+      sum +
+      Number(
+        line.net ?? Number(line.total || 0) / (1 + Number(line.tax || 0) / 100),
+      ),
+    0,
+  );
   const lines = (refund.lines ?? [])
     .map(
       (l) =>
-        `<tr><td class="qty">${esc(new Intl.NumberFormat("de-DE", { maximumFractionDigits: 3 }).format(Number(l.quantity) || 0))}&times;</td><td>${esc(l.name)}<br><span class="dim">${esc(l.code)} &middot; ${esc(money(l.unitGross, currency))}/ud</span></td><td class="r">${esc(money(l.total, currency))}</td></tr>`,
+        `<tr><td class="qty">${esc(new Intl.NumberFormat("de-DE", { maximumFractionDigits: 3 }).format(Number(l.quantity) || 0))}&times;</td><td>${esc(l.name)}<br><span class="dim">${esc(l.code)} &middot; ${esc(money(l.unitGross, currency))}/ud &middot; IVA ${esc(l.tax ?? 0)}%</span></td><td class="r">${esc(money(l.total, currency))}</td></tr>`,
     )
     .join("");
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Devoluci&oacute;n ${esc(refund.code)}</title><style>
@@ -121,14 +129,16 @@ table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:3px 0}.q
 </style></head><body>
 <h1>${esc(refund.companyName || "KiwiKERP · TPV")}</h1>
 ${refund.companyCif ? `<p class="c dim">N.I.F: ${esc(refund.companyCif)}</p>` : ""}
-<h2>DEVOLUCI&Oacute;N ${esc(refund.code)}</h2>
+<h2>${refund.fiscalCode ? `RECTIFICATIVA SIMPLIFICADA R5 ${esc(refund.fiscalCode)}` : `DEVOLUCI&Oacute;N ${esc(refund.code)}`}</h2>
+${refund.originalFiscalCode ? `<p class="c">Rectifica ${esc(refund.originalFiscalCode)}</p>` : ""}
 ${refund.chargeCode ? `<p class="c dim">Devuelve ticket ${esc(refund.chargeCode)}</p>` : ""}
 <p class="c dim">${esc(fmtDate(refund.refundedAt))}${refund.cashier ? ` &middot; ${esc(refund.cashier)}` : ""}</p>
 ${refund.customerName ? `<p class="c">Cliente: ${esc(refund.customerName)}${refund.customerNif ? ` &middot; N.I.F: ${esc(refund.customerNif)}` : ""}</p>` : ""}
 ${refund.reason ? `<div class="reason">Motivo: ${esc(refund.reason)}</div>` : ""}
 <hr><table>${lines}</table><hr>
+${refund.fiscalCode ? `<div class="row"><span>Base rectificada</span><span>${esc(money(-net, currency))}</span></div><div class="row"><span>IVA rectificado</span><span>${esc(money(-(Number(refund.total) - net), currency))}</span></div>` : ""}
 <div class="row total"><span>Total devuelto</span><span>${esc(money(refund.total, currency))}</span></div>
 <div class="row"><span>M&eacute;todo</span><span>${esc((refund.method && METHOD_LABEL[refund.method]) || refund.method)}</span></div>
-<div class="nofiscal">Documento no v&aacute;lido como factura</div>
+${refund.fiscalCode ? `<div class="row"><span>Importe rectificado</span><span>${esc(money(-Number(refund.total), currency))}</span></div><p class="c dim">${esc(refund.verifactuStatus === "ACCEPTED" || refund.verifactuStatus === "ACCEPTED_WITH_ERRORS" ? "Registrada en VeriFactu" : "Envío VeriFactu: " + (refund.verifactuStatus || "PENDING"))}</p>${refund.qrPng ? `<p class="c"><img src="data:image/png;base64,${esc(refund.qrPng)}" width="150" height="150" alt="QR AEAT"><br>VERI*FACTU</p>` : ""}` : `<div class="nofiscal">Documento no v&aacute;lido como factura</div>`}
 </body></html>`;
 }

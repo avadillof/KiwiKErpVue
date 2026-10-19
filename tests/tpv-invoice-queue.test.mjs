@@ -26,6 +26,33 @@ function queue({ get, post = async () => ({ data: { pkid: 77, code: 'FC-77', ver
 }
 const draft = { invoiceId: 77, state: 'Borrador / Draft', code: 'DRAFT_TPV-49', verifactuStatus: null };
 const accepted = { invoiceId: 77, state: 'Confirmada', code: 'FC-77', verifactuStatus: 'ACCEPTED' };
+
+test('Canje del F2 y R5 espera todo el conjunto antes de descargar', async () => {
+  let complete = false;
+  const documents = () => [
+    { invoiceId: 77, code: 'FC-77', total: 6.56, verifactuStatus: 'ACCEPTED' },
+    { invoiceId: 78, code: 'FC-78', refundId: 5, total: -3.28, substitutedCode: 'RT-5', verifactuStatus: complete ? 'ACCEPTED' : 'PENDING' },
+  ];
+  const q = queue({ get: async () => ({ data: { ...accepted, verifactuStatus: complete ? 'ACCEPTED' : 'PENDING', documents: documents() } }) });
+  const job = await q.request();
+  assert.equal(job.state, 'polling');
+  assert.equal(q.downloads.length, 0);
+  assert.equal(job.documents.length, 2);
+  complete = true;
+  await q.tick();
+  assert.equal(q.invoiceJobs.value.get(49).state, 'done');
+  assert.equal(q.downloads.length, 1);
+  assert.equal(q.invoiceJobs.value.get(49).documents[1].verifactuStatus, 'ACCEPTED');
+});
+
+test('Error en F3 negativa impide descargar aunque la principal esté aceptada', async () => {
+  const q = queue({ get: async () => ({ data: { ...accepted, verifactuStatus: 'NEEDS_CORRECTION', verifactuResponse: 'FC-78: revisar destinatario', documents: [{ invoiceId: 77, verifactuStatus: 'ACCEPTED' }, { invoiceId: 78, refundId: 5, verifactuStatus: 'NEEDS_CORRECTION' }] } }) });
+  const job = await q.request();
+  assert.equal(job.state, 'error');
+  assert.match(job.error, /FC-78/);
+  assert.equal(q.downloads.length, 0);
+  assert.equal(q.calls.filter(call => call[0] === 'POST').length, 0);
+});
 test('Accepted invoice downloads after reload without POST or Vue injection', async () => {
   const q = queue({ get: async () => ({ data: accepted }) });
   const job = await q.request();

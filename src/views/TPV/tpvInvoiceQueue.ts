@@ -14,6 +14,16 @@ export type InvoiceJobState =
   | "pending"
   | "done"
   | "error";
+export interface InvoiceDocument {
+  invoiceId: number;
+  code: string;
+  state: string;
+  refundId?: number | null;
+  substitutedCode?: string;
+  total: number;
+  verifactuStatus?: string;
+  verifactuResponse?: string;
+}
 export interface InvoiceJob {
   chargeId: number;
   openingId: number;
@@ -23,6 +33,7 @@ export interface InvoiceJob {
   invoiceId: number | null;
   invoiceCode: string;
   verifactuStatus: string;
+  documents?: InvoiceDocument[];
 }
 
 export const invoiceJobs = ref(new Map<number, InvoiceJob>());
@@ -126,6 +137,7 @@ export async function requestInvoice(
     );
     if (!active(job)) return job;
     const saved = existing.data;
+    job.documents = saved?.documents;
     job.invoiceId = saved?.invoiceId ?? null;
     job.invoiceCode = saved?.code ?? "";
     job.verifactuStatus = saved?.verifactuStatus ?? "";
@@ -155,6 +167,7 @@ export async function requestInvoice(
     );
     if (!active(job)) return job;
     if (data && typeof data === "object") {
+      if (Array.isArray(data.documents)) job.documents = data.documents;
       if (typeof (data.invoiceId ?? data.pkid) === "number")
         job.invoiceId = data.invoiceId ?? data.pkid;
       if (typeof data.code === "string") job.invoiceCode = data.code;
@@ -252,6 +265,7 @@ async function pollAll() {
         );
         if (!active(job)) continue;
         if (data && typeof data === "object") {
+          if (Array.isArray(data.documents)) job.documents = data.documents;
           if (typeof (data.invoiceId ?? data.pkid) === "number")
             job.invoiceId = data.invoiceId ?? data.pkid;
           if (typeof data.code === "string") job.invoiceCode = data.code;

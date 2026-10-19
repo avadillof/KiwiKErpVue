@@ -1,4 +1,8 @@
 <template>
+  <TpvRecInvoiceDialog
+    ref="tpvRecDialog"
+    :can-print="securityStore.hasPermission(PERM.CREDIT_PRINT)"
+  />
   <RecInvoiceEmailDialog ref="emailDialog" @sent="refresh" />
   <RecInvoiceAuditDialog ref="recInvoiceAuditDialog" />
   <SalesTraceabilityDialog ref="traceabilityRef" />
@@ -29,20 +33,20 @@
         </div>
       </div>
       <div class="hero-actions">
-      <Button
-        v-if="aiAssistantAvailable"
-        class="assistant-access"
-        label="Asistente de Facturas"
-        icon="pi pi-sparkles"
-        @click="invoiceAssistant?.open()"
-      />
-      <Button
-        label="Ventas"
-        icon="pi pi-arrow-left"
-        text
-        severity="secondary"
-        @click="router.push({ name: 'Ventas' })"
-      />
+        <Button
+          v-if="aiAssistantAvailable"
+          class="assistant-access"
+          label="Asistente de Facturas"
+          icon="pi pi-sparkles"
+          @click="invoiceAssistant?.open()"
+        />
+        <Button
+          label="Ventas"
+          icon="pi pi-arrow-left"
+          text
+          severity="secondary"
+          @click="router.push({ name: 'Ventas' })"
+        />
       </div>
     </header>
 
@@ -63,7 +67,9 @@
             label="Enviar pendientes"
             icon="pi pi-send"
             outlined
-            v-tooltip.bottom="'Envía por correo las rectificativas emitidas y nunca enviadas al contacto principal del cliente (máximo 50 por tanda). Queda registrado en cada rectificativa.'"
+            v-tooltip.bottom="
+              'Envía por correo las rectificativas emitidas y nunca enviadas al contacto principal del cliente (máximo 50 por tanda). Queda registrado en cada rectificativa.'
+            "
             :disabled="busy || sendingPending"
             @click="openSendPending"
           /><Button
@@ -80,7 +86,7 @@
         class="table compact-table custom-header-table"
         selectionMode="single"
         v-model:selection="selected"
-        dataKey="pkid"
+        dataKey="rowKey"
         endpoint="WebGetSalesRecInvoices"
         :params="{
           status: status || undefined,
@@ -90,7 +96,8 @@
         :requestConfig="() => auth.portalRequestConfig()"
         :showPaginator="true"
         :filterable="true"
-        :showActions="true">
+        :showActions="true"
+      >
         <template #panelOptions>
           <div class="rec-filters">
             <Select
@@ -111,7 +118,8 @@
                     value
                   "
                   :severity="situationFilterSeverity(value)"
-                  rounded /><span v-else>{{ placeholder }}</span></template
+                  rounded
+                /><span v-else>{{ placeholder }}</span></template
               ><template #option="{ option }"
                 ><Tag
                   :value="option.label"
@@ -136,7 +144,8 @@
                       ?.label || value
                   "
                   :severity="verifactuFilterSeverity(value)"
-                  rounded /><span v-else>{{ placeholder }}</span></template
+                  rounded
+                /><span v-else>{{ placeholder }}</span></template
               ><template #option="{ option }"
                 ><Tag
                   :value="option.label"
@@ -198,19 +207,45 @@
           style="min-width: 155px"
           bodyStyle="white-space:nowrap"
           ><template #body="{ data }"
-            ><span class="code-with-indicators"><span :class="{ 'draft-code': data.draft }">{{
-              data.code
-            }}</span><span v-if="data.hasNotes || data.rectificationCount || data.attachmentCount" class="rectification-indicator"><Tag v-if="data.attachmentCount" :value="String(data.attachmentCount)" icon="pi pi-paperclip" severity="info" rounded /><i v-if="data.hasNotes" class="pi pi-comment notes" title="Tiene observaciones" /><span v-if="data.rectificationCount" :title="rectificationTooltip(data)"><Tag :value="String(data.rectificationCount)" icon="pi pi-undo" severity="warn" rounded /></span></span></span></template
-          ></Column
+            ><span class="code-with-indicators"
+              ><span :class="{ 'draft-code': data.draft }">{{ data.code }}</span
+              ><Tag
+                v-if="data.tpvRefund"
+                value="R5 · TPV"
+                severity="info" /><span
+                v-if="
+                  data.hasNotes ||
+                  data.rectificationCount ||
+                  data.attachmentCount
+                "
+                class="rectification-indicator"
+                ><Tag
+                  v-if="data.attachmentCount"
+                  :value="String(data.attachmentCount)"
+                  icon="pi pi-paperclip"
+                  severity="info"
+                  rounded /><i
+                  v-if="data.hasNotes"
+                  class="pi pi-comment notes"
+                  title="Tiene observaciones" /><span
+                  v-if="data.rectificationCount"
+                  :title="rectificationTooltip(data)"
+                  ><Tag
+                    :value="String(data.rectificationCount)"
+                    icon="pi pi-undo"
+                    severity="warn"
+                    rounded /></span></span></span></template></Column
         ><Column
           field="date"
           header="Fecha"
           sortable
           style="width: 8rem"
           bodyStyle="white-space:nowrap;font-variant-numeric:tabular-nums"
-          ><template #body="{ data }"><span class="invoice-date-time">{{
-            dateTime(data.date)
-          }}</span></template></Column
+          ><template #body="{ data }"
+            ><span class="invoice-date-time">{{
+              dateTime(data.date)
+            }}</span></template
+          ></Column
         ><Column
           field="dateSend"
           header="Enviado el"
@@ -259,11 +294,13 @@
           ><template #body="{ data }"
             ><Tag
               :value="
-                data.draft || data.cancelled
-                  ? 'No aplica'
-                  : data.paid
-                    ? 'Pagada'
-                    : 'Pendiente'
+                data.tpvRefund
+                  ? 'Devuelta en TPV'
+                  : data.draft || data.cancelled
+                    ? 'No aplica'
+                    : data.paid
+                      ? 'Pagada'
+                      : 'Pendiente'
               "
               :severity="
                 data.paid && !data.draft && !data.cancelled
@@ -355,21 +392,24 @@
       </div>
     </section>
 
-      <Dialog
-        v-model:visible="pickerVisible"
-        modal
-        class="kiwik-dialog invoice-picker-dialog"
-        :style="{ width: '65rem', height: '70vh' }"
-        :breakpoints="{ '900px': '96vw' }"
-        :pt="{
-          root: { class: 'kiwik-dialog' },
-          header: { class: 'kiwik-dialog-header' },
-          content: { class: 'kiwik-dialog-content' },
-          footer: { class: 'kiwik-dialog-footer' },
-        }"
-      >
+    <Dialog
+      v-model:visible="pickerVisible"
+      modal
+      class="kiwik-dialog invoice-picker-dialog"
+      :style="{ width: '65rem', height: '70vh' }"
+      :breakpoints="{ '900px': '96vw' }"
+      :pt="{
+        root: { class: 'kiwik-dialog' },
+        header: { class: 'kiwik-dialog-header' },
+        content: { class: 'kiwik-dialog-content' },
+        footer: { class: 'kiwik-dialog-footer' },
+      }"
+    >
       <template #header>
-        <b><i class="pi pi-file-edit"></i> Nueva rectificativa · Documento de origen</b>
+        <b
+          ><i class="pi pi-file-edit"></i> Nueva rectificativa · Documento de
+          origen</b
+        >
       </template>
       <Message v-if="dialogError" severity="error" :closable="false">{{
         dialogError
@@ -386,7 +426,7 @@
           :loading="busy"
         />
       </form>
-      
+
       <DataTable
         :value="invoiceOptions"
         :loading="busy"
@@ -440,7 +480,12 @@
       }"
     >
       <template #header>
-        <b><i class="pi pi-file-edit"></i> {{ form.pkid ? `Rectificativa ${form.code}` : 'Nueva rectificativa' }}</b>
+        <b
+          ><i class="pi pi-file-edit"></i>
+          {{
+            form.pkid ? `Rectificativa ${form.code}` : "Nueva rectificativa"
+          }}</b
+        >
       </template>
       <Message v-if="dialogError" severity="error" :closable="false">{{
         dialogError
@@ -624,7 +669,8 @@
             v-model="form.terms"
             rows="6"
             maxlength="1000"
-            :disabled="!editable || busy" /></label>
+            :disabled="!editable || busy"
+        /></label>
       </div>
       <section v-if="form.verifactuStatus" class="fiscal">
         <h3>Seguimiento VeriFactu</h3>
@@ -830,7 +876,8 @@
       }"
       ><template #header
         ><b><i class="pi pi-ban"></i> Cancelar borrador</b></template
-      ><p>
+      >
+      <p>
         Se conservará el documento cancelado y se liberarán sus cantidades para
         otra rectificativa.
       </p>
@@ -864,14 +911,12 @@
       ><template #header
         ><b
           ><i class="pi pi-wallet"></i>
-          {{
-            paidValue ? "Marcar como pagada" : "Desmarcar como pagada"
-          }}</b
+          {{ paidValue ? "Marcar como pagada" : "Desmarcar como pagada" }}</b
         ></template
       ><Message v-if="dialogError" severity="error" :closable="false">{{
         dialogError
-      }}</Message
-      ><p>
+      }}</Message>
+      <p>
         {{
           paidValue
             ? `Se marcará como pagada la rectificativa ${paidTarget?.code || ""}. El abono quedará liquidado sin alterar líneas, PDF ni estado VeriFactu.`
@@ -901,7 +946,11 @@
       :closable="!sendingPending"
       :closeOnEscape="!sendingPending"
       :style="{ width: 'min(860px,95vw)' }"
-      :contentStyle="{ maxHeight: '62vh', overflowY: 'auto', padding: '1.25rem 1.5rem' }"
+      :contentStyle="{
+        maxHeight: '62vh',
+        overflowY: 'auto',
+        padding: '1.25rem 1.5rem',
+      }"
       :pt="{
         root: { class: 'kiwik-dialog' },
         header: { class: 'kiwik-dialog-header' },
@@ -912,25 +961,35 @@
       <template v-if="!pendingResult">
         <p>
           Se enviarán las rectificativas emitidas, aceptadas por VeriFactu y
-          nunca enviadas que tengan contacto principal con correo válido
-          (máximo 50 por tanda).
+          nunca enviadas que tengan contacto principal con correo válido (máximo
+          50 por tanda).
         </p>
         <p>
-          El envío se procesa en segundo plano y cada correo queda registrado
-          en el historial de su rectificativa. Esta ventana se cerrará al
-          lanzar el envío y te avisaremos con el resultado.
+          El envío se procesa en segundo plano y cada correo queda registrado en
+          el historial de su rectificativa. Esta ventana se cerrará al lanzar el
+          envío y te avisaremos con el resultado.
         </p>
-        <div v-if="pendingPreviewLoading" class="flex justify-content-center py-3">
+        <div
+          v-if="pendingPreviewLoading"
+          class="flex justify-content-center py-3"
+        >
           <i class="pi pi-spin pi-spinner" />&nbsp;Cargando pendientes…
         </div>
-        <Message v-else-if="pendingPreviewError" severity="error" :closable="false">{{
-          pendingPreviewError
-        }}</Message>
+        <Message
+          v-else-if="pendingPreviewError"
+          severity="error"
+          :closable="false"
+          >{{ pendingPreviewError }}</Message
+        >
         <template v-else-if="pendingPreview">
           <p>
             <b>{{ pendingPreview.count }} rectificativas</b> en
             <b>{{ pendingPreview.groups?.length ?? 0 }} clientes</b
-            >{{ pendingPreview.truncated ? " (máximo 50, se continúa después)" : "" }}:
+            >{{
+              pendingPreview.truncated
+                ? " (máximo 50, se continúa después)"
+                : ""
+            }}:
           </p>
           <Message
             v-if="!pendingPreview.groups?.length"
@@ -938,13 +997,21 @@
             :closable="false"
             >No hay pendientes que cumplan los criterios.</Message
           >
-          <details v-for="group in pendingPreview.groups" :key="group.client" class="pending-group">
+          <details
+            v-for="group in pendingPreview.groups"
+            :key="group.client"
+            class="pending-group"
+          >
             <summary>
               <span class="pending-client"
                 ><b>{{ group.client || "Sin cliente" }}</b
-                ><small>{{ group.contactName || "sin contacto" }} · {{ group.email || "sin correo" }}</small></span
+                ><small
+                  >{{ group.contactName || "sin contacto" }} ·
+                  {{ group.email || "sin correo" }}</small
+                ></span
               ><span class="pending-totals"
-                >{{ group.invoices?.length ?? 0 }} rectificativas · {{ money(group.total, "€") }}</span
+                >{{ group.invoices?.length ?? 0 }} rectificativas ·
+                {{ money(group.total, "€") }}</span
               >
             </summary>
             <Message v-if="group.warning" severity="warn" :closable="false">{{
@@ -965,8 +1032,8 @@
           {{ pendingResult.failedCount }}</Message
         >
         <p v-if="pendingResult.truncated">
-          Se alcanzó el máximo de 50: repite la operación para continuar con
-          el resto.
+          Se alcanzó el máximo de 50: repite la operación para continuar con el
+          resto.
         </p>
         <details v-if="pendingResult.failed?.length">
           <summary>Fallidas ({{ pendingResult.failed.length }})</summary>
@@ -1000,14 +1067,19 @@
               label="Enviar pendientes"
               icon="pi pi-send"
               style="white-space: nowrap; min-width: 190px"
-              v-tooltip.bottom="'Confirma el envío en segundo plano a los contactos principales de los clientes.'"
+              v-tooltip.bottom="
+                'Confirma el envío en segundo plano a los contactos principales de los clientes.'
+              "
               :loading="sendingPending"
               @click="sendPending"
             />
           </div></div
       ></template>
     </Dialog>
-    <VeriFactuQueuePanel @open-invoice="openDetail" @processed="onQueueProcessed" />
+    <VeriFactuQueuePanel
+      @open-invoice="openDetail"
+      @processed="onQueueProcessed"
+    />
     <VeriFactuChainPanel ref="chainPanel" />
   </main>
 </template>
@@ -1035,6 +1107,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useSecurityStore } from "@/stores/securityStore";
 import { PERM } from "@/services/Frm_Main/permissions";
 import { useToast } from "primevue/usetoast";
+import TpvRecInvoiceDialog from "./TpvRecInvoiceDialog.vue";
 import RecInvoiceEmailDialog from "./RecInvoiceEmailDialog.vue";
 import RecInvoiceAuditDialog from "./RecInvoiceAuditDialog.vue";
 import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
@@ -1063,12 +1136,13 @@ async function checkAiStatus() {
     aiAssistantAvailable.value = false;
   }
 }
+const tpvRecDialog = ref<InstanceType<typeof TpvRecInvoiceDialog> | null>(null);
 const emailDialog = ref<InstanceType<typeof RecInvoiceEmailDialog> | null>(
   null,
 );
-const recInvoiceAuditDialog = ref<
-  InstanceType<typeof RecInvoiceAuditDialog> | null
->(null);
+const recInvoiceAuditDialog = ref<InstanceType<
+  typeof RecInvoiceAuditDialog
+> | null>(null);
 const auth = useAuthStore();
 const securityStore = useSecurityStore();
 const api = axios.create();
@@ -1139,75 +1213,88 @@ async function onNotesSaved() {
     }
   }
 }
-const rowItems = computed(() => [
-  {
-    label: "Abrir rectificativa",
-    icon: "pi pi-eye",
-    command: () => openDetail(selected.value?.pkid),
-  },
-  {
-    label: "Trazabilidad comercial",
-    icon: "pi pi-sitemap",
-    command: () =>
-      traceabilityRef.value?.open("RECTIFICATION", selected.value?.pkid),
-  },
-  {
-    label: "Auditoría de emisión",
-    icon: "pi pi-history",
-    visible: securityStore.hasPermission(PERM.CREDIT_ISSUE),
-    command: () => recInvoiceAuditDialog.value?.open(selected.value),
-  },
-  ...(canMarkPaid(selected.value) && securityStore.hasPermission(PERM.CREDIT_MARK_PAID)
+const rowItems = computed(() =>
+  selected.value?.tpvRefund
     ? [
         {
-          label: selected.value?.paid
-            ? "Desmarcar como pagada"
-            : "Marcar como pagada",
-          icon: "pi pi-wallet",
-          command: () => askMarkPaid(selected.value, !selected.value?.paid),
+          label: "Consultar / Imprimir R5",
+          icon: "pi pi-eye",
+          command: () => tpvRecDialog.value?.open(selected.value.refundId),
         },
       ]
-    : []),
-  { separator: true },
-  {
-    label: selected.value?.dateSend
-      ? "Reenviar por correo"
-      : "Enviar por correo",
-    visible: securityStore.hasPermission(PERM.CREDIT_EMAIL),
-    icon: "pi pi-envelope",
-    command: () => emailDialog.value?.open(selected.value),
-  },
-  {
-    label: "Historial de correo",
-    visible: securityStore.hasPermission(PERM.CREDIT_EMAIL),
-    icon: "pi pi-history",
-    command: () => emailDialog.value?.open(selected.value, "history"),
-  },
-  { separator: true },
-  {
-    label: "Ver / Imprimir rectificativa",
-    visible: securityStore.hasPermission(PERM.CREDIT_PRINT),
-    icon: "pi pi-print",
-    disabled: selected.value?.verifactuStatus !== "ACCEPTED" || busy.value,
-    command: () => openRecInvoicePdf(selected.value),
-  },
-  { separator: true },
-  {
-    label: "Notas",
-    visible: securityStore.hasPermission(PERM.CREDIT_NOTES),
-    icon: "pi pi-comments",
-    command: () => {
-      noteRequest.id = selected.value?.pkid ?? -1;
-      notesVisible.value = true;
-    },
-  },
-  {
-    label: `Documentos${selected.value?.attachmentCount ? ` (${selected.value.attachmentCount})` : ""}`,
-    visible: securityStore.hasPermission(PERM.CREDIT_DOCS),
-    icon: "pi pi-paperclip",
-    command: () => openAttachments(selected.value),
-  },
-]);
+    : [
+        {
+          label: "Abrir rectificativa",
+          icon: "pi pi-eye",
+          command: () => openDetail(selected.value?.pkid),
+        },
+        {
+          label: "Trazabilidad comercial",
+          icon: "pi pi-sitemap",
+          command: () =>
+            traceabilityRef.value?.open("RECTIFICATION", selected.value?.pkid),
+        },
+        {
+          label: "Auditoría de emisión",
+          icon: "pi pi-history",
+          visible: securityStore.hasPermission(PERM.CREDIT_ISSUE),
+          command: () => recInvoiceAuditDialog.value?.open(selected.value),
+        },
+        ...(canMarkPaid(selected.value) &&
+        securityStore.hasPermission(PERM.CREDIT_MARK_PAID)
+          ? [
+              {
+                label: selected.value?.paid
+                  ? "Desmarcar como pagada"
+                  : "Marcar como pagada",
+                icon: "pi pi-wallet",
+                command: () =>
+                  askMarkPaid(selected.value, !selected.value?.paid),
+              },
+            ]
+          : []),
+        { separator: true },
+        {
+          label: selected.value?.dateSend
+            ? "Reenviar por correo"
+            : "Enviar por correo",
+          visible: securityStore.hasPermission(PERM.CREDIT_EMAIL),
+          icon: "pi pi-envelope",
+          command: () => emailDialog.value?.open(selected.value),
+        },
+        {
+          label: "Historial de correo",
+          visible: securityStore.hasPermission(PERM.CREDIT_EMAIL),
+          icon: "pi pi-history",
+          command: () => emailDialog.value?.open(selected.value, "history"),
+        },
+        { separator: true },
+        {
+          label: "Ver / Imprimir rectificativa",
+          visible: securityStore.hasPermission(PERM.CREDIT_PRINT),
+          icon: "pi pi-print",
+          disabled:
+            selected.value?.verifactuStatus !== "ACCEPTED" || busy.value,
+          command: () => openRecInvoicePdf(selected.value),
+        },
+        { separator: true },
+        {
+          label: "Notas",
+          visible: securityStore.hasPermission(PERM.CREDIT_NOTES),
+          icon: "pi pi-comments",
+          command: () => {
+            noteRequest.id = selected.value?.pkid ?? -1;
+            notesVisible.value = true;
+          },
+        },
+        {
+          label: `Documentos${selected.value?.attachmentCount ? ` (${selected.value.attachmentCount})` : ""}`,
+          visible: securityStore.hasPermission(PERM.CREDIT_DOCS),
+          icon: "pi pi-paperclip",
+          command: () => openAttachments(selected.value),
+        },
+      ],
+);
 const validatingIssue = ref(false);
 const issueValidated = ref(false);
 const issueValidationErrors = ref<string[]>([]);
@@ -1305,7 +1392,9 @@ function rectMoney(n: number, currency: string) {
 }
 function rectificationTooltip(item: any) {
   const rows = item?.rectifications ?? [];
-  return rows.length ? `Rectificaciones asociadas (${rows.length})\n${rows.map((row: any) => `${row.code}: ${rectMoney(row.total, item.currency)}`).join("\n")}\nTotal: ${rectMoney(item.rectificationTotal, item.currency)}` : "Sin rectificaciones asociadas";
+  return rows.length
+    ? `Rectificaciones asociadas (${rows.length})\n${rows.map((row: any) => `${row.code}: ${rectMoney(row.total, item.currency)}`).join("\n")}\nTotal: ${rectMoney(item.rectificationTotal, item.currency)}`
+    : "Sin rectificaciones asociadas";
 }
 function dateLabel(date: string) {
   return date ? new Date(date).toLocaleDateString("es-ES") : "—";
@@ -1468,7 +1557,9 @@ async function pollSendPending() {
   if (!sendPendingJobId.value) return;
   try {
     const { data } = await api.get(
-      backendUrl(`/WebSendPendingSalesRecInvoiceEmails/${sendPendingJobId.value}`),
+      backendUrl(
+        `/WebSendPendingSalesRecInvoiceEmails/${sendPendingJobId.value}`,
+      ),
     );
     if (data.status === "RUNNING") return;
     if (pendingTimer) window.clearInterval(pendingTimer);
@@ -1506,10 +1597,7 @@ async function pollSendPending() {
   }
 }
 const year = ref(new Date().getFullYear());
-const years = Array.from(
-  { length: 5 },
-  (_, i) => new Date().getFullYear() - i,
-);
+const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 const statsExpanded = ref(true);
 const loadingStats = ref(false);
 const recStats = ref<any>({
@@ -1564,8 +1652,18 @@ const kpis = computed(() => [
 ]);
 const chartData = computed(() => ({
   labels: [
-    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
   ],
   datasets: [
     {
@@ -1587,9 +1685,12 @@ const chartOptions = {
 async function loadStats() {
   loadingStats.value = true;
   try {
-    const { data } = await api.get(backendUrl("/WebGetSalesRecInvoiceSummary"), {
-      params: { year: year.value },
-    });
+    const { data } = await api.get(
+      backendUrl("/WebGetSalesRecInvoiceSummary"),
+      {
+        params: { year: year.value },
+      },
+    );
     recStats.value = { ...recStats.value, ...data };
   } catch (e) {
     error.value = message(e);
@@ -1600,10 +1701,20 @@ async function loadStats() {
 watch(year, loadStats);
 const tableMenu = ref<any>(null);
 const tableItems = computed(() => {
-  const t: any[] = [{ label: "Refrescar", icon: "pi pi-refresh", command: () => refreshTable() }];
+  const t: any[] = [
+    {
+      label: "Refrescar",
+      icon: "pi pi-refresh",
+      command: () => refreshTable(),
+    },
+  ];
   if (securityStore.hasPermission(PERM.RPT_EXPORT)) {
     t.push({ separator: true });
-    t.push({ label: "Exportar Excel", icon: "pi pi-file-excel", command: () => tableRef.value?.exportToExcel() });
+    t.push({
+      label: "Exportar Excel",
+      icon: "pi pi-file-excel",
+      command: () => tableRef.value?.exportToExcel(),
+    });
   }
   return t;
 });
@@ -1647,8 +1758,10 @@ async function findInvoices() {
         },
       })
     ).data.content
-      .filter((i: any) =>
-        ["ACCEPTED", "ACCEPTED_WITH_ERRORS"].includes(i.verifactuStatus),
+      .filter(
+        (i: any) =>
+          !i.tpvRefund &&
+          ["ACCEPTED", "ACCEPTED_WITH_ERRORS"].includes(i.verifactuStatus),
       )
       .map((i: any) => ({ ...i, sourceRecInvoiceId: i.pkid }));
     // Consultar disponibilidad antes de ofrecer el documento; al seleccionarlo
@@ -1999,15 +2112,23 @@ onUnmounted(() => {
   border-color: #dfe4ea;
   border-radius: 14px;
 }
-.list-card > .table { flex: 1 1 auto; min-height: 0; }
+.list-card > .table {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .list-card .toolbar {
   flex: 0 0 auto;
   min-height: 62px;
   padding: 12px 16px;
   border-bottom: 1px solid #e8ecf0;
 }
-.list-card .toolbar h2 { margin: 0 0 3px; font-size: 1rem; }
-.list-card .toolbar small { font-size: .75rem; }
+.list-card .toolbar h2 {
+  margin: 0 0 3px;
+  font-size: 1rem;
+}
+.list-card .toolbar small {
+  font-size: 0.75rem;
+}
 .list-card .toolbar-actions {
   display: flex;
   align-items: center;
@@ -2236,11 +2357,18 @@ onUnmounted(() => {
   color: #657084;
   font-size: 0.73rem;
 }
-.list-card :deep(.table-container) { width: 100%; }
+.list-card :deep(.table-container) {
+  width: 100%;
+}
 .list-card :deep(.table-container),
 .list-card :deep(.datatable-wrapper),
-.list-card :deep(.p-datatable-wrapper) { max-width: 100%; min-width: 0; }
-.list-card :deep(.p-datatable-table) { min-width: 0; }
+.list-card :deep(.p-datatable-wrapper) {
+  max-width: 100%;
+  min-width: 0;
+}
+.list-card :deep(.p-datatable-table) {
+  min-width: 0;
+}
 .hero,
 .heading,
 .toolbar,
@@ -2336,10 +2464,10 @@ small {
   color: #253000;
 }
 .mode-field :deep(.p-select.p-focus) {
-  box-shadow: 0 0 0 2px rgba(156, 193, 10, .35);
+  box-shadow: 0 0 0 2px rgba(156, 193, 10, 0.35);
 }
 .mode-field :deep(.p-select.p-disabled) {
-  opacity: .75;
+  opacity: 0.75;
 }
 .wide {
   grid-column: 1 / -1;
@@ -2384,7 +2512,6 @@ small {
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
 }
-
 
 :global(.rec-dialog) {
   border-radius: 12px;
@@ -2469,22 +2596,20 @@ small {
   color: #7b8f22;
 }
 
+:global(.invoice-picker-dialog .p-dialog-content) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 
+.invoice-picker-dialog .filters {
+  flex: 0 0 auto;
+}
 
-  :global(.invoice-picker-dialog .p-dialog-content) {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .invoice-picker-dialog .filters {
-    flex: 0 0 auto;
-  }
-
-  .invoice-picker-dialog .p-datatable {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
+.invoice-picker-dialog .p-datatable {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 </style>

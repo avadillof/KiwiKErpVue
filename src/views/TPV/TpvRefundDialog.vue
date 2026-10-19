@@ -124,6 +124,15 @@
           </div>
           <div class="refund-card-actions">
             <Button
+              v-for="refund in charge.refunds ?? []"
+              :key="refund.refundId"
+              :label="refund.fiscalCode || refund.code || 'Devolución'"
+              icon="pi pi-print"
+              outlined
+              :disabled="printing"
+              @click="reprintRefund(refund)"
+            />
+            <Button
               label="Reimprimir"
               icon="pi pi-print"
               text
@@ -192,6 +201,13 @@
         :disabled="busy"
         @click="selected = null"
       />
+      <Message
+        v-if="selected.fiscalCode && !selected.invoiceId"
+        severity="info"
+        :closable="false"
+        >Se generará una rectificativa R5 del ticket, con numeración propia. No
+        se modifica el original.</Message
+      >
       <div class="refund-head">
         <strong>{{ selected.code }}</strong>
         <b>{{ fmt(Number(selected.total), String(selected.currency)) }}</b>
@@ -265,9 +281,21 @@
           <i class="pi pi-credit-card" /><span>Tarjeta</span>
         </button>
       </div>
-      <label for="refund-reason">Motivo (obligatorio)</label>
+      <div class="refund-reason-heading">
+        <label for="refund-reason">Motivo (obligatorio)</label>
+        <Button
+          label="Teclado"
+          icon="pi pi-keyboard"
+          aria-label="Mostrar teclado para escribir el motivo de devolución"
+          outlined
+          :disabled="busy"
+          @click="showReasonKeyboard"
+        />
+      </div>
       <textarea
         id="refund-reason"
+        ref="reasonInput"
+        data-alpha="1"
         v-model="reason"
         rows="2"
         maxlength="500"
@@ -297,6 +325,15 @@
       </p>
     </div>
 
+    <Message v-if="receipt?.fiscalCode" severity="success" :closable="false">
+      R5 {{ receipt.fiscalCode }} · Rectifica {{ receipt.originalFiscalCode }}.
+      {{
+        receipt.verifactuStatus === "ACCEPTED" ||
+        receipt.verifactuStatus === "ACCEPTED_WITH_ERRORS"
+          ? "Registrada en VeriFactu."
+          : "Pendiente de envío VeriFactu; puedes consultar su estado en la cola."
+      }}
+    </Message>
     <PrinterControls
       v-if="receipt"
       language="ESCPOS"
@@ -434,6 +471,11 @@ const filteredCharges = computed(() => {
 });
 function showKeyboard() {
   searchInput.value?.focus();
+  window.dispatchEvent(new CustomEvent("kiwik:alpha-show"));
+}
+const reasonInput = ref<HTMLTextAreaElement | null>(null);
+function showReasonKeyboard() {
+  reasonInput.value?.focus();
   window.dispatchEvent(new CustomEvent("kiwik:alpha-show"));
 }
 const selected = ref<TpvCharge | null>(null);
@@ -580,8 +622,16 @@ const previewTotal = computed(() => {
     const pid = line.productId ?? -1;
     const qty = retQty.value[pid] ?? 0;
     const chargedQty = Number(line.quantity) || 0;
-    if (qty > 0 && chargedQty > 0)
-      sum += (Number(line.total) * qty) / chargedQty;
+    if (qty > 0 && chargedQty > 0) {
+      const already = (selected.value.refunds ?? [])
+        .flatMap((refund) => refund.lines ?? [])
+        .filter((returned) => returned.productId === line.productId)
+        .reduce((total, returned) => total + Number(returned.total || 0), 0);
+      const cumulative = Number(line.refundedQty || 0) + qty;
+      sum +=
+        Math.round((Number(line.total) * cumulative * 100) / chargedQty) / 100 -
+        already;
+    }
   }
   return Math.round(sum * 100) / 100;
 });
@@ -654,6 +704,8 @@ function setQty(productId: number | undefined, value: number | null) {
   retQty.value = { ...retQty.value, [productId]: value ?? 0 };
 }
 
+const refundOperation = ref<{ signature: string; key: string } | null>(null);
+
 async function confirm() {
   if (
     busy.value ||
@@ -666,7 +718,7 @@ async function confirm() {
   error.value = "";
   try {
     const payload: Record<string, unknown> = {
-      operationKey: createUuid(),
+      operationKey: "",
       openingId: props.openingId,
       chargeId: selected.value.chargeId,
       method: method.value,
@@ -680,12 +732,17 @@ async function confirm() {
           quantity: retQty.value[l.productId ?? -1] ?? 0,
         }));
     }
+    const signature = JSON.stringify(payload);
+    if (refundOperation.value?.signature !== signature)
+      refundOperation.value = { signature, key: createUuid() };
+    payload.operationKey = refundOperation.value.key;
     const { data } = await axios.post<TpvRefund>(
       backendUrl("/WebTpv/refund"),
       payload,
       { ...auth.portalRequestConfig(), timeout: 20000 },
     );
     receipt.value = data;
+    refundOperation.value = null;
     // Hardware failures must not turn a successful payment into a failed checkout.
     void openCashDrawerOnce(data, String(props.registerId ?? "")).catch((e) => {
       toast.add({
@@ -706,6 +763,28 @@ async function confirm() {
         : detail?.message || "No se pudo registrar la devolución.";
   } finally {
     busy.value = false;
+  }
+}
+
+async function reprintRefund(refund: TpvRefund) {
+  if (printing.value) return;
+  printing.value = true;
+  try {
+    refreshPrintSettings();
+    const message = await printConfiguredRefund(
+      refund,
+      String(props.registerId ?? ""),
+    );
+    toast.add({ severity: "success", summary: message, life: 4000 });
+  } catch (e) {
+    toast.add({
+      severity: "error",
+      summary:
+        e instanceof Error ? e.message : "No se pudo reimprimir la devolución.",
+      life: 5000,
+    });
+  } finally {
+    printing.value = false;
   }
 }
 
@@ -967,6 +1046,12 @@ label {
   margin-top: 4px;
   font-weight: 700;
   color: #253000;
+}
+.refund-reason-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 .refund-reason {
   width: 100%;

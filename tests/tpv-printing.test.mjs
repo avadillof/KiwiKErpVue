@@ -15,7 +15,28 @@ function load(file, dependencies = {}, globals = {}) {
   return exports;
 }
 const barcode = load('../src/libs/printing/ticketBarcode.ts', { jsbarcode: JsBarcode });
-const { buildEscposReceipt } = load('../src/libs/printing/escposReceipt.ts', { './ticketBarcode': barcode });
+const { buildEscposReceipt, buildEscposRefund } = load('../src/libs/printing/escposReceipt.ts', { './ticketBarcode': barcode });
+
+test('R5 imprime identidad, original rectificado, importe negativo y QR sin abrir cajón', () => {
+  const refund = { code: 'T-1-R1', refundId: 7, fiscalCode: 'RT-KW-2026/0001', originalFiscalCode: 'T-KW-2026/0001', total: 3.03, currency: 'EUR', method: 'CASH', qrUrl: 'https://example.test/qr?importe=-3.03', qrPng: 'YWJj', verifactuStatus: 'PENDING', reason: '<script>prueba</script>' };
+  const thermal = buildEscposRefund(refund, { columns: 48, codePage: 19, cut: false });
+  assert.ok(thermal.includes('RECTIFICATIVA SIMPLIFICADA R5'));
+  assert.ok(thermal.includes(refund.fiscalCode));
+  assert.ok(thermal.includes(refund.originalFiscalCode));
+  assert.ok(thermal.includes('-3,03 EUR'));
+  assert.ok(thermal.includes(refund.qrUrl));
+  assert.ok(!thermal.includes('\x1bp'));
+  assert.ok(!thermal.includes('Documento no válido como factura'));
+  const build = load('../src/libs/printing/htmlReceipt.ts', { './ticketBarcode': barcode }).buildHtmlRefund;
+  const html = build(refund);
+  assert.ok(html.includes('RECTIFICATIVA SIMPLIFICADA R5'));
+  assert.ok(html.includes('Rectifica T-KW-2026/0001'));
+  assert.ok(html.includes('-3,03'));
+  assert.ok(html.includes('data:image/png;base64,YWJj'));
+  assert.ok(!html.includes('<script>'));
+  assert.ok(!html.includes('Registrada en VeriFactu'));
+  assert.ok(build({ code: 'T-1-R1', total: 3.03 }).includes('Documento no v&aacute;lido como factura'));
+});
 test('Código de barras conserva referencia y compacta parejas numéricas ESC/POS', () => {
   assert.equal(barcode.ticketBarcodeValue('T-123'), 'T-123');
   assert.equal(barcode.ticketBarcodeValue('T-1\x1b@'), '');

@@ -1,46 +1,276 @@
 <template>
   <section class="vf-panel">
     <header>
-      <div><b><i class="pi pi-cloud-upload"/> Cola VeriFactu</b><small>Pendientes, incidencias y últimas facturas y tickets aceptados por la AEAT</small></div>
-      <div class="actions"><Button label="Consultar AEAT" icon="pi pi-building-columns" outlined size="small" @click="openAeat"/><Button label="Procesar ahora" icon="pi pi-send" outlined size="small" :loading="processing" :disabled="!queue.pending.length||processing||loading" title="Enviar a la AEAT los registros en espera, conservando el encadenamiento" @click="openProcess"/><Button icon="pi pi-refresh" text rounded :loading="loading" title="Actualizar cola" @click="load(true)"/><Button :icon="expanded?'pi pi-chevron-up':'pi pi-chevron-down'" text rounded @click="expanded=!expanded"/></div>
+      <div>
+        <b><i class="pi pi-cloud-upload" /> Cola VeriFactu</b
+        ><small
+          >Pendientes, incidencias y últimas facturas y tickets aceptados por la
+          AEAT</small
+        >
+      </div>
+      <div class="actions">
+        <Button
+          label="Consultar AEAT"
+          icon="pi pi-building-columns"
+          outlined
+          size="small"
+          @click="openAeat"
+        /><Button
+          label="Procesar ahora"
+          icon="pi pi-send"
+          outlined
+          size="small"
+          :loading="processing"
+          :disabled="!queue.pending.length || processing || loading"
+          title="Enviar a la AEAT los registros en espera, conservando el encadenamiento"
+          @click="openProcess"
+        /><Button
+          icon="pi pi-refresh"
+          text
+          rounded
+          :loading="loading"
+          title="Actualizar cola"
+          @click="load(true)"
+        /><Button
+          :icon="expanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+          text
+          rounded
+          @click="expanded = !expanded"
+        />
+      </div>
     </header>
     <div v-if="expanded" class="body">
-      <Message v-if="queue.autoSend===false" severity="warn" :closable="false" class="paused">Envío automático pausado: los registros se conservan en cola. Usa «Procesar ahora» para enviarlos a la AEAT.</Message>
-      <div v-if="loading" class="loading"><i class="pi pi-spin pi-spinner"/> Actualizando la cola…</div>
+      <Message
+        v-if="queue.autoSend === false"
+        severity="warn"
+        :closable="false"
+        class="paused"
+        >Envío automático pausado: los registros se conservan en cola. Usa
+        «Procesar ahora» para enviarlos a la AEAT.</Message
+      >
+      <div v-if="loading" class="loading">
+        <i class="pi pi-spin pi-spinner" /> Actualizando la cola…
+      </div>
       <div v-else class="columns">
-        <section><h3><span class="waiting"><i class="pi pi-cloud-upload"/></span> En espera <Tag :value="String(queue.pending.length)" severity="info" rounded/></h3><p v-if="!queue.pending.length" class="empty">No hay facturas ni tickets pendientes.</p><button v-for="item in queue.pending" :key="`p-${item.pkid ?? item.code}`" class="row" @click="item.ticket ? showError(item) : $emit('openInvoice',item)"><span class="waiting"><i class="pi pi-cloud-upload"/></span><span><b>{{item.code}}</b><small>{{item.customer}} · próximo intento {{dateTime(item.nextAttemptAt)}}</small></span><Tag :value="item.statusLabel" severity="info" rounded/></button></section>
-        <section><h3><i class="pi pi-exclamation-triangle error"/> Con incidencias <Tag :value="String(queue.errors.length)" :severity="queue.errors.length?'danger':'secondary'" rounded/></h3><p v-if="!queue.errors.length" class="empty">No hay incidencias.</p><button v-for="item in queue.errors" :key="`e-${item.pkid ?? item.code}`" class="row row-error" @click="showError(item)"><i class="pi pi-info-circle error"/><span><b>{{item.code}}</b><small>{{item.customer}} · {{item.error||item.statusLabel}}</small></span><Tag :value="item.statusLabel" severity="danger" rounded/></button></section>
-        <section><h3><i class="pi pi-check-circle ok"/> Últimas correctas <Tag :value="String(queue.accepted.length)" severity="success" rounded/></h3><p v-if="!queue.accepted.length" class="empty">Todavía no hay facturas ni tickets aceptados.</p><button v-for="item in queue.accepted" :key="`a-${item.pkid ?? item.code}`" class="row" @click="item.ticket ? showError(item) : $emit('openInvoice',item)"><i class="pi pi-check-circle ok"/><span><b>{{item.code}}</b><small v-if="customerLabel(item.customer)||parsed(item.updatedAt)">{{[customerLabel(item.customer),parsed(item.updatedAt)?dateTime(item.updatedAt):''].filter(Boolean).join(' · ')}}</small></span><Tag value="Aceptada" severity="success" rounded/></button><small class="limit">Máximo configurado: {{queue.acceptedLimit}} aceptadas.</small></section>
+        <section>
+          <h3>
+            <span class="waiting"><i class="pi pi-cloud-upload" /></span> En
+            espera
+            <Tag
+              :value="String(queue.pending.length)"
+              severity="info"
+              rounded
+            />
+          </h3>
+          <p v-if="!queue.pending.length" class="empty">
+            No hay facturas ni tickets pendientes.
+          </p>
+          <button
+            v-for="item in queue.pending"
+            :key="`p-${item.pkid ?? item.code}`"
+            class="row"
+            @click="item.ticket ? showError(item) : $emit('openInvoice', item)"
+          >
+            <span class="waiting"><i class="pi pi-cloud-upload" /></span
+            ><span
+              ><b>{{ item.code }}</b
+              ><small
+                >{{ item.customer }} · próximo intento
+                {{ dateTime(item.nextAttemptAt) }}</small
+              ></span
+            ><Tag :value="item.statusLabel" severity="info" rounded />
+          </button>
+        </section>
+        <section>
+          <h3>
+            <i class="pi pi-exclamation-triangle error" /> Con incidencias
+            <Tag
+              :value="String(queue.errors.length)"
+              :severity="queue.errors.length ? 'danger' : 'secondary'"
+              rounded
+            />
+          </h3>
+          <p v-if="!queue.errors.length" class="empty">No hay incidencias.</p>
+          <button
+            v-for="item in queue.errors"
+            :key="`e-${item.pkid ?? item.code}`"
+            class="row row-error"
+            @click="showError(item)"
+          >
+            <i class="pi pi-info-circle error" /><span
+              ><b>{{ item.code }}</b
+              ><small
+                >{{ item.customer }} ·
+                {{ item.error || item.statusLabel }}</small
+              ></span
+            ><Tag :value="item.statusLabel" severity="danger" rounded />
+          </button>
+        </section>
+        <section>
+          <h3>
+            <i class="pi pi-check-circle ok" /> Últimas correctas
+            <Tag
+              :value="String(queue.accepted.length)"
+              severity="success"
+              rounded
+            />
+          </h3>
+          <p v-if="!queue.accepted.length" class="empty">
+            Todavía no hay facturas ni tickets aceptados.
+          </p>
+          <button
+            v-for="item in queue.accepted"
+            :key="`a-${item.pkid ?? item.code}`"
+            class="row"
+            @click="item.ticket ? showError(item) : $emit('openInvoice', item)"
+          >
+            <i class="pi pi-check-circle ok" /><span
+              ><b>{{ item.code }}</b
+              ><small
+                v-if="customerLabel(item.customer) || parsed(item.updatedAt)"
+                >{{
+                  [
+                    customerLabel(item.customer),
+                    parsed(item.updatedAt) ? dateTime(item.updatedAt) : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                }}</small
+              ></span
+            ><Tag value="Aceptada" severity="success" rounded /></button
+          ><small class="limit"
+            >Máximo configurado: {{ queue.acceptedLimit }} aceptadas.</small
+          >
+        </section>
       </div>
     </div>
   </section>
-  <Dialog v-model:visible="processVisible" modal :style="{width:'min(520px,95vw)'}" class="kiwik-dialog" :closable="!processing" :pt="{root:{class:'kiwik-dialog'},header:{class:'kiwik-dialog-header'},content:{class:'kiwik-dialog-content'},footer:{class:'kiwik-dialog-footer'}}">
+  <Dialog
+    v-model:visible="processVisible"
+    modal
+    :style="{ width: 'min(520px,95vw)' }"
+    class="kiwik-dialog"
+    :closable="!processing"
+    :pt="{
+      root: { class: 'kiwik-dialog' },
+      header: { class: 'kiwik-dialog-header' },
+      content: { class: 'kiwik-dialog-content' },
+      footer: { class: 'kiwik-dialog-footer' },
+    }"
+  >
     <template #header>
-      <div class="error-dialog-header"><span><i class="pi pi-send"/></span><div><b>Procesar cola ahora</b><small>Envío manual a la AEAT</small></div></div>
+      <div class="error-dialog-header">
+        <span><i class="pi pi-send" /></span>
+        <div>
+          <b>Procesar cola ahora</b><small>Envío manual a la AEAT</small>
+        </div>
+      </div>
     </template>
-    <Message v-if="processError" severity="error" :closable="false">{{processError}}</Message>
-    <p>Se enviarán a la AEAT los <b>{{queue.pending.length}} registros en espera</b>, en orden de generación para conservar el encadenamiento.</p>
-    <label class="process-pass"><span>Contraseña del certificado VeriFactu</span><Password v-model="processPassword" toggleMask :feedback="false" fluid :disabled="processing" autofocus /></label>
-    <template #footer><div class="error-dialog-footer"><div class="error-dialog-actions"><Button label="Volver" text severity="secondary" :disabled="processing" @click="processVisible=false"/><Button label="Procesar ahora" icon="pi pi-send" :loading="processing" :disabled="!processPassword||processing" @click="processNow"/></div></div></template>
+    <Message v-if="processError" severity="error" :closable="false">{{
+      processError
+    }}</Message>
+    <p>
+      Se enviarán a la AEAT los
+      <b>{{ queue.pending.length }} registros en espera</b>, en orden de
+      generación para conservar el encadenamiento.
+    </p>
+    <label class="process-pass"
+      ><span>Contraseña del certificado VeriFactu</span
+      ><Password
+        v-model="processPassword"
+        toggleMask
+        :feedback="false"
+        fluid
+        :disabled="processing"
+        autofocus
+    /></label>
+    <template #footer
+      ><div class="error-dialog-footer">
+        <div class="error-dialog-actions">
+          <Button
+            label="Volver"
+            text
+            severity="secondary"
+            :disabled="processing"
+            @click="processVisible = false"
+          /><Button
+            label="Procesar ahora"
+            icon="pi pi-send"
+            :loading="processing"
+            :disabled="!processPassword || processing"
+            @click="processNow"
+          />
+        </div></div
+    ></template>
   </Dialog>
-  <Dialog v-model:visible="errorVisible" modal :style="{width:'min(720px,95vw)'}" class="kiwik-dialog" :pt="{root:{class:'kiwik-dialog'},header:{class:'kiwik-dialog-header'},headerActions:{style:{position:'absolute',right:'1.25rem',top:'50%',transform:'translateY(-50%)'}},content:{class:'kiwik-dialog-content'},footer:{class:'kiwik-dialog-footer'}}">
+  <Dialog
+    v-model:visible="errorVisible"
+    modal
+    :style="{ width: 'min(720px,95vw)' }"
+    class="kiwik-dialog"
+    :pt="{
+      root: { class: 'kiwik-dialog' },
+      header: { class: 'kiwik-dialog-header' },
+      headerActions: {
+        style: {
+          position: 'absolute',
+          right: '1.25rem',
+          top: '50%',
+          transform: 'translateY(-50%)',
+        },
+      },
+      content: { class: 'kiwik-dialog-content' },
+      footer: { class: 'kiwik-dialog-footer' },
+    }"
+  >
     <template #header>
-      <div class="error-dialog-header"><span><i class="pi pi-info-circle"/></span><div><b>Detalle de la incidencia VeriFactu</b><small>Facturación · VeriFactu</small></div></div>
+      <div class="error-dialog-header">
+        <span><i class="pi pi-info-circle" /></span>
+        <div>
+          <b>Detalle de la incidencia VeriFactu</b
+          ><small>Facturación · VeriFactu</small>
+        </div>
+      </div>
     </template>
     <div class="error-dialog">
-      <div><small>{{errorItem?.ticket ? 'Ticket F2' : 'Factura'}}</small><b>{{errorItem?.code||'-'}}</b></div>
-      <Message v-if="errorItem?.error" severity="error" :closable="false">{{errorItem?.error}}</Message>
-      <Message v-else severity="info" :closable="false">Registro aceptado por la AEAT.</Message>
-      <Message v-if="ticketActionError" severity="error" :closable="false">{{ ticketActionError }}</Message>
+      <div>
+        <small>{{ errorItem?.ticket ? "Ticket F2" : "Factura" }}</small
+        ><b>{{ errorItem?.code || "-" }}</b>
+      </div>
+      <Message v-if="errorItem?.error" severity="error" :closable="false">{{
+        errorItem?.error
+      }}</Message>
+      <Message v-else severity="info" :closable="false"
+        >Registro aceptado por la AEAT.</Message
+      >
+      <Message v-if="ticketActionError" severity="error" :closable="false">{{
+        ticketActionError
+      }}</Message>
       <div class="error-attempts">
-        <div><small>Intentos realizados</small><b>{{errorItem?.attempts||0}}</b></div>
-        <div><small>Último intento realizado</small><b>{{errorItem?.attempts>0?attemptDateTime(errorItem.updatedAt):'Sin intentos realizados'}}</b></div>
+        <div>
+          <small>Intentos realizados</small
+          ><b>{{ errorItem?.attempts || 0 }}</b>
+        </div>
+        <div>
+          <small>Último intento realizado</small
+          ><b>{{
+            errorItem?.attempts > 0
+              ? attemptDateTime(errorItem.updatedAt)
+              : "Sin intentos realizados"
+          }}</b>
+        </div>
       </div>
     </div>
     <template #footer>
       <div class="error-dialog-footer">
         <div class="error-dialog-actions">
-          <Button label="Cerrar" text severity="secondary" :disabled="ticketActionLoading" @click="errorVisible=false"/>
+          <Button
+            label="Cerrar"
+            text
+            severity="secondary"
+            :disabled="ticketActionLoading"
+            @click="errorVisible = false"
+          />
           <Button
             v-if="errorItem?.ticket && errorItem?.status === 'ERROR'"
             label="Volver a poner en cola"
@@ -56,68 +286,879 @@
             :disabled="ticketActionLoading"
             @click="openTicketCorrection"
           />
-          <Button v-if="errorItem?.pkid" label="Abrir factura" icon="pi pi-eye" @click="errorVisible=false;$emit('openInvoice',errorItem)"/>
+          <Button
+            v-if="errorItem?.pkid"
+            label="Abrir factura"
+            icon="pi pi-eye"
+            @click="
+              errorVisible = false;
+              $emit('openInvoice', errorItem);
+            "
+          />
         </div>
       </div>
     </template>
   </Dialog>
-  <Dialog v-model:visible="correctionVisible" modal :style="{width:'min(620px,95vw)'}" class="kiwik-dialog" :closable="!ticketActionLoading" :pt="{root:{class:'kiwik-dialog'},header:{class:'kiwik-dialog-header'},content:{class:'kiwik-dialog-content'},footer:{class:'kiwik-dialog-footer'}}">
+  <Dialog
+    v-model:visible="correctionVisible"
+    modal
+    :style="{ width: 'min(620px,95vw)' }"
+    class="kiwik-dialog"
+    :closable="!ticketActionLoading"
+    :pt="{
+      root: { class: 'kiwik-dialog' },
+      header: { class: 'kiwik-dialog-header' },
+      content: { class: 'kiwik-dialog-content' },
+      footer: { class: 'kiwik-dialog-footer' },
+    }"
+  >
     <template #header>
-      <div class="error-dialog-header"><span><i class="pi pi-file-edit"/></span><div><b>Subsanar ticket VeriFactu</b><small>{{ errorItem?.code }} · Registro F2</small></div></div>
+      <div class="error-dialog-header">
+        <span><i class="pi pi-file-edit" /></span>
+        <div>
+          <b>Subsanar ticket VeriFactu</b
+          ><small
+            >{{ errorItem?.code }} · Registro
+            {{ errorItem?.fiscalType || "F2" }}</small
+          >
+        </div>
+      </div>
     </template>
-    <Message severity="warn" :closable="false">Se generará un nuevo envío marcado como subsanación. Esta acción no modifica el ticket cobrado.</Message>
-    <Message v-if="ticketActionError" severity="error" :closable="false">{{ ticketActionError }}</Message>
+    <Message severity="warn" :closable="false"
+      >Se generará un nuevo envío marcado como subsanación. Esta acción no
+      modifica el ticket cobrado.</Message
+    >
+    <Message v-if="ticketActionError" severity="error" :closable="false">{{
+      ticketActionError
+    }}</Message>
     <label class="correction-reason">
       <span>Motivo de la subsanación</span>
-      <Textarea v-model="correctionReason" rows="5" maxlength="1000" autoResize placeholder="Explica la corrección realizada antes de volver a enviarlo" autofocus/>
+      <Textarea
+        v-model="correctionReason"
+        rows="5"
+        maxlength="1000"
+        autoResize
+        placeholder="Explica la corrección realizada antes de volver a enviarlo"
+        autofocus
+      />
       <small>{{ correctionReason.length }}/1.000</small>
     </label>
     <template #footer>
-      <div class="error-dialog-footer"><div class="error-dialog-actions">
-        <Button label="Volver" text severity="secondary" :disabled="ticketActionLoading" @click="correctionVisible=false"/>
-        <Button label="Guardar y poner en cola" icon="pi pi-check" :loading="ticketActionLoading" :disabled="!correctionReason.trim()" @click="correctTicket"/>
-      </div></div>
+      <div class="error-dialog-footer">
+        <div class="error-dialog-actions">
+          <Button
+            label="Volver"
+            text
+            severity="secondary"
+            :disabled="ticketActionLoading"
+            @click="correctionVisible = false"
+          />
+          <Button
+            label="Guardar y poner en cola"
+            icon="pi pi-check"
+            :loading="ticketActionLoading"
+            :disabled="!correctionReason.trim()"
+            @click="correctTicket"
+          />
+        </div>
+      </div>
     </template>
   </Dialog>
-  <Dialog v-model:visible="aeatVisible" modal maximizable :style="{width:'min(1200px,96vw)'}" :contentStyle="{minHeight:'55vh'}" :pt="{root:{class:'kiwik-dialog'},header:{class:'kiwik-dialog-header'},content:{class:'kiwik-dialog-content'},footer:{class:'kiwik-dialog-footer'}}"><template #header><b><i class="pi pi-building-columns"/> Facturas registradas en la Agencia Tributaria</b></template><div class="filters"><label><span>Año</span><Select v-model="aeatYear" :options="years"/></label><label><span>Mes</span><Select v-model="aeatMonth" :options="months" optionLabel="label" optionValue="value"/></label><label class="password"><span>Contraseña del certificado</span><Password v-model="aeatPassword" toggleMask :feedback="false" fluid/></label><Button label="Consultar AEAT" icon="pi pi-search" :loading="aeatLoading" :disabled="!aeatPassword" @click="queryAeat"/></div><Message v-if="aeatError" severity="error" :closable="false">{{aeatError}}</Message><Message v-else-if="queried&&!rows.length" severity="info" :closable="false">La AEAT no devolvió facturas para el periodo seleccionado.</Message><DataTable v-if="rows.length" :value="rows" size="small" stripedRows scrollable scrollHeight="400px" :rowClass="rowClass" tableStyle="min-width:100%"><Column field="number" header="Factura" :style="{minWidth:'170px'}"><template #body="{data}"><b>{{data.number}}</b><small v-if="data.ref" class="vf-ref"><i class="pi pi-link"/> Corrige {{data.ref}}</small></template></Column><Column field="date" header="Fecha" :style="{minWidth:'120px'}" bodyStyle="white-space:nowrap"><template #body="{data}">{{humanDate(data.date)}}</template></Column><Column field="nif" header="NIF destinatario" :style="{minWidth:'130px'}" bodyStyle="white-space:nowrap"/><Column field="name" header="Destinatario" :style="{minWidth:'240px'}" bodyStyle="white-space:normal;word-break:break-word"/><Column field="amount" header="Importe" bodyStyle="text-align:right;white-space:nowrap" :style="{minWidth:'110px'}"/><Column field="status" header="Estado" :style="{minWidth:'140px'}"><template #body="{data}"><Tag :value="data.status||'Registrado'" :severity="statusSeverity(data.status)" rounded/></template></Column><Column field="rect" header="Tipo" :style="{minWidth:'130px'}"><template #body="{data}"><Tag :value="data.rect?'Rectificación':'Factura'" :severity="data.rect?'warn':'success'" rounded/></template></Column></DataTable><details v-if="raw&&!rows.length" class="raw"><summary>Ver respuesta técnica</summary><pre>{{raw}}</pre></details><template #footer><div style="width:100%;border-top:1px solid #9cc10a;padding-top:12px;text-align:right"><Button label="Cerrar" severity="secondary" @click="aeatVisible=false"/></div></template></Dialog>
+  <Dialog
+    v-model:visible="aeatVisible"
+    modal
+    maximizable
+    :style="{ width: 'min(1200px,96vw)' }"
+    :contentStyle="{ minHeight: '55vh' }"
+    :pt="{
+      root: { class: 'kiwik-dialog' },
+      header: { class: 'kiwik-dialog-header' },
+      content: { class: 'kiwik-dialog-content' },
+      footer: { class: 'kiwik-dialog-footer' },
+    }"
+    ><template #header
+      ><b
+        ><i class="pi pi-building-columns" /> Facturas registradas en la Agencia
+        Tributaria</b
+      ></template
+    >
+    <div class="filters">
+      <label
+        ><span>Año</span><Select v-model="aeatYear" :options="years" /></label
+      ><label
+        ><span>Mes</span
+        ><Select
+          v-model="aeatMonth"
+          :options="months"
+          optionLabel="label"
+          optionValue="value" /></label
+      ><label class="password"
+        ><span>Contraseña del certificado</span
+        ><Password
+          v-model="aeatPassword"
+          toggleMask
+          :feedback="false"
+          fluid /></label
+      ><Button
+        label="Consultar AEAT"
+        icon="pi pi-search"
+        :loading="aeatLoading"
+        :disabled="!aeatPassword"
+        @click="queryAeat"
+      />
+    </div>
+    <Message v-if="aeatError" severity="error" :closable="false">{{
+      aeatError
+    }}</Message
+    ><Message
+      v-else-if="queried && !rows.length"
+      severity="info"
+      :closable="false"
+      >La AEAT no devolvió facturas para el periodo seleccionado.</Message
+    ><DataTable
+      v-if="rows.length"
+      :value="rows"
+      size="small"
+      stripedRows
+      scrollable
+      scrollHeight="400px"
+      :rowClass="rowClass"
+      tableStyle="min-width:100%"
+      ><Column field="number" header="Factura" :style="{ minWidth: '170px' }"
+        ><template #body="{ data }"
+          ><b>{{ data.number }}</b
+          ><small v-if="data.ref" class="vf-ref"
+            ><i class="pi pi-link" /> Corrige {{ data.ref }}</small
+          ></template
+        ></Column
+      ><Column
+        field="date"
+        header="Fecha"
+        :style="{ minWidth: '120px' }"
+        bodyStyle="white-space:nowrap"
+        ><template #body="{ data }">{{
+          humanDate(data.date)
+        }}</template></Column
+      ><Column
+        field="nif"
+        header="NIF destinatario"
+        :style="{ minWidth: '130px' }"
+        bodyStyle="white-space:nowrap" /><Column
+        field="name"
+        header="Destinatario"
+        :style="{ minWidth: '240px' }"
+        bodyStyle="white-space:normal;word-break:break-word" /><Column
+        field="amount"
+        header="Importe"
+        bodyStyle="text-align:right;white-space:nowrap"
+        :style="{ minWidth: '110px' }" /><Column
+        field="status"
+        header="Estado"
+        :style="{ minWidth: '140px' }"
+        ><template #body="{ data }"
+          ><Tag
+            :value="data.status || 'Registrado'"
+            :severity="statusSeverity(data.status)"
+            rounded /></template></Column
+      ><Column field="rect" header="Tipo" :style="{ minWidth: '130px' }"
+        ><template #body="{ data }"
+          ><Tag
+            :value="data.rect ? 'Rectificación' : 'Factura'"
+            :severity="data.rect ? 'warn' : 'success'"
+            rounded /></template></Column
+    ></DataTable>
+    <details v-if="raw && !rows.length" class="raw">
+      <summary>Ver respuesta técnica</summary>
+      <pre>{{ raw }}</pre>
+    </details>
+    <template #footer
+      ><div
+        style="
+          width: 100%;
+          border-top: 1px solid #9cc10a;
+          padding-top: 12px;
+          text-align: right;
+        "
+      >
+        <Button
+          label="Cerrar"
+          severity="secondary"
+          @click="aeatVisible = false"
+        /></div></template
+  ></Dialog>
 </template>
 <script setup lang="ts">
-import { backendUrl } from '@/services/backendUrl';
-import { useAuthStore } from '@/stores/authStore';
-import{onMounted,onUnmounted,ref}from'vue';import axios from'axios';import Button from'primevue/button';import Column from'primevue/column';import DataTable from'primevue/datatable';import Dialog from'primevue/dialog';import Message from'primevue/message';import Password from'primevue/password';import Select from'primevue/select';import Tag from'primevue/tag';import Textarea from'primevue/textarea';import { useToast } from 'primevue/usetoast';
+import { backendUrl } from "@/services/backendUrl";
+import { useAuthStore } from "@/stores/authStore";
+import { onMounted, onUnmounted, ref } from "vue";
+import axios from "axios";
+import Button from "primevue/button";
+import Column from "primevue/column";
+import DataTable from "primevue/datatable";
+import Dialog from "primevue/dialog";
+import Message from "primevue/message";
+import Password from "primevue/password";
+import Select from "primevue/select";
+import Tag from "primevue/tag";
+import Textarea from "primevue/textarea";
+import { useToast } from "primevue/usetoast";
 const auth = useAuthStore();
 const toast = useToast();
-const authedGet = (url:string, config?:any) => axios.get(backendUrl(url), { ...config, ...auth.portalRequestConfig() });
-const authedPost = (url:string, data?:any, config?:any) => axios.post(backendUrl(url), data, { ...config, ...auth.portalRequestConfig() });
-const emit = defineEmits(['openInvoice','processed']);
-const customerLabel=(value:any)=>{const text=String(value??'').trim();return text==='-'||text==='—'?'':text;};
-const expanded=ref(true),loading=ref(false),processing=ref(false),queue=ref<any>({pending:[],errors:[],accepted:[],acceptedLimit:20,autoSend:true}),errorVisible=ref(false),errorItem=ref<any>(),aeatVisible=ref(false),aeatLoading=ref(false),aeatError=ref(''),queried=ref(false),raw=ref(''),rows=ref<any[]>([]),aeatPassword=ref(''),aeatYear=ref(new Date().getFullYear()),aeatMonth=ref(String(new Date().getMonth()+1).padStart(2,'0'));
-const years=Array.from({length:8},(_,i)=>new Date().getFullYear()-i),months=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((label,i)=>({label,value:String(i+1).padStart(2,'0')}));
+const authedGet = (url: string, config?: any) =>
+  axios.get(backendUrl(url), { ...config, ...auth.portalRequestConfig() });
+const authedPost = (url: string, data?: any, config?: any) =>
+  axios.post(backendUrl(url), data, {
+    ...config,
+    ...auth.portalRequestConfig(),
+  });
+const emit = defineEmits(["openInvoice", "processed"]);
+const customerLabel = (value: any) => {
+  const text = String(value ?? "").trim();
+  return text === "-" || text === "—" ? "" : text;
+};
+const expanded = ref(true),
+  loading = ref(false),
+  processing = ref(false),
+  queue = ref<any>({
+    pending: [],
+    errors: [],
+    accepted: [],
+    acceptedLimit: 20,
+    autoSend: true,
+  }),
+  errorVisible = ref(false),
+  errorItem = ref<any>(),
+  aeatVisible = ref(false),
+  aeatLoading = ref(false),
+  aeatError = ref(""),
+  queried = ref(false),
+  raw = ref(""),
+  rows = ref<any[]>([]),
+  aeatPassword = ref(""),
+  aeatYear = ref(new Date().getFullYear()),
+  aeatMonth = ref(String(new Date().getMonth() + 1).padStart(2, "0"));
+const years = Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - i),
+  months = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ].map((label, i) => ({ label, value: String(i + 1).padStart(2, "0") }));
 // For incidents with attempts, updatedAt is the completion time saved by the queue processor.
-const attemptDateTime=(value:any)=>{const d=parsed(value);return d?`${dateTime(value)}:${pad(d.getSeconds())}`:'Fecha no disponible'};
-const parsed=(v:any)=>{if(!v)return null;if(Array.isArray(v))return new Date(v[0],v[1]-1,v[2],v[3]||0,v[4]||0,v[5]||0);if(typeof v==='object'&&v.year!=null){const d=new Date(v.year,(v.monthValue??v.month??1)-1,v.dayOfMonth??v.day??1,v.hour??0,v.minute??0,v.second??0);return Number.isNaN(d.getTime())?null:d}const d=new Date(v);return Number.isNaN(d.getTime())?null:d},pad=(v:number)=>String(v).padStart(2,'0'),dateTime=(v:any)=>{const d=parsed(v);return d?`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`:'—'},humanDate=(v:any)=>{if(v==null||v==='')return'—';const raw=String(v).trim();const m=raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);if(m)return`${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${m[3]}`;const d=parsed(v);return d?`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`:raw};
-const statusSeverity=(v:any)=>{const s=String(v||'').toLowerCase();if(s.includes('error')||s.includes('rechaz'))return'warn';if(s.includes('correct')||s.includes('acept'))return'success';return'info'},rowClass=(data:any)=>data.rect?'vf-row-rect':'';
-const decorateTable=()=>{const byCode=new Map((queue.value.errors||[]).map((item:any)=>[item.code,item]));document.querySelectorAll('.list-card tbody tr').forEach(row=>{const code=row.querySelector('.invoice-code-value')?.textContent?.trim(),cell=row.querySelector('.invoice-verifactu-cell'),existing=cell?.querySelector('.vf-table-error');const item:any=code?byCode.get(code):null;if(!cell||!item){existing?.remove();return}if(existing)return;const button=document.createElement('button');button.type='button';button.className='vf-table-error';button.title='Ver error de VeriFactu';button.innerHTML='<i class="pi pi-info-circle"></i>';button.addEventListener('click',(event)=>{event.stopPropagation();showError(item)});cell.appendChild(button)})};
-const load=async(showLoading?:boolean)=>{if(showLoading)loading.value=true;try{const{data}=await authedGet(`/WebGetSalesInvoiceVeriFactuQueue`);queue.value={pending:data.pending||[],errors:data.errors||[],accepted:data.accepted||[],acceptedLimit:data.acceptedLimit||20,autoSend:data.autoSend!==false};setTimeout(decorateTable,0)}finally{if(showLoading)loading.value=false}},showError=(item:any)=>{errorItem.value=item;ticketActionError.value='';errorVisible.value=true},openAeat=()=>{aeatError.value='';aeatVisible.value=true};
-const ticketActionLoading=ref(false),ticketActionError=ref(''),correctionVisible=ref(false),correctionReason=ref('');
-const ticketFailure=(e:any)=>typeof e.response?.data==='string'?e.response.data:e.response?.data?.message||e.message||'No se pudo actualizar el envío VeriFactu.';
-const retryTicket=async()=>{if(!errorItem.value?.chargeId||ticketActionLoading.value)return;ticketActionLoading.value=true;ticketActionError.value='';try{await authedPost(`/WebRetryTpvVeriFactu/${errorItem.value.chargeId}`,{});toast.add({severity:'success',summary:'Ticket puesto en cola',detail:`${errorItem.value.code} volverá a procesarse con la cola VeriFactu.`,life:5000});errorVisible.value=false;emit('processed');await load()}catch(e:any){ticketActionError.value=ticketFailure(e)}finally{ticketActionLoading.value=false}};
-const openTicketCorrection=()=>{correctionReason.value='';ticketActionError.value='';correctionVisible.value=true};
-const correctTicket=async()=>{if(!errorItem.value?.chargeId||!correctionReason.value.trim()||ticketActionLoading.value)return;ticketActionLoading.value=true;ticketActionError.value='';try{await authedPost(`/WebCorrectTpvVeriFactu/${errorItem.value.chargeId}`,{reason:correctionReason.value.trim()});toast.add({severity:'success',summary:'Subsanación preparada',detail:`${errorItem.value.code} se ha devuelto a la cola como subsanación.`,life:5500});correctionVisible.value=false;errorVisible.value=false;emit('processed');await load()}catch(e:any){ticketActionError.value=ticketFailure(e)}finally{ticketActionLoading.value=false}};
-const processVisible=ref(false),processPassword=ref(''),processError=ref('');
-const openProcess=()=>{if(!queue.value.pending.length||processing.value)return;processPassword.value='';processError.value='';processVisible.value=true};
-const processFailure=(e:any)=>typeof e.response?.data==='string'?e.response.data:e.message||'No se pudo procesar la cola.';
-const processNow=async()=>{if(processing.value||!queue.value.pending.length||!processPassword.value)return;processing.value=true;processError.value='';try{const{data}=await authedPost(`/WebProcessSalesInvoiceVeriFactuQueue`,{certificatePassword:processPassword.value,userCode:auth.user?.userDsCode});processPassword.value='';processVisible.value=false;toast.add({severity:'success',summary:'Cola procesada',detail:`${data.processed||0} registros enviados · ${data.accepted||0} aceptados por la AEAT.`,life:6000});emit('processed');await load()}catch(e:any){processError.value=processFailure(e)}finally{processing.value=false}};
-const text=(node:Element,names:string[])=>{for(const name of names){const found=Array.from(node.getElementsByTagName('*')).filter(e=>e.localName===name&&!e.getElementsByTagName('*').length);if(found.length){const v=(found[0].textContent||'').trim();if(v)return v}}return''};
-const queryAeat=async()=>{aeatLoading.value=true;aeatError.value='';queried.value=false;rows.value=[];try{const form=new FormData();form.append('passwordcerti',aeatPassword.value);form.append('ano',String(aeatYear.value));form.append('mes',aeatMonth.value);const{data}=await authedPost(`/WebEstadosVeriFactu`,form);raw.value=typeof data==='string'?data:new XMLSerializer().serializeToString(data);const xml=new DOMParser().parseFromString(raw.value,'application/xml');if(xml.querySelector('parsererror'))throw new Error('La AEAT devolvió una respuesta que no se pudo interpretar.');const candidates=Array.from(xml.getElementsByTagName('*')).filter(e=>['RegistroRespuestaConsultaFactuSistemaFacturacion','RegistroRespuestaConsultaFactu','RegistroFacturacion'].includes(e.localName));const statusOf=(e:any)=>{const v=text(e,['EstadoRegistro','EstadoRegistroFactura']);return v?String(v).match(/[A-Za-zÁÉÍÓÚÑñáéíóú ]+$/)?.[0]?.trim()||v:''};const rectOf=(e:any)=>{const els=Array.from(e.getElementsByTagName('*'));const corr=els.find((x:any)=>['FacturasRectificadas','FacturasSustituidas'].includes(x.localName));const tipo=text(e,['TipoFactura','TipoRectificativa']);const number=text(e,['NumSerieFactura','NumSerieFacturaEmisor']);return{ref:corr?text(corr as Element,['NumSerieFactura','NumSerieFacturaEmisor']):'',rect:!!corr||/^R/i.test(tipo)||/^RFC/i.test(number)}};rows.value=candidates.map((e:any)=>{const info=rectOf(e);return{number:text(e,['NumSerieFactura','NumSerieFacturaEmisor']),date:text(e,['FechaExpedicionFactura']),nif:text(e,['NIF','IDOtro']),name:text(e,['NombreRazon']),amount:text(e,['ImporteTotal']),status:statusOf(e),ref:info.ref,rect:info.rect}}).filter((r:any)=>r.number||r.nif||r.amount);queried.value=true}catch(e:any){aeatError.value=friendlyAeatError(e)}finally{aeatLoading.value=false}};
-const friendlyAeatError=(e:any)=>{const raw=e.response?.data||e.message||'No se pudo consultar la AEAT.';const text=String(typeof raw==='string'?raw:raw?.message||raw);if(text.trim().startsWith('<'))return 'El servidor devolvió un error interno. Revisa el registro del backend.';if(/no se encontr[oó] certificado/i.test(text))return `${text} En producción debe ser el certificado real.`;return text};
-let timer:number|undefined,observer:MutationObserver|undefined;onMounted(()=>{load(true);timer=window.setInterval(load,10000);const table=document.querySelector('.list-card');if(table){observer=new MutationObserver(decorateTable);observer.observe(table,{childList:true,subtree:true})}});onUnmounted(()=>{if(timer)window.clearInterval(timer);observer?.disconnect()});
+const attemptDateTime = (value: any) => {
+  const d = parsed(value);
+  return d
+    ? `${dateTime(value)}:${pad(d.getSeconds())}`
+    : "Fecha no disponible";
+};
+const parsed = (v: any) => {
+    if (!v) return null;
+    if (Array.isArray(v))
+      return new Date(v[0], v[1] - 1, v[2], v[3] || 0, v[4] || 0, v[5] || 0);
+    if (typeof v === "object" && v.year != null) {
+      const d = new Date(
+        v.year,
+        (v.monthValue ?? v.month ?? 1) - 1,
+        v.dayOfMonth ?? v.day ?? 1,
+        v.hour ?? 0,
+        v.minute ?? 0,
+        v.second ?? 0,
+      );
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  },
+  pad = (v: number) => String(v).padStart(2, "0"),
+  dateTime = (v: any) => {
+    const d = parsed(v);
+    return d
+      ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+      : "—";
+  },
+  humanDate = (v: any) => {
+    if (v == null || v === "") return "—";
+    const raw = String(v).trim();
+    const m = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (m) return `${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}/${m[3]}`;
+    const d = parsed(v);
+    return d
+      ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+      : raw;
+  };
+const statusSeverity = (v: any) => {
+    const s = String(v || "").toLowerCase();
+    if (s.includes("error") || s.includes("rechaz")) return "warn";
+    if (s.includes("correct") || s.includes("acept")) return "success";
+    return "info";
+  },
+  rowClass = (data: any) => (data.rect ? "vf-row-rect" : "");
+const decorateTable = () => {
+  const byCode = new Map(
+    (queue.value.errors || []).map((item: any) => [item.code, item]),
+  );
+  document.querySelectorAll(".list-card tbody tr").forEach((row) => {
+    const code = row.querySelector(".invoice-code-value")?.textContent?.trim(),
+      cell = row.querySelector(".invoice-verifactu-cell"),
+      existing = cell?.querySelector(".vf-table-error");
+    const item: any = code ? byCode.get(code) : null;
+    if (!cell || !item) {
+      existing?.remove();
+      return;
+    }
+    if (existing) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "vf-table-error";
+    button.title = "Ver error de VeriFactu";
+    button.innerHTML = '<i class="pi pi-info-circle"></i>';
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      showError(item);
+    });
+    cell.appendChild(button);
+  });
+};
+const load = async (showLoading?: boolean) => {
+    if (showLoading) loading.value = true;
+    try {
+      const { data } = await authedGet(`/WebGetSalesInvoiceVeriFactuQueue`);
+      queue.value = {
+        pending: data.pending || [],
+        errors: data.errors || [],
+        accepted: data.accepted || [],
+        acceptedLimit: data.acceptedLimit || 20,
+        autoSend: data.autoSend !== false,
+      };
+      setTimeout(decorateTable, 0);
+    } finally {
+      if (showLoading) loading.value = false;
+    }
+  },
+  showError = (item: any) => {
+    errorItem.value = item;
+    ticketActionError.value = "";
+    errorVisible.value = true;
+  },
+  openAeat = () => {
+    aeatError.value = "";
+    aeatVisible.value = true;
+  };
+const ticketActionLoading = ref(false),
+  ticketActionError = ref(""),
+  correctionVisible = ref(false),
+  correctionReason = ref("");
+const ticketFailure = (e: any) =>
+  typeof e.response?.data === "string"
+    ? e.response.data
+    : e.response?.data?.message ||
+      e.message ||
+      "No se pudo actualizar el envío VeriFactu.";
+const retryTicket = async () => {
+  if (
+    !(errorItem.value?.chargeId || errorItem.value?.refundId) ||
+    ticketActionLoading.value
+  )
+    return;
+  ticketActionLoading.value = true;
+  ticketActionError.value = "";
+  try {
+    await authedPost(
+      errorItem.value.refundId
+        ? `/WebRetryTpvRefundVeriFactu/${errorItem.value.refundId}`
+        : `/WebRetryTpvVeriFactu/${errorItem.value.chargeId}`,
+      {},
+    );
+    toast.add({
+      severity: "success",
+      summary: "Ticket puesto en cola",
+      detail: `${errorItem.value.code} volverá a procesarse con la cola VeriFactu.`,
+      life: 5000,
+    });
+    errorVisible.value = false;
+    emit("processed");
+    await load();
+  } catch (e: any) {
+    ticketActionError.value = ticketFailure(e);
+  } finally {
+    ticketActionLoading.value = false;
+  }
+};
+const openTicketCorrection = () => {
+  correctionReason.value = "";
+  ticketActionError.value = "";
+  correctionVisible.value = true;
+};
+const correctTicket = async () => {
+  if (
+    !(errorItem.value?.chargeId || errorItem.value?.refundId) ||
+    !correctionReason.value.trim() ||
+    ticketActionLoading.value
+  )
+    return;
+  ticketActionLoading.value = true;
+  ticketActionError.value = "";
+  try {
+    await authedPost(
+      errorItem.value.refundId
+        ? `/WebCorrectTpvRefundVeriFactu/${errorItem.value.refundId}`
+        : `/WebCorrectTpvVeriFactu/${errorItem.value.chargeId}`,
+      { reason: correctionReason.value.trim() },
+    );
+    toast.add({
+      severity: "success",
+      summary: "Subsanación preparada",
+      detail: `${errorItem.value.code} se ha devuelto a la cola como subsanación.`,
+      life: 5500,
+    });
+    correctionVisible.value = false;
+    errorVisible.value = false;
+    emit("processed");
+    await load();
+  } catch (e: any) {
+    ticketActionError.value = ticketFailure(e);
+  } finally {
+    ticketActionLoading.value = false;
+  }
+};
+const processVisible = ref(false),
+  processPassword = ref(""),
+  processError = ref("");
+const openProcess = () => {
+  if (!queue.value.pending.length || processing.value) return;
+  processPassword.value = "";
+  processError.value = "";
+  processVisible.value = true;
+};
+const processFailure = (e: any) =>
+  typeof e.response?.data === "string"
+    ? e.response.data
+    : e.message || "No se pudo procesar la cola.";
+const processNow = async () => {
+  if (processing.value || !queue.value.pending.length || !processPassword.value)
+    return;
+  processing.value = true;
+  processError.value = "";
+  try {
+    const { data } = await authedPost(`/WebProcessSalesInvoiceVeriFactuQueue`, {
+      certificatePassword: processPassword.value,
+      userCode: auth.user?.userDsCode,
+    });
+    processPassword.value = "";
+    processVisible.value = false;
+    toast.add({
+      severity: "success",
+      summary: "Cola procesada",
+      detail: `${data.processed || 0} registros enviados · ${data.accepted || 0} aceptados por la AEAT.`,
+      life: 6000,
+    });
+    emit("processed");
+    await load();
+  } catch (e: any) {
+    processError.value = processFailure(e);
+  } finally {
+    processing.value = false;
+  }
+};
+const text = (node: Element, names: string[]) => {
+  for (const name of names) {
+    const found = Array.from(node.getElementsByTagName("*")).filter(
+      (e) => e.localName === name && !e.getElementsByTagName("*").length,
+    );
+    if (found.length) {
+      const v = (found[0].textContent || "").trim();
+      if (v) return v;
+    }
+  }
+  return "";
+};
+const queryAeat = async () => {
+  aeatLoading.value = true;
+  aeatError.value = "";
+  queried.value = false;
+  rows.value = [];
+  try {
+    const form = new FormData();
+    form.append("passwordcerti", aeatPassword.value);
+    form.append("ano", String(aeatYear.value));
+    form.append("mes", aeatMonth.value);
+    const { data } = await authedPost(`/WebEstadosVeriFactu`, form);
+    raw.value =
+      typeof data === "string"
+        ? data
+        : new XMLSerializer().serializeToString(data);
+    const xml = new DOMParser().parseFromString(raw.value, "application/xml");
+    if (xml.querySelector("parsererror"))
+      throw new Error(
+        "La AEAT devolvió una respuesta que no se pudo interpretar.",
+      );
+    const candidates = Array.from(xml.getElementsByTagName("*")).filter((e) =>
+      [
+        "RegistroRespuestaConsultaFactuSistemaFacturacion",
+        "RegistroRespuestaConsultaFactu",
+        "RegistroFacturacion",
+      ].includes(e.localName),
+    );
+    const statusOf = (e: any) => {
+      const v = text(e, ["EstadoRegistro", "EstadoRegistroFactura"]);
+      return v
+        ? String(v)
+            .match(/[A-Za-zÁÉÍÓÚÑñáéíóú ]+$/)?.[0]
+            ?.trim() || v
+        : "";
+    };
+    const rectOf = (e: any) => {
+      const els = Array.from(e.getElementsByTagName("*"));
+      const corr = els.find((x: any) =>
+        ["FacturasRectificadas", "FacturasSustituidas"].includes(x.localName),
+      );
+      const tipo = text(e, ["TipoFactura", "TipoRectificativa"]);
+      const number = text(e, ["NumSerieFactura", "NumSerieFacturaEmisor"]);
+      return {
+        ref: corr
+          ? text(corr as Element, ["NumSerieFactura", "NumSerieFacturaEmisor"])
+          : "",
+        rect: !!corr || /^R/i.test(tipo) || /^RFC/i.test(number),
+      };
+    };
+    rows.value = candidates
+      .map((e: any) => {
+        const info = rectOf(e);
+        return {
+          number: text(e, ["NumSerieFactura", "NumSerieFacturaEmisor"]),
+          date: text(e, ["FechaExpedicionFactura"]),
+          nif: text(e, ["NIF", "IDOtro"]),
+          name: text(e, ["NombreRazon"]),
+          amount: text(e, ["ImporteTotal"]),
+          status: statusOf(e),
+          ref: info.ref,
+          rect: info.rect,
+        };
+      })
+      .filter((r: any) => r.number || r.nif || r.amount);
+    queried.value = true;
+  } catch (e: any) {
+    aeatError.value = friendlyAeatError(e);
+  } finally {
+    aeatLoading.value = false;
+  }
+};
+const friendlyAeatError = (e: any) => {
+  const raw = e.response?.data || e.message || "No se pudo consultar la AEAT.";
+  const text = String(typeof raw === "string" ? raw : raw?.message || raw);
+  if (text.trim().startsWith("<"))
+    return "El servidor devolvió un error interno. Revisa el registro del backend.";
+  if (/no se encontr[oó] certificado/i.test(text))
+    return `${text} En producción debe ser el certificado real.`;
+  return text;
+};
+let timer: number | undefined, observer: MutationObserver | undefined;
+onMounted(() => {
+  load(true);
+  timer = window.setInterval(load, 10000);
+  const table = document.querySelector(".list-card");
+  if (table) {
+    observer = new MutationObserver(decorateTable);
+    observer.observe(table, { childList: true, subtree: true });
+  }
+});
+onUnmounted(() => {
+  if (timer) window.clearInterval(timer);
+  observer?.disconnect();
+});
 </script>
 <style scoped>
-.error-dialog-header{display:flex;align-items:center;gap:.7rem}.error-dialog-header>span{display:grid;width:36px;height:36px;flex-shrink:0;place-items:center;border-radius:9px;background:#eaf2d2;color:#648506}.error-dialog-header b,.error-dialog-header small{display:block}.error-dialog-header b{color:#344054;font-size:1rem}.error-dialog-header small{margin-top:.15rem;color:#7d8797;font-size:.72rem}.error-dialog-footer{width:100%;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #9cc10a}.error-dialog-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.5rem}.error-attempts{display:flex;flex-wrap:wrap;gap:1rem 2rem;padding:.75rem;border:1px solid #e5ecd0;border-radius:9px;background:#f8faef}.error-attempts small{margin-bottom:.25rem;color:#667085}.error-dialog :deep(.p-message-text){overflow-wrap:anywhere;white-space:pre-wrap}
-.vf-panel{margin-top:14px;overflow:hidden;border:1px solid #dfe4ea;border-radius:14px;background:#fff}.vf-panel>header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #e8ecf0}.vf-panel header small{display:block;margin-top:.2rem;color:#7d8797}.vf-panel header i{color:#648506}.actions{display:flex;gap:.35rem}.body{padding:14px 16px}.loading{display:flex;justify-content:center;gap:.5rem;padding:2rem}.columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}.columns>section{min-width:0;padding:.85rem;border:1px solid #e4ead6;border-radius:10px;background:#fafcf7}.columns h3{display:flex;align-items:center;gap:.45rem;margin:0 0 .6rem;font-size:.88rem}.row{display:flex;width:100%;align-items:center;gap:.55rem;margin-top:.4rem;padding:.6rem;border:1px solid #e6ebdf;border-radius:8px;background:#fff;color:#273244;text-align:left;cursor:pointer}.row:hover{border-color:#9bb95a;background:#f8fbeF}.row>span:nth-child(2){min-width:0;flex:1}.row b,.row small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row small,.empty,.limit{color:#7d8797;font-size:.7rem}.row-error{border-color:#f1d0d0}.waiting{display:grid;width:28px;height:28px;place-items:center;border-radius:50%;background:#e8f3ff;color:#2875b6;animation:pulse 1.35s ease-in-out infinite}.error{color:#c33f3f}.ok{color:#23815a}.filters{display:grid;grid-template-columns:120px 180px minmax(260px,1fr) auto;align-items:end;gap:.8rem;margin-bottom:1rem;padding:.8rem;border:1px solid #dfe8c8;border-radius:9px;background:#f8fbeF}.filters label{display:flex;flex-direction:column;gap:.35rem}.filters label>span{font-size:.75rem;font-weight:700}.error-dialog{display:flex;flex-direction:column;gap:1rem;max-height:min(65vh,600px);overflow-y:auto;overflow-wrap:anywhere}.error-dialog b,.error-dialog small{display:block}.raw pre{max-height:320px;overflow:auto;white-space:pre-wrap}@keyframes pulse{0%,100%{opacity:.55;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}@media(max-width:1000px){.columns{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.password{grid-column:span 2}}
-:global(.vf-table-error){display:inline-grid;width:1.8rem;height:1.8rem;margin-left:.35rem;place-items:center;border:0;border-radius:50%;background:#fdeaea;color:#c33f3f;cursor:pointer}:global(.vf-table-error:hover){background:#f8cfcf}
-:global(.vf-row-rect>td){background:rgba(255,244,214,.65)!important}
-.vf-ref{display:block;margin-top:.12rem;color:#b76e00;font-weight:600;font-size:.68rem}.vf-ref i{font-size:.6rem;margin-right:.15rem}.paused{margin-bottom:.8rem}.process-pass{display:flex;flex-direction:column;gap:.4rem;margin-top:.7rem}.process-pass>span{font-size:.75rem;font-weight:700}
-.correction-reason{display:flex;flex-direction:column;gap:.4rem;margin-top:1rem}.correction-reason>span{font-size:.78rem;font-weight:700;color:#344054}.correction-reason>small{align-self:flex-end;color:#7d8797}.correction-reason :deep(textarea){width:100%;resize:vertical}
+.error-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.error-dialog-header > span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9px;
+  background: #eaf2d2;
+  color: #648506;
+}
+.error-dialog-header b,
+.error-dialog-header small {
+  display: block;
+}
+.error-dialog-header b {
+  color: #344054;
+  font-size: 1rem;
+}
+.error-dialog-header small {
+  margin-top: 0.15rem;
+  color: #7d8797;
+  font-size: 0.72rem;
+}
+.error-dialog-footer {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #9cc10a;
+}
+.error-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.error-attempts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  padding: 0.75rem;
+  border: 1px solid #e5ecd0;
+  border-radius: 9px;
+  background: #f8faef;
+}
+.error-attempts small {
+  margin-bottom: 0.25rem;
+  color: #667085;
+}
+.error-dialog :deep(.p-message-text) {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.vf-panel {
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #dfe4ea;
+  border-radius: 14px;
+  background: #fff;
+}
+.vf-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid #e8ecf0;
+}
+.vf-panel header small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #7d8797;
+}
+.vf-panel header i {
+  color: #648506;
+}
+.actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.body {
+  padding: 14px 16px;
+}
+.loading {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+}
+.columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.columns > section {
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid #e4ead6;
+  border-radius: 10px;
+  background: #fafcf7;
+}
+.columns h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.88rem;
+}
+.row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.4rem;
+  padding: 0.6rem;
+  border: 1px solid #e6ebdf;
+  border-radius: 8px;
+  background: #fff;
+  color: #273244;
+  text-align: left;
+  cursor: pointer;
+}
+.row:hover {
+  border-color: #9bb95a;
+  background: #f8fbef;
+}
+.row > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+.row b,
+.row small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row small,
+.empty,
+.limit {
+  color: #7d8797;
+  font-size: 0.7rem;
+}
+.row-error {
+  border-color: #f1d0d0;
+}
+.waiting {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8f3ff;
+  color: #2875b6;
+  animation: pulse 1.35s ease-in-out infinite;
+}
+.error {
+  color: #c33f3f;
+}
+.ok {
+  color: #23815a;
+}
+.filters {
+  display: grid;
+  grid-template-columns: 120px 180px minmax(260px, 1fr) auto;
+  align-items: end;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  border: 1px solid #dfe8c8;
+  border-radius: 9px;
+  background: #f8fbef;
+}
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.filters label > span {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.error-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: min(65vh, 600px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.error-dialog b,
+.error-dialog small {
+  display: block;
+}
+.raw pre {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+@media (max-width: 1000px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .password {
+    grid-column: span 2;
+  }
+}
+:global(.vf-table-error) {
+  display: inline-grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  margin-left: 0.35rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #fdeaea;
+  color: #c33f3f;
+  cursor: pointer;
+}
+:global(.vf-table-error:hover) {
+  background: #f8cfcf;
+}
+:global(.vf-row-rect > td) {
+  background: rgba(255, 244, 214, 0.65) !important;
+}
+.vf-ref {
+  display: block;
+  margin-top: 0.12rem;
+  color: #b76e00;
+  font-weight: 600;
+  font-size: 0.68rem;
+}
+.vf-ref i {
+  font-size: 0.6rem;
+  margin-right: 0.15rem;
+}
+.paused {
+  margin-bottom: 0.8rem;
+}
+.process-pass {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+.process-pass > span {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.correction-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+.correction-reason > span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #344054;
+}
+.correction-reason > small {
+  align-self: flex-end;
+  color: #7d8797;
+}
+.correction-reason :deep(textarea) {
+  width: 100%;
+  resize: vertical;
+}
 </style>
