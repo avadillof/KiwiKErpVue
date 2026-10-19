@@ -324,7 +324,7 @@
             </div>
         </section>
 
-        <Frm_TaskForm ref="taskFormRef" @saved="() => load()" />
+        <Frm_TaskForm ref="taskFormRef" @saved="onTaskSaved" />
         <ConfirmDialog />
     </main>
 </template>
@@ -416,6 +416,7 @@ let autoTimer: number | null = null;
 const ARCHIVE_DAYS = 60;
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
+let loadGeneration = 0;
 
 const columns = computed(() => TASK_STATES.filter((column) =>
     !(hideDoneColumn.value && column.value === 'FINALIZADA')
@@ -504,8 +505,8 @@ function recentSince(): string {
 }
 
 async function load(quiet = false) {
+    const generation = ++loadGeneration;
     if (!quiet) loading.value = true;
-    archiveTruncated.value = null;
     try {
         const common: TaskQuery = {
             query: query.value,
@@ -523,8 +524,9 @@ async function load(quiet = false) {
                 updatedSince: terminal && !archiveMode.value ? recentSince() : undefined,
                 size: 2000
             });
+            if (generation !== loadGeneration) return;
             tasks.value = res.items;
-            if (terminal && res.total > res.items.length) archiveTruncated.value = res.total;
+            archiveTruncated.value = terminal && res.total > res.items.length ? res.total : null;
         } else {
             const [open, done] = await Promise.all([
                 getTasksPage({ ...common, states: TASK_OPEN_STATES.join(','), size: 2000 }),
@@ -532,8 +534,9 @@ async function load(quiet = false) {
                     ? getTasksPage({ ...common, states: 'FINALIZADA,DESCARTADA', size: 2000 })
                     : getTasksPage({ ...common, states: 'FINALIZADA,DESCARTADA', updatedSince: recentSince(), size: 500 })
             ]);
+            if (generation !== loadGeneration) return;
             tasks.value = [...open.items, ...done.items];
-            if (done.total > done.items.length) archiveTruncated.value = done.total;
+            archiveTruncated.value = done.total > done.items.length ? done.total : null;
         }
     } catch (e: any) {
         if (!quiet) {
@@ -545,8 +548,18 @@ async function load(quiet = false) {
             });
         }
     } finally {
-        if (!quiet) loading.value = false;
+        if (!quiet && generation === loadGeneration) loading.value = false;
     }
+}
+
+function onTaskSaved(saved: TaskDTO) {
+    const index = tasks.value.findIndex((task) => task.pkid === saved.pkid);
+    if (index >= 0) {
+        tasks.value.splice(index, 1, { ...tasks.value[index], ...saved });
+    } else {
+        tasks.value.unshift(saved);
+    }
+    void load(true);
 }
 
 function canAutoRefresh(): boolean {

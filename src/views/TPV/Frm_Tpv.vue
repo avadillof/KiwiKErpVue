@@ -1167,10 +1167,8 @@
           <Button
             label="Cancelar"
             outlined
-            @click="preparationVisible = false" /><Button
-            label="Aplicar"
-            @click="applyPreparation"
-          /></div
+            @click="preparationVisible = false"
+          /><Button label="Aplicar" @click="applyPreparation" /></div
       ></template>
     </Dialog>
     <TpvTableActions
@@ -1475,6 +1473,7 @@ import {
   watch,
 } from "vue";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
+import { registerTpvIdleLogout } from "@/services/composables/Sv_IdleLogout";
 import axios from "axios";
 import { printConfiguredReceipt } from "../../services/Printing/printerService";
 import TpvTableActions from "./TpvTableActions.vue";
@@ -2874,15 +2873,25 @@ function remove(target: Line) {
   lines.value = lines.value.filter((line) => line !== target);
 }
 async function requestSessionExit(action: "logout" | "switch") {
-  if (busy.value || endingSession.value) return;
+  if (endingSession.value) return;
+  if (busy.value || checkoutPending.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Operación del TPV en curso",
+      detail:
+        "Termina el cobro o la operación en curso antes de cerrar la sesión o cambiar de usuario.",
+      life: 5000,
+    });
+    return;
+  }
   // Table tickets belong to the table. Save before changing the authenticated operator.
   if (isBarMode.value && activeTable.value && !(await saveTable())) return;
   sessionAction.value = action;
   if (unsaved.value) sessionDialog.value = true;
-  else void finishSession();
+  else await finishSession();
 }
 async function finishSession() {
-  if (busy.value || endingSession.value) return;
+  if (busy.value || endingSession.value || checkoutPending.value) return;
   if (sessionAction.value === "switch") {
     // Cambio rápido sin pasar por el login: se vacía con aviso y se elige operario.
     sessionDialog.value = false;
@@ -3026,7 +3035,11 @@ onBeforeRouteLeave(
         "La venta no está guardada. ¿Quieres salir y descartar el ticket?",
       )),
 );
+let unregisterIdleLogout: (() => void) | undefined;
 onMounted(() => {
+  unregisterIdleLogout = registerTpvIdleLogout(() =>
+    requestSessionExit("logout"),
+  );
   if (!showCentral.value) void refresh();
 
   window.addEventListener("beforeunload", beforeUnload);
@@ -3036,6 +3049,7 @@ onMounted(() => {
   searchInput.value?.focus();
 });
 onBeforeUnmount(() => {
+  unregisterIdleLogout?.();
   disposed = true;
   ++generation;
   clearTimeout(searchTimer);

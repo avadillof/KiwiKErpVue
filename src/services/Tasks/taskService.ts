@@ -71,6 +71,17 @@ export interface TaskCommentDTO {
   text: string;
 }
 
+export interface TaskChecklistItemDTO {
+  pkid: number | null;
+  taskPkid: number;
+  text: string;
+  done: boolean;
+  position?: number | null;
+  userPkid?: number | null;
+  completedByName?: string;
+  completedAt?: string | null;
+}
+
 export const TASK_STATES: { value: TaskState; label: string; severity: string }[] = [
   { value: 'PLANIFICADA', label: 'Planificado', severity: 'info' },
   { value: 'EN_CURSO', label: 'Realizándose', severity: 'warn' },
@@ -207,6 +218,22 @@ export async function getTaskComments(taskPkid: number, requesterPkid?: number |
 export async function saveTaskComment(entry: TaskCommentDTO): Promise<TaskCommentDTO> {
   const { data } = await axios.post(backendUrl('/WebSaveTaskComment'), entry);
   return data as TaskCommentDTO;
+}
+
+export async function getTaskChecklist(taskPkid: number, requesterPkid?: number | null): Promise<TaskChecklistItemDTO[]> {
+  const params: Record<string, any> = { taskPkid };
+  if (requesterPkid != null) params.requesterPkid = requesterPkid;
+  const { data } = await axios.get(backendUrl('/WebGetTaskChecklist'), { params });
+  return (Array.isArray(data) ? data : []) as TaskChecklistItemDTO[];
+}
+
+export async function saveTaskChecklistItem(entry: TaskChecklistItemDTO): Promise<TaskChecklistItemDTO> {
+  const { data } = await axios.post(backendUrl('/WebSaveTaskChecklistItem'), entry);
+  return data as TaskChecklistItemDTO;
+}
+
+export async function deleteTaskChecklistItem(pkid: number, userPkid?: number | null): Promise<void> {
+  await axios.post(backendUrl('/WebDeleteTaskChecklistItem'), { pkid, userPkid: userPkid ?? null });
 }
 
 export async function saveTaskOrder(order: { pkid: number | null; state: string; position: number }[], requesterPkid?: number | null): Promise<number> {

@@ -195,6 +195,53 @@
 
             <Panel style="margin-top:20px">
                 <template #header>
+                    <div class="flex align-items-center gap-2 checklist-header">
+                        <div class="flex align-items-center justify-content-center bg-primary-100 border-circle"
+                            style="width:32px;height:32px">
+                            <i class="pi pi-list-check text-primary"></i>
+                        </div>
+                        <span class="font-bold">Lista de comprobación</span>
+                        <Tag v-if="checklist.length" :value="`${completedChecklist}/${checklist.length}`"
+                            :severity="completedChecklist === checklist.length ? 'success' : 'info'" rounded />
+                    </div>
+                </template>
+
+                <div v-if="form.pkid" id="task-checklist" class="checklist">
+                    <div v-if="checklist.length" class="checklist-progress">
+                        <div><span>Progreso de los pasos</span><strong>{{ checklistPercent }} %</strong></div>
+                        <ProgressBar :value="checklistPercent" :showValue="false" />
+                    </div>
+                    <p v-else class="checklist-empty">Divide la tarea en pasos concretos para que nadie olvide una parte del trabajo.</p>
+                    <div class="checklist-items">
+                        <div v-for="item in checklist" :key="item.pkid ?? item.text" class="checklist-item"
+                            :class="{ done: item.done }">
+                            <Checkbox v-model="item.done" binary :inputId="`check-${item.pkid}`"
+                                :disabled="checklistBusy" @update:modelValue="toggleChecklist(item)" />
+                            <label :for="`check-${item.pkid}`">{{ item.text }}</label>
+                            <small v-if="item.done && item.completedByName">
+                                {{ item.completedByName }}<span v-if="item.completedAt"> · {{ fmtCommentTime(item.completedAt) }}</span>
+                            </small>
+                            <Button icon="pi pi-trash" text rounded size="small" severity="danger"
+                                title="Eliminar paso" :disabled="checklistBusy" @click="removeChecklistItem(item)" />
+                        </div>
+                    </div>
+                    <div class="checklist-add">
+                        <InputText ref="checklistInputRef" v-model="newChecklistText" maxlength="240"
+                            placeholder="Añadir un paso…" :disabled="checklistBusy"
+                            @keydown.enter.prevent="addChecklistItem" />
+                        <Button label="Añadir" icon="pi pi-plus" size="small" :loading="checklistBusy"
+                            :disabled="!newChecklistText.trim()" @click="addChecklistItem" />
+                    </div>
+                    <InlineMessage v-if="errors.checklist" severity="error">{{ errors.checklist }}</InlineMessage>
+                    <small class="mail-hint">Si hay pasos pendientes, la tarea no podrá marcarse como Hecho.</small>
+                </div>
+                <Message v-else severity="info" :closable="false" class="mt-2">
+                    Guarda la tarea para poder preparar su lista de comprobación.
+                </Message>
+            </Panel>
+
+            <Panel style="margin-top:20px">
+                <template #header>
                     <div class="flex align-items-center gap-2">
                         <div class="flex align-items-center justify-content-center bg-primary-100 border-circle"
                             style="width:32px;height:32px">
@@ -443,6 +490,7 @@ import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Panel from 'primevue/panel';
+import ProgressBar from 'primevue/progressbar';
 import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import Slider from 'primevue/slider';
@@ -458,17 +506,21 @@ import {
     TASK_PRIORITIES,
     TASK_STATES,
     deleteTaskTime,
+    deleteTaskChecklistItem,
     emptyTask,
     getContacts,
     getTask,
+    getTaskChecklist,
     getTaskComments,
     getTaskTimes,
     getUsers,
     isTaskLocked,
     saveTask,
+    saveTaskChecklistItem,
     saveTaskComment,
     saveTaskTime,
     unlinkTaskInvoice,
+    type TaskChecklistItemDTO,
     type TaskCommentDTO,
     type TaskDTO,
     type TaskTimeDTO
@@ -479,7 +531,9 @@ const confirm = useConfirm();
 const companyStore = useCompanyStore();
 const authStore = useAuthStore();
 const { scrollToError } = useFormValidator();
-const emit = defineEmits(['saved']);
+const emit = defineEmits<{
+    saved: [task: TaskDTO];
+}>();
 
 const visible = ref(false);
 const saving = ref(false);
@@ -489,6 +543,10 @@ const userOptions = ref<{ label: string; value: number }[]>([]);
 const contactOptions = ref<{ label: string; value: number }[]>([]);
 const times = ref<TaskTimeDTO[]>([]);
 const comments = ref<TaskCommentDTO[]>([]);
+const checklist = ref<TaskChecklistItemDTO[]>([]);
+const newChecklistText = ref('');
+const checklistBusy = ref(false);
+const checklistInputRef = ref<any>(null);
 const newComment = ref('');
 const sendingComment = ref(false);
 const threadRef = ref<HTMLElement | null>(null);
@@ -501,7 +559,7 @@ const newTimeHours = ref<number | null>(null);
 const newTimeMemo = ref('');
 const newTimeUser = ref<number | null>(null);
 
-const errors = ref({ name: '', creator: '', assignee: '', discard: '', dates: '' });
+const errors = ref({ name: '', creator: '', assignee: '', discard: '', dates: '', checklist: '' });
 const assigneeType = ref<'USER' | 'CONTACT'>('USER');
 const assigneeOptions = [
     { label: 'Usuario interno', value: 'USER' as const },
@@ -510,6 +568,11 @@ const assigneeOptions = [
 
 const totalHours = computed(() =>
     times.value.reduce((acc, t) => acc + Number(t.hours || 0), 0)
+);
+const completedChecklist = computed(() => checklist.value.filter((item) => item.done).length);
+const checklistPercent = computed(() => checklist.value.length
+    ? Math.round(completedChecklist.value * 100 / checklist.value.length)
+    : 0
 );
 
 const progressValue = computed({
@@ -546,9 +609,11 @@ function parseInputDate(value: any): Date | null {
 }
 
 async function open(pkid: number | null = null, presetState?: string) {
-    errors.value = { name: '', creator: '', assignee: '', discard: '', dates: '' };
+    errors.value = { name: '', creator: '', assignee: '', discard: '', dates: '', checklist: '' };
     times.value = [];
     comments.value = [];
+    checklist.value = [];
+    newChecklistText.value = '';
     newComment.value = '';
     dueDate.value = null;
     startDate.value = null;
@@ -573,6 +638,7 @@ async function open(pkid: number | null = null, presetState?: string) {
         if (form.value.entitiePkid) await loadContacts(form.value.entitiePkid);
         await loadTimes(form.value.pkid);
         await loadComments(form.value.pkid);
+        await loadChecklist(form.value.pkid);
         } catch (e: any) {
             toast.add({
                 severity: 'error',
@@ -710,6 +776,107 @@ async function loadComments(taskPkid: number | null) {
     scrollThread();
 }
 
+async function loadChecklist(taskPkid: number | null) {
+    if (!taskPkid) {
+        checklist.value = [];
+        return;
+    }
+    try {
+        checklist.value = await getTaskChecklist(taskPkid, myRequester());
+    } catch {
+        checklist.value = [];
+    }
+}
+
+async function refreshChecklistProgress() {
+    if (!form.value.pkid || form.value.state !== 'EN_CURSO') return;
+    try {
+        const fresh = await getTask(form.value.pkid, myRequester());
+        form.value.progress = fresh.progress;
+    } catch {
+        // La lista ya está guardada; el tablero se actualizará al cerrar la ficha.
+    }
+}
+
+async function addChecklistItem() {
+    const text = newChecklistText.value.trim();
+    if (!form.value.pkid || !text || checklistBusy.value) return;
+    checklistBusy.value = true;
+    try {
+        const saved = await saveTaskChecklistItem({
+            pkid: null,
+            taskPkid: form.value.pkid,
+            text,
+            done: false,
+            userPkid: myPkid.value
+        });
+        checklist.value = [...checklist.value, saved];
+        newChecklistText.value = '';
+        errors.value.checklist = '';
+        await refreshChecklistProgress();
+        await nextTick();
+        (checklistInputRef.value?.$el ?? checklistInputRef.value)?.focus?.();
+    } catch (error: any) {
+        toast.add({
+            severity: 'error', summary: 'No se pudo añadir el paso',
+            detail: error.response?.data?.message ?? 'Revisa los datos e inténtalo de nuevo',
+            life: companyStore.companyInfo.toastDuration ?? 3000
+        });
+    } finally {
+        checklistBusy.value = false;
+    }
+}
+
+async function toggleChecklist(item: TaskChecklistItemDTO) {
+    if (!item.pkid || checklistBusy.value) return;
+    checklistBusy.value = true;
+    try {
+        const saved = await saveTaskChecklistItem({ ...item, userPkid: myPkid.value });
+        checklist.value = checklist.value.map((current) => current.pkid === saved.pkid ? saved : current);
+        if (checklist.value.every((current) => current.done)) errors.value.checklist = '';
+        await refreshChecklistProgress();
+    } catch (error: any) {
+        item.done = !item.done;
+        toast.add({
+            severity: 'error', summary: 'No se pudo actualizar el paso',
+            detail: error.response?.data?.message ?? 'Inténtalo de nuevo',
+            life: companyStore.companyInfo.toastDuration ?? 3000
+        });
+    } finally {
+        checklistBusy.value = false;
+    }
+}
+
+function removeChecklistItem(item: TaskChecklistItemDTO) {
+    if (!item.pkid || checklistBusy.value) return;
+    confirm.require({
+        header: 'Eliminar paso',
+        message: `Se eliminará «${item.text}» de la lista de comprobación.`,
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Eliminar',
+        rejectLabel: 'Volver',
+        accept: () => void performChecklistDelete(item)
+    });
+}
+
+async function performChecklistDelete(item: TaskChecklistItemDTO) {
+    if (!item.pkid) return;
+    checklistBusy.value = true;
+    try {
+        await deleteTaskChecklistItem(item.pkid, myPkid.value);
+        checklist.value = checklist.value.filter((current) => current.pkid !== item.pkid);
+        await refreshChecklistProgress();
+    } catch (error: any) {
+        toast.add({
+            severity: 'error', summary: 'No se pudo eliminar el paso',
+            detail: error.response?.data?.message ?? 'Inténtalo de nuevo',
+            life: companyStore.companyInfo.toastDuration ?? 3000
+        });
+    } finally {
+        checklistBusy.value = false;
+    }
+}
+
 async function sendComment() {
     const text = newComment.value.trim();
     if (!text || !form.value.pkid || myPkid.value == null || sendingComment.value) return;
@@ -737,7 +904,7 @@ async function sendComment() {
 }
 
 function validate(): boolean {
-    errors.value = { name: '', creator: '', assignee: '', discard: '', dates: '' };
+    errors.value = { name: '', creator: '', assignee: '', discard: '', dates: '', checklist: '' };
     let first = '';
     if (!form.value.name?.trim()) {
         errors.value.name = 'Obligatorio';
@@ -763,8 +930,13 @@ function validate(): boolean {
         errors.value.dates = 'El inicio no puede ser posterior al vencimiento';
         first = first || 'task-start';
     }
+    if (form.value.state === 'FINALIZADA' && checklist.value.some((item) => !item.done)) {
+        errors.value.checklist = 'Completa todos los pasos antes de marcar la tarea como Hecho';
+        first = first || 'task-checklist';
+    }
     if (first) void scrollToError(first as any);
-    return !errors.value.name && !errors.value.creator && !errors.value.assignee && !errors.value.discard && !errors.value.dates;
+    return !errors.value.name && !errors.value.creator && !errors.value.assignee
+        && !errors.value.discard && !errors.value.dates && !errors.value.checklist;
 }
 
 async function save() {
@@ -783,7 +955,7 @@ async function save() {
             summary: 'Tarea guardada correctamente',
             life: companyStore.companyInfo.toastDuration ?? 3000
         });
-        emit('saved');
+        emit('saved', saved);
         visible.value = false;
     } catch (error: any) {
         toast.add({
@@ -872,16 +1044,18 @@ function askUnlink(linkPkid: number | null) {
 async function unlinkInvoice(linkPkid: number) {
     try {
         await unlinkTaskInvoice(linkPkid);
+        let refreshed = form.value;
         if (form.value.pkid) {
             const fresh = await getTask(form.value.pkid, myRequester());
             form.value = { ...form.value, ...fresh };
+            refreshed = fresh;
         }
         toast.add({
             severity: 'success',
             summary: 'Factura desvinculada',
             life: companyStore.companyInfo.toastDuration ?? 3000
         });
-        emit('saved');
+        emit('saved', refreshed);
     } catch (error: any) {
         toast.add({
             severity: 'error',
@@ -894,6 +1068,90 @@ async function unlinkInvoice(linkPkid: number) {
 </script>
 
 <style scoped>
+.checklist-header {
+    min-width: 0;
+}
+.checklist {
+    display: grid;
+    gap: .85rem;
+}
+.checklist-progress {
+    display: grid;
+    gap: .4rem;
+    padding: .7rem .85rem;
+    border: 1px solid #e3e9d4;
+    border-radius: 10px;
+    background: #f9fbf3;
+}
+.checklist-progress > div {
+    display: flex;
+    justify-content: space-between;
+    color: #596577;
+    font-size: .78rem;
+}
+.checklist-progress strong {
+    color: #648506;
+}
+.checklist-progress :deep(.p-progressbar) {
+    height: 8px;
+    background: #e7ecd9;
+}
+.checklist-progress :deep(.p-progressbar-value) {
+    background: #9cc10a;
+}
+.checklist-empty {
+    margin: 0;
+    padding: .8rem;
+    border: 1px dashed #d7dfc2;
+    border-radius: 10px;
+    color: #788071;
+}
+.checklist-items {
+    display: grid;
+    gap: .35rem;
+}
+.checklist-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: .65rem;
+    min-height: 42px;
+    padding: .35rem .45rem .35rem .7rem;
+    border: 1px solid #e5e9dc;
+    border-radius: 9px;
+    background: #fff;
+}
+.checklist-item label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #344054;
+    cursor: pointer;
+}
+.checklist-item small {
+    color: #899184;
+    white-space: nowrap;
+}
+.checklist-item.done {
+    background: #f7faef;
+}
+.checklist-item.done label {
+    color: #788071;
+    text-decoration: line-through;
+}
+.checklist-add {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .6rem;
+}
+@media (max-width: 720px) {
+    .checklist-item {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+    .checklist-item small {
+        grid-column: 2 / -1;
+        white-space: normal;
+    }
+}
 .text-muted {
     color: #788071;
     font-size: 0.82rem;
