@@ -1,0 +1,12 @@
+{
+  "name": "KiwiKERP",
+  "short_name": "KiwiKERP",
+  "description": "Gestión empresarial KiwiKERP",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f4",
+  "theme_color": "#9cc10a",
+  "icons": [
+    { "src": "/logos/logo512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

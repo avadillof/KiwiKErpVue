@@ -56,6 +56,7 @@ declare module 'vue' {
     PrinterControls: typeof import('./src/components/Printing/PrinterControls.vue')['default']
     ProductLookup: typeof import('./src/components/shared/ProductLookup.vue')['default']
     ProductPricePreview: typeof import('./src/components/shared/ProductPricePreview.vue')['default']
+    PushNotificationSettings: typeof import('./src/components/PushNotificationSettings.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SalesPriceUpdateDialog: typeof import('./src/components/shared/SalesPriceUpdateDialog.vue')['default']

@@ -110,6 +110,17 @@
           emailError
         }}</InlineMessage>
 
+        <FloatLabel variant="on" class="w-full">
+          <InputText
+            id="user_phone"
+            maxlength="45"
+            v-model="formData.phone"
+            class="w-full"
+            autocomplete="tel"
+          />
+          <label for="user_phone">Teléfono móvil</label>
+        </FloatLabel>
+
         <FloatLabel variant="on" class="w-full" v-if="visibleInputs">
           <Select
             id="user_group"
@@ -315,6 +326,7 @@ const formData = ref<UserFormData>({
   userDsCode: "",
   name: "",
   email: "",
+  phone: "",
   password: "",
   groupKyId: 0,
   active: true,
@@ -380,6 +392,7 @@ export interface UserFormData {
   userDsCode: string;
   name: string;
   email: string;
+  phone: string;
   password: string;
   groupKyId: number;
   active: boolean;
@@ -426,6 +439,7 @@ const open = async (id: number | null = null) => {
         userDsCode: user.userDsCode,
         name: user.name,
         email: user.email,
+        phone: user.phone || "",
         password: "", // Por seguridad no traemos la pass
         active: user.active,
         pin: user.pin || "",
@@ -448,6 +462,7 @@ const open = async (id: number | null = null) => {
         userDsCode: "",
         name: "",
         email: "",
+        phone: "",
         password: "",
         groupKyId: 0,
         active: true,

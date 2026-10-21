@@ -4,14 +4,25 @@
     modal
     class="kiwik-dialog notification-dialog"
     :style="{ width: 'min(520px, 95vw)' }"
-    @hide="q = ''">
+    @hide="q = ''"
+  >
     <template #header>
       <div class="notification-header">
-        <span class="notification-header__icon"><i class="pi pi-bell"></i></span>
+        <span class="notification-header__icon"
+          ><i class="pi pi-bell"></i
+        ></span>
         <div>
           <small>Centro de mensajes</small>
           <h2>Notificaciones</h2>
         </div>
+        <Button
+          icon="pi pi-mobile"
+          label="Avisos móviles"
+          text
+          size="small"
+          class="notification-header__push"
+          @click="settingsVisible = true"
+        />
         <Button
           v-if="store.unreadCount > 0"
           label="Marcar todas como leídas"
@@ -19,12 +30,16 @@
           text
           size="small"
           class="notification-header__markall"
-          @click="store.markAllRead()" />
+          @click="store.markAllRead()"
+        />
       </div>
     </template>
 
     <div class="notification-body">
-      <div v-if="store.loading && !store.messages.length" class="notification-state">
+      <div
+        v-if="store.loading && !store.messages.length"
+        class="notification-state"
+      >
         <i class="pi pi-spin pi-spinner"></i>
         <span>Cargando notificaciones…</span>
       </div>
@@ -39,7 +54,8 @@
           v-model="q"
           type="text"
           class="notification-filter"
-          placeholder="Filtrar notificaciones…" />
+          placeholder="Filtrar notificaciones…"
+        />
 
         <ul class="notification-list">
           <li
@@ -50,19 +66,34 @@
             role="button"
             :tabindex="0"
             @click="openMessage(m)"
-            @keydown.enter="openMessage(m)">
-            <span class="notification-item__icon" :style="{ color: iconFor(m.type).color, background: iconFor(m.type).bg }">
+            @keydown.enter="openMessage(m)"
+          >
+            <span
+              class="notification-item__icon"
+              :style="{
+                color: iconFor(m.type).color,
+                background: iconFor(m.type).bg,
+              }"
+            >
               <i :class="iconFor(m.type).icon"></i>
             </span>
             <span class="notification-item__content">
               <span class="notification-item__title">{{ m.title }}</span>
               <span class="notification-item__body">{{ m.body }}</span>
-              <span class="notification-item__meta">{{ formatDate(m.createdAt) }}</span>
+              <span class="notification-item__meta">{{
+                formatDate(m.createdAt)
+              }}</span>
             </span>
             <i v-if="!m.read" class="notification-item__dot"></i>
-            <i v-else-if="m.link" class="pi pi-external-link notification-item__go"></i>
+            <i
+              v-else-if="m.link"
+              class="pi pi-external-link notification-item__go"
+            ></i>
           </li>
-          <li v-if="!filteredMessages.length" class="notification-item notification-item--empty">
+          <li
+            v-if="!filteredMessages.length"
+            class="notification-item notification-item--empty"
+          >
             No hay notificaciones que coincidan.
           </li>
         </ul>
@@ -71,15 +102,30 @@
   </Dialog>
 
   <Dialog
+    v-model:visible="settingsVisible"
+    modal
+    header="Notificaciones en dispositivos"
+    class="kiwik-dialog push-settings-dialog"
+    :style="{ width: 'min(700px, 95vw)' }"
+  >
+    <PushNotificationSettings v-if="settingsVisible" />
+  </Dialog>
+
+  <Dialog
     v-model:visible="detailVisible"
     modal
     class="kiwik-dialog notification-detail-dialog"
-    :style="{ width: 'min(500px, 95vw)' }">
+    :style="{ width: 'min(500px, 95vw)' }"
+  >
     <template #header>
       <div v-if="selected" class="notification-detail-header">
         <span
           class="notification-item__icon"
-          :style="{ color: iconFor(selected.type).color, background: iconFor(selected.type).bg }">
+          :style="{
+            color: iconFor(selected.type).color,
+            background: iconFor(selected.type).bg,
+          }"
+        >
           <i :class="iconFor(selected.type).icon"></i>
         </span>
         <div>
@@ -90,61 +136,83 @@
     </template>
     <div v-if="selected" class="notification-detail-body">
       <p class="notification-detail-meta">
-        {{ typeLabel(selected.type) }} · {{ selected.read ? "Leído" : "No leído" }} · {{ formatDate(selected.createdAt) }}
+        {{ typeLabel(selected.type) }} ·
+        {{ selected.read ? "Leído" : "No leído" }} ·
+        {{ formatDate(selected.createdAt) }}
       </p>
       <p class="notification-detail-text">{{ selected.body }}</p>
     </div>
     <template #footer>
       <div class="notification-detail-actions">
-        <Button label="Cerrar" text severity="secondary" @click="detailVisible = false" />
+        <Button
+          label="Cerrar"
+          text
+          severity="secondary"
+          @click="detailVisible = false"
+        />
         <Button
           v-if="selected?.link"
           :label="linkLabel(selected)"
           icon="pi pi-external-link"
-          @click="goTo(selected)" />
+          @click="goTo(selected)"
+        />
       </div>
     </template>
   </Dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
-import { useMessagesStore } from '@/stores/messagesStore';
-import { formatHumanDate } from '@/services/composables/UseServerTime';
-import type { NotificationMessage, NotificationType } from '@/services/Frm_Main/MessageNotifications';
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+import Dialog from "primevue/dialog";
+import Button from "primevue/button";
+import { useMessagesStore } from "@/stores/messagesStore";
+import { formatHumanDate } from "@/services/composables/UseServerTime";
+import type {
+  NotificationMessage,
+  NotificationType,
+} from "@/services/Frm_Main/MessageNotifications";
+import PushNotificationSettings from "@/components/PushNotificationSettings.vue";
 
-const ICONS: Record<NotificationType, { icon: string; color: string; bg: string }> = {
-  quote: { icon: 'pi pi-file-edit', color: '#4f6fd0', bg: '#eef2fc' },
-  order: { icon: 'pi pi-shopping-cart', color: '#b25e09', bg: '#fdf1e2' },
-  delivery: { icon: 'pi pi-truck', color: '#0e7490', bg: '#e6f6f9' },
-  invoice: { icon: 'pi pi-receipt', color: '#5b7d07', bg: '#eef5d7' },
-  verifactu: { icon: 'pi pi-building-columns', color: '#8a4bd0', bg: '#f3edfc' },
-  security: { icon: 'pi pi-shield', color: '#b42318', bg: '#fdefec' },
-  system: { icon: 'pi pi-cog', color: '#475467', bg: '#eef0f3' },
-  other: { icon: 'pi pi-info-circle', color: '#475467', bg: '#eef0f3' }
+const ICONS: Record<
+  NotificationType,
+  { icon: string; color: string; bg: string }
+> = {
+  quote: { icon: "pi pi-file-edit", color: "#4f6fd0", bg: "#eef2fc" },
+  order: { icon: "pi pi-shopping-cart", color: "#b25e09", bg: "#fdf1e2" },
+  delivery: { icon: "pi pi-truck", color: "#0e7490", bg: "#e6f6f9" },
+  invoice: { icon: "pi pi-receipt", color: "#5b7d07", bg: "#eef5d7" },
+  verifactu: {
+    icon: "pi pi-building-columns",
+    color: "#8a4bd0",
+    bg: "#f3edfc",
+  },
+  security: { icon: "pi pi-shield", color: "#b42318", bg: "#fdefec" },
+  system: { icon: "pi pi-cog", color: "#475467", bg: "#eef0f3" },
+  other: { icon: "pi pi-info-circle", color: "#475467", bg: "#eef0f3" },
 };
 
 const router = useRouter();
 const store = useMessagesStore();
 const visible = ref(false);
-const q = ref('');
+const q = ref("");
 const selected = ref<NotificationMessage | null>(null);
+const settingsVisible = ref(false);
 
 const detailVisible = computed({
   get: () => selected.value !== null,
   set: (v: boolean) => {
     if (!v) selected.value = null;
-  }
+  },
 });
 
 const filteredMessages = computed(() => {
   const query = q.value.trim().toLowerCase();
   if (!query) return store.messages;
   return store.messages.filter(
-    (m) => m.title.toLowerCase().includes(query) || m.body.toLowerCase().includes(query)
+    (m) =>
+      m.title.toLowerCase().includes(query) ||
+      m.body.toLowerCase().includes(query),
   );
 });
 
@@ -158,14 +226,14 @@ function formatDate(raw: string): string {
 
 function typeLabel(type: NotificationType): string {
   const labels: Record<NotificationType, string> = {
-    quote: 'Presupuesto',
-    order: 'Pedido',
-    delivery: 'Entrega',
-    invoice: 'Factura',
-    verifactu: 'VeriFactu',
-    security: 'Seguridad',
-    system: 'Sistema',
-    other: 'Notificación'
+    quote: "Presupuesto",
+    order: "Pedido",
+    delivery: "Entrega",
+    invoice: "Factura",
+    verifactu: "VeriFactu",
+    security: "Seguridad",
+    system: "Sistema",
+    other: "Notificación",
   };
   return labels[type] || labels.other;
 }
@@ -177,26 +245,27 @@ function openMessage(m: NotificationMessage) {
 
 function goTo(m: NotificationMessage) {
   selected.value = null;
-  if (m.link && typeof m.link === 'string') {
+  if (m.link && typeof m.link === "string") {
     visible.value = false;
-    void router.push(m.link.startsWith('/') ? m.link : { name: m.link });
+    void router.push(m.link.startsWith("/") ? m.link : { name: m.link });
   }
 }
 
 function linkLabel(message: NotificationMessage): string {
-  const link = message.link || '';
-  if (link.includes('Frm_Ajustes') && link.includes('tab=5')) return 'Ir a Salvaguarda de datos';
-  if (link.includes('Frm_Ajustes')) return 'Ir a Configuración';
-  if (link === 'InformesVentas') return 'Ir a Liquidación de IVA';
-  if (message.type === 'quote') return 'Ir a Presupuestos';
-  if (message.type === 'order') return 'Ir a Pedidos';
-  if (message.type === 'delivery') return 'Ir a Albaranes';
-  if (message.type === 'invoice') return 'Ir a Facturas';
-  return 'Abrir en KiwiKERP';
+  const link = message.link || "";
+  if (link.includes("Frm_Ajustes") && link.includes("tab=5"))
+    return "Ir a Salvaguarda de datos";
+  if (link.includes("Frm_Ajustes")) return "Ir a Configuración";
+  if (link === "InformesVentas") return "Ir a Liquidación de IVA";
+  if (message.type === "quote") return "Ir a Presupuestos";
+  if (message.type === "order") return "Ir a Pedidos";
+  if (message.type === "delivery") return "Ir a Albaranes";
+  if (message.type === "invoice") return "Ir a Facturas";
+  return "Abrir en KiwiKERP";
 }
 
 async function open() {
-  q.value = '';
+  q.value = "";
   visible.value = true;
   await store.loadMessages();
 }
@@ -237,6 +306,9 @@ defineExpose({ open });
 }
 .notification-header__markall {
   margin-left: auto;
+}
+.notification-header__push + .notification-header__markall {
+  margin-left: 0;
 }
 
 .notification-detail-header {
@@ -302,7 +374,9 @@ defineExpose({ open });
   font: inherit;
   font-size: 0.88rem;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .notification-filter:focus {
   border-color: #9cc10a;
@@ -332,7 +406,10 @@ defineExpose({ open });
   background: #fff;
   color: #1f2937;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    box-shadow 0.12s;
 }
 .notification-item:hover,
 .notification-item:focus-visible {

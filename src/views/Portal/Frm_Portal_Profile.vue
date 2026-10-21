@@ -134,6 +134,19 @@
           </div>
         </form>
       </section>
+
+      <section class="profile-card push-card">
+        <div class="profile-card__heading">
+          <span class="profile-card__icon"><i class="pi pi-bell" /></span>
+          <div>
+            <h2>Notificaciones</h2>
+            <p>
+              Configura los avisos de tareas e incidencias en tus dispositivos.
+            </p>
+          </div>
+        </div>
+        <PushNotificationSettings :portal-token="token" />
+      </section>
     </div>
   </div>
 
@@ -182,6 +195,7 @@ import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Message from "primevue/message";
+import PushNotificationSettings from "@/components/PushNotificationSettings.vue";
 import { useToast } from "primevue/usetoast";
 import {
   portalProfile,

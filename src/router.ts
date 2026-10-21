@@ -56,6 +56,11 @@ const routes = [
     component: () => import('./views/Portal/Frm_Portal.vue')
   },
   {
+    path: '/vincular-notificaciones',
+    name: 'PushPairing',
+    component: () => import('./views/Push/Frm_PushPairing.vue')
+  },
+  {
     path: '/service-unavailable',
     name: 'ServiceUnavailable',
     component: Frm_ServiceUnavailable,
