@@ -7,6 +7,11 @@
             <span class="gantt-legend-item"><i class="today-mark"></i>Hoy</span>
             <span class="archive-toggle"><ToggleButton v-model="showDone" onLabel="Hechas" offLabel="Hechas" onIcon="pi pi-check"
                 offIcon="pi pi-check" size="small" title="Mostrar también finalizadas y descartadas" /></span>
+            <span class="gantt-grouping">
+                <i class="pi pi-sitemap"></i>
+                <Select v-model="groupMode" :options="groupOptions" optionLabel="label" optionValue="value"
+                    size="small" aria-label="Agrupar planificación" />
+            </span>
             <span class="gantt-zoom">
                 <Button icon="pi pi-minus" rounded text size="small" title="Reducir zoom"
                     :disabled="zoomIndex <= 0" @click="zoomOut" />
@@ -34,37 +39,49 @@
                     </div>
                 </div>
 
-                <div v-for="row in rows" :key="row.task.pkid ?? row.task.code" class="gantt-row"
-                    @click="emit('edit', row.task)">
-                    <div class="gantt-label" :title="row.task.name">
-                        <div class="gantt-label-main"><strong>{{ row.task.code }}</strong><span>{{ row.task.name }}</span></div>
-                        <small class="gantt-label-who">{{ assigneeName(row.task) }}</small>
+                <template v-for="group in groupedRows" :key="group.key">
+                    <div v-if="groupMode !== 'NONE'" class="gantt-group-row">
+                        <div class="gantt-group-label"><i :class="group.icon"></i><strong>{{ group.label }}</strong><span>{{ group.rows.length }}</span></div>
+                        <div class="gantt-group-line"></div>
                     </div>
-                    <div class="gantt-timeline gantt-track">
-                        <span v-for="d in days" :key="d.key" class="gantt-cell"
-                            :class="{ weekend: d.weekend }" :style="{ width: dayWidth + 'px' }"></span>
-                        <div class="gantt-bar" :class="{ timing: isTimerRunning(row.task.pkid) }"
-                            :style="barStyle(row)" :title="barTitle(row.task)">
-                            <div class="gantt-fill" :style="{ width: progressPct(row.task) + '%' }"></div>
-                            <span v-if="barWide(row)" class="gantt-pct">{{ progressPct(row.task) }} %</span>
-                            <span class="gantt-after">
-                                <span class="gantt-who">
-                                    <img v-if="row.task.userPkid && !photoErrors[row.task.userPkid]"
-                                        :src="userPhotoUrl(row.task.userPkid)" :alt="assigneeName(row.task)"
-                                        @error="onPhotoError(row.task.userPkid)" />
-                                    <span v-else class="gantt-who-initials">{{ initials(assigneeName(row.task)) }}</span>
-                                </span>
-                                <span class="gantt-who-name">{{ assigneeName(row.task) }}</span>
-                                <span v-if="isTimerRunning(row.task.pkid)" class="gantt-timer-chip">
-                                    <i class="pi pi-stopwatch"></i>{{ formatElapsed(timerElapsed(row.task.pkid)) }}
-                                </span>
-                                <span v-else-if="!barWide(row)" class="gantt-after-pct">{{ progressPct(row.task) }} %</span>
-                            </span>
-                            <span v-if="row.task.overdue" class="gantt-flag">Vencida</span>
+                    <div v-for="row in group.rows" :key="row.task.pkid ?? row.task.code" class="gantt-row"
+                        :class="{ overdue: row.task.overdue }" @click="emit('edit', row.task)">
+                        <div class="gantt-label" :title="row.task.name">
+                            <div class="gantt-label-main">
+                                <i class="priority-dot" :class="`priority-${row.task.priority}`"></i>
+                                <strong>{{ row.task.code }}</strong><span>{{ row.task.name }}</span>
+                            </div>
+                            <small class="gantt-label-who">
+                                <span>{{ assigneeName(row.task) }}</span>
+                                <span class="gantt-label-dates">{{ shortDate(row.start) }} → {{ shortDate(row.end) }}</span>
+                            </small>
                         </div>
-                        <div v-if="showToday" class="gantt-today" :style="{ left: todayOffset + 'px' }"></div>
+                        <div class="gantt-timeline gantt-track">
+                            <span v-for="d in days" :key="d.key" class="gantt-cell"
+                                :class="{ weekend: d.weekend }" :style="{ width: dayWidth + 'px' }"></span>
+                            <div class="gantt-bar" :class="[{ timing: isTimerRunning(row.task.pkid), overdue: row.task.overdue }, `priority-${row.task.priority}`]"
+                                :style="barStyle(row)" :title="barTitle(row.task)">
+                                <div class="gantt-fill" :style="{ width: progressPct(row.task) + '%' }"></div>
+                                <span v-if="barWide(row)" class="gantt-pct">{{ progressPct(row.task) }} %</span>
+                                <span class="gantt-after">
+                                    <span class="gantt-who">
+                                        <img v-if="row.task.userPkid && !photoErrors[row.task.userPkid]"
+                                            :src="userPhotoUrl(row.task.userPkid)" :alt="assigneeName(row.task)"
+                                            @error="onPhotoError(row.task.userPkid)" />
+                                        <span v-else class="gantt-who-initials">{{ initials(assigneeName(row.task)) }}</span>
+                                    </span>
+                                    <span class="gantt-who-name">{{ assigneeName(row.task) }}</span>
+                                    <span v-if="isTimerRunning(row.task.pkid)" class="gantt-timer-chip">
+                                        <i class="pi pi-stopwatch"></i>{{ formatElapsed(timerElapsed(row.task.pkid)) }}
+                                    </span>
+                                    <span v-else-if="!barWide(row)" class="gantt-after-pct">{{ progressPct(row.task) }} %</span>
+                                </span>
+                                <span v-if="row.task.overdue" class="gantt-flag">Vencida</span>
+                            </div>
+                            <div v-if="showToday" class="gantt-today" :style="{ left: todayOffset + 'px' }"></div>
+                        </div>
                     </div>
-                </div>
+                </template>
             </div>
         </div>
         <div v-else class="kanban-empty">Sin tareas con fecha para mostrar.</div>
@@ -81,8 +98,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import Button from 'primevue/button';
+import Select from 'primevue/select';
 import ToggleButton from 'primevue/togglebutton';
 import { backendUrl } from '@/services/backendUrl';
 import { formatElapsed, isTimerRunning, timerElapsed } from '@/services/Tasks/taskTimer';
@@ -92,6 +110,14 @@ const emit = defineEmits(['edit']);
 const props = defineProps<{ tasks: TaskDTO[] }>();
 
 const showDone = ref(false);
+type GroupMode = 'NONE' | 'ASSIGNEE' | 'CLIENT' | 'STATE';
+const groupOptions: { label: string; value: GroupMode }[] = [
+    { label: 'Sin agrupar', value: 'NONE' },
+    { label: 'Por responsable', value: 'ASSIGNEE' },
+    { label: 'Por cliente', value: 'CLIENT' },
+    { label: 'Por estado', value: 'STATE' }
+];
+const groupMode = ref<GroupMode>((localStorage.getItem('kiwik-task-gantt-group') as GroupMode) || 'NONE');
 const photoErrors = ref<Record<number, boolean>>({});
 
 function assigneeName(task: TaskDTO): string {
@@ -139,6 +165,14 @@ function scrollToToday(smooth = true) {
 }
 
 onMounted(() => nextTick(() => scrollToToday(false)));
+watch(groupMode, (value) => localStorage.setItem('kiwik-task-gantt-group', value));
+watch(showDone, (value) => localStorage.setItem('kiwik-task-gantt-done', String(value)));
+watch(zoomIndex, (value) => localStorage.setItem('kiwik-task-gantt-zoom', String(value)));
+
+const savedDone = localStorage.getItem('kiwik-task-gantt-done');
+if (savedDone != null) showDone.value = savedDone === 'true';
+const savedZoom = Number(localStorage.getItem('kiwik-task-gantt-zoom'));
+if (Number.isInteger(savedZoom) && savedZoom >= 0 && savedZoom < ZOOM_LEVELS.length) zoomIndex.value = savedZoom;
 
 const legend = [
     { label: 'Planificado', color: '#7fb3d5' },
@@ -241,6 +275,37 @@ const rows = computed<Row[]>(() => {
     return list;
 });
 
+const stateLabels: Record<string, string> = {
+    PLANIFICADA: 'Planificadas', EN_CURSO: 'Realizándose', EN_VALIDACION: 'En validación',
+    FINALIZADA: 'Hechas', DESCARTADA: 'Descartadas'
+};
+
+function groupData(row: Row): { key: string; label: string; icon: string } {
+    if (groupMode.value === 'ASSIGNEE') {
+        const label = assigneeName(row.task) || 'Sin responsable';
+        return { key: `user-${label}`, label, icon: 'pi pi-user' };
+    }
+    if (groupMode.value === 'CLIENT') {
+        const label = row.task.entitieName || 'Sin cliente';
+        return { key: `client-${label}`, label, icon: 'pi pi-building' };
+    }
+    if (groupMode.value === 'STATE') {
+        const label = stateLabels[row.task.state] || row.task.state;
+        return { key: `state-${row.task.state}`, label, icon: 'pi pi-flag' };
+    }
+    return { key: 'all', label: 'Todas las tareas', icon: 'pi pi-list' };
+}
+
+const groupedRows = computed(() => {
+    const groups = new Map<string, { key: string; label: string; icon: string; rows: Row[] }>();
+    for (const row of rows.value) {
+        const data = groupData(row);
+        if (!groups.has(data.key)) groups.set(data.key, { ...data, rows: [] });
+        groups.get(data.key)!.rows.push(row);
+    }
+    return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+});
+
 const gridWidth = computed(() => 280 + days.value.length * dayWidth.value);
 
 const showToday = computed(() => {
@@ -286,7 +351,11 @@ function barStyle(row: Row): Record<string, string> {
 }
 
 function barTitle(task: TaskDTO): string {
-    return `${task.code} · ${task.name} (${progressPct(task)} %)`;
+    return `${task.code} · ${task.name}\n${assigneeName(task)} · ${stateLabels[task.state] || task.state}\nProgreso: ${progressPct(task)} %`;
+}
+
+function shortDate(value: Date): string {
+    return value.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).replace('.', '');
 }
 
 function progressPct(task: TaskDTO): number {
@@ -318,6 +387,7 @@ function progressPct(task: TaskDTO): number {
     margin-bottom: 0.8rem;
     font-size: 0.78rem;
     color: #687386;
+    align-items: center;
 }
 .gantt-legend-item {
     display: inline-flex;
@@ -336,7 +406,9 @@ function progressPct(task: TaskDTO): number {
     background: #c53030;
 }
 .gantt-scroll {
-    overflow-x: auto;
+    overflow: auto;
+    min-height: 280px;
+    max-height: min(64vh, 720px);
     border: 1px solid #edf0e4;
     border-radius: 10px;
 }
@@ -345,6 +417,9 @@ function progressPct(task: TaskDTO): number {
     display: flex;
 }
 .gantt-header {
+    position: sticky;
+    top: 0;
+    z-index: 8;
     background: #fbfcfa;
     border-bottom: 1px solid #e3e8d2;
     font-weight: 700;
@@ -359,7 +434,7 @@ function progressPct(task: TaskDTO): number {
     background: #fff;
     position: sticky;
     left: 0;
-    z-index: 2;
+    z-index: 4;
     overflow: hidden;
     cursor: pointer;
 }
@@ -370,7 +445,9 @@ function progressPct(task: TaskDTO): number {
     line-height: 1.25;
 }
 .gantt-label-who {
-    display: block;
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
     font-size: 0.66rem;
     font-weight: 700;
     color: #bcc2cd;
@@ -379,6 +456,11 @@ function progressPct(task: TaskDTO): number {
     white-space: nowrap;
     line-height: 1.2;
 }
+.gantt-label-dates {
+    color: #8b94a3;
+    font-variant-numeric: tabular-nums;
+    flex: 0 0 auto;
+}
 .gantt-label strong {
     margin-right: 0.4rem;
     color: #648506;
@@ -386,6 +468,7 @@ function progressPct(task: TaskDTO): number {
 .gantt-label.head {
     cursor: default;
     background: #fbfcfa;
+    z-index: 10;
 }
 .gantt-timeline {
     position: relative;
@@ -424,6 +507,12 @@ function progressPct(task: TaskDTO): number {
 .gantt-row:hover .gantt-label {
     background: #f6f8ec;
 }
+.gantt-row:hover .gantt-track {
+    background: rgba(156, 193, 10, .035);
+}
+.gantt-row.overdue .gantt-label {
+    box-shadow: inset 3px 0 #e05252;
+}
 .gantt-track {
     display: flex;
 }
@@ -443,7 +532,25 @@ function progressPct(task: TaskDTO): number {
     cursor: pointer;
     min-width: 26px;
     overflow: hidden;
+    border-left: 4px solid rgba(255, 255, 255, .7);
 }
+.gantt-bar.priority-URGENTE { border-left-color: #8f1d1d; }
+.gantt-bar.priority-ALTA { border-left-color: #a96300; }
+.gantt-bar.priority-MEDIA { border-left-color: rgba(255, 255, 255, .8); }
+.gantt-bar.priority-BAJA { border-left-color: #64748b; }
+.priority-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: .4rem;
+    border-radius: 50%;
+    background: #94a3b8;
+    vertical-align: 1px;
+}
+.priority-dot.priority-URGENTE { background: #c53030; box-shadow: 0 0 0 3px #fde8e8; }
+.priority-dot.priority-ALTA { background: #e89519; }
+.priority-dot.priority-MEDIA { background: #7fb3d5; }
+.priority-dot.priority-BAJA { background: #94a3b8; }
 .gantt-fill {
     position: absolute;
     left: 0;
@@ -541,6 +648,22 @@ function progressPct(task: TaskDTO): number {
     align-items: center;
     gap: 0.15rem;
 }
+.gantt-grouping {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    margin-left: auto;
+}
+.gantt-grouping > i {
+    color: #7f980e;
+}
+.gantt-grouping :deep(.p-select) {
+    min-width: 150px;
+    border-color: #dfe6cf;
+}
+.gantt-grouping + .gantt-zoom {
+    margin-left: 0;
+}
 .gantt-zoom-label {
     min-width: 52px;
     text-align: center;
@@ -575,6 +698,49 @@ function progressPct(task: TaskDTO): number {
     width: 2px;
     background: #c53030;
     opacity: 0.7;
+    z-index: 3;
+    pointer-events: none;
+}
+.gantt-group-row {
+    display: flex;
+    position: sticky;
+    left: 0;
+    min-height: 32px;
+    background: #f5f8ec;
+    border-top: 1px solid #dfe7ca;
+    border-bottom: 1px solid #e6ecd7;
+    z-index: 5;
+}
+.gantt-group-label {
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex: 0 0 280px;
+    width: 280px;
+    padding: .4rem .7rem;
+    background: #f5f8ec;
+    color: #4e5f17;
+    font-size: .76rem;
+    border-right: 1px solid #dfe7ca;
+}
+.gantt-group-label > span {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    margin-left: auto;
+    padding: 0 .35rem;
+    border-radius: 999px;
+    background: #e4edc6;
+    color: #586d08;
+}
+.gantt-group-line {
+    flex: 1;
+    min-width: 0;
+    background: linear-gradient(90deg, #f5f8ec, #fbfcf7);
 }
 .gantt-unscheduled {
     margin-top: 1rem;
@@ -616,5 +782,11 @@ function progressPct(task: TaskDTO): number {
     color: #899184;
     font-size: 0.8rem;
     margin-top: 0.6rem;
+}
+@media (max-width: 900px) {
+    .gantt-legend { gap: .55rem; }
+    .gantt-grouping { order: 3; margin-left: 0; }
+    .gantt-zoom { margin-left: auto; }
+    .gantt-scroll { max-height: 58vh; }
 }
 </style>

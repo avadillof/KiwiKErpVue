@@ -27,6 +27,9 @@
                     </div>
                 </template>
                 <template #end>
+                    <Button v-if="canImportEntities" label="Importar desde Excel"
+                        icon="pi pi-file-excel" severity="secondary" outlined size="small" class="mr-2"
+                        @click="entityImportRef?.open(esCompras)" />
                     <Button v-if="securityStore.hasPermission(PERM.ENTI_GEN_EDIT)" class="new-document" label="Nueva entidad" icon="pi pi-plus"
                         size="small" @click="clientFormRef.open(null)" />
                 </template>
@@ -144,6 +147,7 @@
         </section>
 
         <Frm_ClientForm ref="clientFormRef" @saved="refreshTable" />
+        <EntityImportDialog ref="entityImportRef" @saved="refreshTable" />
         <DialogNotes v-model:visible="showNotes" :request="noteRequest" @saved="refreshTable" />
         <ConfirmDialog />
 
@@ -252,6 +256,8 @@ import { useToast } from "primevue/usetoast";
 import { useCompanyStore } from '../../../stores/companyStore';
 import { HelperDates } from '../../../libs/HelperDates.ts';
 import Frm_ClientForm from './Frm_ClientForm.vue';
+import EntityImportDialog from './EntityImportDialog.vue';
+import { canImportMasterData } from '@/services/importSecurity';
 import { useSecurityStore } from '../../../stores/securityStore.ts';
 import { useAuthStore } from '../../../stores/authStore';
 import { PERM } from '@/services/Frm_Main/permissions';
@@ -260,8 +266,10 @@ import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import Frm_Contacts from '../../Frm_Contacts/Frm_Contacts.vue';
 
 const securityStore = useSecurityStore();
+const canImportEntities = computed(() => canImportMasterData(securityStore, 'entities'));
 const authStore = useAuthStore();
 const clientFormRef = ref();
+const entityImportRef = ref<InstanceType<typeof EntityImportDialog>>();
 const router = useRouter();
 const route = useRoute();
 // Vista compartida Ventas/Compras: el hub origen viaja en ?from=compras.

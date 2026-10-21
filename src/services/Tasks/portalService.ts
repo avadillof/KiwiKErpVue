@@ -1,8 +1,8 @@
-import axios from 'axios';
-import { backendUrl } from '@/services/backendUrl';
-import type { TaskCommentDTO, TaskDTO } from './taskService';
+import axios from "axios";
+import { backendUrl } from "@/services/backendUrl";
+import type { TaskCommentDTO, TaskDTO, TaskType } from "./taskService";
 
-const TOKEN_KEY = 'kiwik.portal.token';
+const TOKEN_KEY = "kiwik.portal.token";
 
 export function portalToken(): string | null {
   try {
@@ -29,19 +29,74 @@ export interface PortalSession {
   token: string;
 }
 
+export interface PortalProfile {
+  name: string;
+  email: string;
+  phone: string;
+  nif: string;
+  born: string | null;
+  photoAvailable: boolean;
+}
+
+export async function portalProfile(token: string): Promise<PortalProfile> {
+  const { data } = await axios.get(backendUrl("/WebPortalProfile"), {
+    params: { token },
+  });
+  return data as PortalProfile;
+}
+
+export async function savePortalProfile(
+  token: string,
+  profile: Omit<PortalProfile, "photoAvailable">,
+): Promise<PortalProfile> {
+  const { data } = await axios.post(backendUrl("/WebPortalProfile"), profile, {
+    params: { token },
+  });
+  return data as PortalProfile;
+}
+
+export async function savePortalProfilePhoto(
+  token: string,
+  file: File,
+): Promise<void> {
+  const form = new FormData();
+  form.append("file", file);
+  await axios.post(backendUrl("/WebPortalProfilePhoto"), form, {
+    params: { token },
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+export async function portalProfilePhoto(
+  token: string,
+): Promise<string | null> {
+  try {
+    const { data } = await axios.get(backendUrl("/WebPortalProfilePhoto"), {
+      params: { token, t: Date.now() },
+      responseType: "blob",
+    });
+    return window.URL.createObjectURL(data);
+  } catch (error: any) {
+    if (error?.response?.status === 404) return null;
+    throw error;
+  }
+}
+
 export async function requestPortalLink(email: string): Promise<void> {
   const portalBase = window.location.origin;
-  await axios.post(backendUrl('/WebRequestPortalLink'), { email, portalBase });
+  await axios.post(backendUrl("/WebRequestPortalLink"), { email, portalBase });
 }
 
 export async function portalSession(token: string): Promise<PortalSession> {
-  const { data } = await axios.get(backendUrl('/WebPortalSession'), { params: { token } });
+  const { data } = await axios.get(backendUrl("/WebPortalSession"), {
+    params: { token },
+  });
   return data as PortalSession;
 }
 
 export async function portalLogout(token: string): Promise<void> {
   try {
-    await axios.post(backendUrl('/WebPortalLogout'), { token });
+    await axios.post(backendUrl("/WebPortalLogout"), { token });
   } catch {
     /* cierra igual en local */
   }
@@ -50,7 +105,9 @@ export async function portalLogout(token: string): Promise<void> {
 
 async function portalTasks(token: string): Promise<TaskDTO[]> {
   try {
-    const { data } = await axios.get(backendUrl('/WebPortalTasks'), { params: { token } });
+    const { data } = await axios.get(backendUrl("/WebPortalTasks"), {
+      params: { token },
+    });
     return (Array.isArray(data) ? data : []) as TaskDTO[];
   } catch (e: any) {
     if (e?.response?.status === 404 || e?.response?.status === 204) return [];
@@ -60,14 +117,24 @@ async function portalTasks(token: string): Promise<TaskDTO[]> {
 
 export { portalTasks };
 
-export async function portalTask(token: string, pkid: number): Promise<TaskDTO> {
-  const { data } = await axios.get(backendUrl('/WebPortalTask'), { params: { token, pkid } });
+export async function portalTask(
+  token: string,
+  pkid: number,
+): Promise<TaskDTO> {
+  const { data } = await axios.get(backendUrl("/WebPortalTask"), {
+    params: { token, pkid },
+  });
   return data as TaskDTO;
 }
 
-export async function portalComments(token: string, taskPkid: number): Promise<TaskCommentDTO[]> {
+export async function portalComments(
+  token: string,
+  taskPkid: number,
+): Promise<TaskCommentDTO[]> {
   try {
-    const { data } = await axios.get(backendUrl('/WebPortalTaskComments'), { params: { token, taskPkid } });
+    const { data } = await axios.get(backendUrl("/WebPortalTaskComments"), {
+      params: { token, taskPkid },
+    });
     return (Array.isArray(data) ? data : []) as TaskCommentDTO[];
   } catch (e: any) {
     if (e?.response?.status === 404 || e?.response?.status === 204) return [];
@@ -75,19 +142,28 @@ export async function portalComments(token: string, taskPkid: number): Promise<T
   }
 }
 
-export async function portalSendComment(token: string, taskPkid: number, text: string): Promise<TaskCommentDTO> {
-  const { data } = await axios.post(backendUrl('/WebPortalTaskComment'), { token, taskPkid, text });
+export async function portalSendComment(
+  token: string,
+  taskPkid: number,
+  text: string,
+): Promise<TaskCommentDTO> {
+  const { data } = await axios.post(backendUrl("/WebPortalTaskComment"), {
+    token,
+    taskPkid,
+    text,
+  });
   return data as TaskCommentDTO;
 }
 
 export async function portalCreateTask(input: {
   token: string;
   name: string;
+  type: TaskType;
   description?: string;
   userPkid?: number | null;
   contactPkid?: number | null;
 }): Promise<TaskDTO> {
-  const { data } = await axios.post(backendUrl('/WebPortalCreateTask'), input);
+  const { data } = await axios.post(backendUrl("/WebPortalCreateTask"), input);
   return data as TaskDTO;
 }
 
@@ -96,9 +172,13 @@ export interface PortalContact {
   name: string;
 }
 
-export async function portalEntitieContacts(token: string): Promise<PortalContact[]> {
+export async function portalEntitieContacts(
+  token: string,
+): Promise<PortalContact[]> {
   try {
-    const { data } = await axios.get(backendUrl('/WebPortalEntitieContacts'), { params: { token } });
+    const { data } = await axios.get(backendUrl("/WebPortalEntitieContacts"), {
+      params: { token },
+    });
     return (Array.isArray(data) ? data : []) as PortalContact[];
   } catch (e: any) {
     if (e?.response?.status === 404 || e?.response?.status === 204) return [];
@@ -112,9 +192,14 @@ export interface PortalDoc {
   size: number;
 }
 
-export async function portalTaskDocuments(token: string, taskPkid: number): Promise<PortalDoc[]> {
+export async function portalTaskDocuments(
+  token: string,
+  taskPkid: number,
+): Promise<PortalDoc[]> {
   try {
-    const { data } = await axios.get(backendUrl('/WebPortalTaskDocuments'), { params: { token, taskPkid } });
+    const { data } = await axios.get(backendUrl("/WebPortalTaskDocuments"), {
+      params: { token, taskPkid },
+    });
     return (Array.isArray(data) ? data : []) as PortalDoc[];
   } catch (e: any) {
     if (e?.response?.status === 404 || e?.response?.status === 204) return [];
@@ -122,24 +207,39 @@ export async function portalTaskDocuments(token: string, taskPkid: number): Prom
   }
 }
 
-export async function portalUploadTaskDocuments(token: string, taskPkid: number, files: File[]): Promise<PortalDoc[]> {
+export async function portalUploadTaskDocuments(
+  token: string,
+  taskPkid: number,
+  files: File[],
+): Promise<PortalDoc[]> {
   const form = new FormData();
-  form.append('token', token);
-  form.append('taskPkid', String(taskPkid));
-  files.forEach((f) => form.append('files', f));
-  const { data } = await axios.post(backendUrl('/WebPortalTaskDocument'), form, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  form.append("token", token);
+  form.append("taskPkid", String(taskPkid));
+  files.forEach((f) => form.append("files", f));
+  const { data } = await axios.post(
+    backendUrl("/WebPortalTaskDocument"),
+    form,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
   return (Array.isArray(data) ? data : []) as PortalDoc[];
 }
 
-export async function portalDownloadTaskDocument(token: string, taskPkid: number, fileName: string): Promise<void> {
-  const { data } = await axios.get(backendUrl('/WebPortalTaskDocumentDownload'), {
-    params: { token, taskPkid, fileName },
-    responseType: 'blob'
-  });
+export async function portalDownloadTaskDocument(
+  token: string,
+  taskPkid: number,
+  fileName: string,
+): Promise<void> {
+  const { data } = await axios.get(
+    backendUrl("/WebPortalTaskDocumentDownload"),
+    {
+      params: { token, taskPkid, fileName },
+      responseType: "blob",
+    },
+  );
   const url = window.URL.createObjectURL(data);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
   document.body.appendChild(link);
@@ -148,8 +248,14 @@ export async function portalDownloadTaskDocument(token: string, taskPkid: number
   window.URL.revokeObjectURL(url);
 }
 
-export async function portalDeleteTaskDocument(token: string, taskPkid: number, fileName: string): Promise<void> {
-  await axios.delete(backendUrl('/WebPortalTaskDocument'), { params: { token, taskPkid, fileName } });
+export async function portalDeleteTaskDocument(
+  token: string,
+  taskPkid: number,
+  fileName: string,
+): Promise<void> {
+  await axios.delete(backendUrl("/WebPortalTaskDocument"), {
+    params: { token, taskPkid, fileName },
+  });
 }
 
 export interface PortalNotification {
@@ -165,9 +271,13 @@ export interface PortalNotification {
   key: string;
 }
 
-export async function portalNotifications(token: string): Promise<PortalNotification[]> {
+export async function portalNotifications(
+  token: string,
+): Promise<PortalNotification[]> {
   try {
-    const { data } = await axios.get(backendUrl('/WebPortalNotifications'), { params: { token } });
+    const { data } = await axios.get(backendUrl("/WebPortalNotifications"), {
+      params: { token },
+    });
     return (Array.isArray(data) ? data : []) as PortalNotification[];
   } catch (e: any) {
     if (e?.response?.status === 404 || e?.response?.status === 204) return [];
@@ -175,20 +285,39 @@ export async function portalNotifications(token: string): Promise<PortalNotifica
   }
 }
 
-export async function portalNotificationsUnread(token: string): Promise<number> {
+export async function portalNotificationsUnread(
+  token: string,
+): Promise<number> {
   try {
-    const { data } = await axios.get(backendUrl('/WebPortalNotificationsUnread'), { params: { token } });
+    const { data } = await axios.get(
+      backendUrl("/WebPortalNotificationsUnread"),
+      { params: { token } },
+    );
     return Number(data?.unread ?? 0);
   } catch {
     return 0;
   }
 }
 
-export async function portalNotificationsRead(token: string, ids?: number[]): Promise<void> {
-  await axios.post(backendUrl('/WebPortalNotificationsRead'), { token, ids: ids ?? null });
+export async function portalNotificationsRead(
+  token: string,
+  ids?: number[],
+): Promise<void> {
+  await axios.post(backendUrl("/WebPortalNotificationsRead"), {
+    token,
+    ids: ids ?? null,
+  });
 }
 
-export async function portalChangeTaskState(token: string, taskPkid: number, state: string): Promise<TaskDTO> {
-  const { data } = await axios.post(backendUrl('/WebPortalTaskState'), { token, taskPkid, state });
+export async function portalChangeTaskState(
+  token: string,
+  taskPkid: number,
+  state: string,
+): Promise<TaskDTO> {
+  const { data } = await axios.post(backendUrl("/WebPortalTaskState"), {
+    token,
+    taskPkid,
+    state,
+  });
   return data as TaskDTO;
 }

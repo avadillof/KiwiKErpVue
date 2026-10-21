@@ -45,6 +45,7 @@ const routes = [
   },
   {
     path: '/tpv',
+    alias: '/ventas/tpv',
     name: 'TPV',
     component: () => import('./views/TPV/Frm_Tpv.vue'),
     meta: { requiresAuth: true, perm: PERM.SALES_OPTIONS }

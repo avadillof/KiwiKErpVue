@@ -16,6 +16,7 @@ export const PERM = {
   ENTI_GEN_NOTES: 'ENTI_GEN_0003',
   ENTI_GEN_DELETE: 'ENTI_GEN_0004', // NUEVO (antes se reusaba 0001 para borrar)
   ENTI_GEN_CONTACTS: 'ENTI_GEN_0005', // ver pestaña Contactos en ficha entidad
+  ENTI_GEN_IMPORT: 'ENTI_GEN_0006', // importar clientes y proveedores desde Excel
 
   // ---------- ENTITIES · cat 15 Contactos ----------
   ENTI_CON_EDIT: 'ENTI_CON_0001',
@@ -33,6 +34,7 @@ export const PERM = {
   PROD_PRICE_UPDATE: 'PROSER_GEN_0077',
   PROD_TAX: 'PROSER_GEN_0078', // acceder a Impuestos
   PROD_MASTER_EDIT: 'PROSER_GEN_0080', // cambios ficha general
+  PROD_IMPORT: 'PROSER_GEN_0085', // importar productos y servicios desde Excel
   PROD_DOC_DELETE: 'PROSER_GEN_0014',
   PROD_DOC_UPLOAD: 'PROSER_GEN_0015',
   PROD_DELETE: 'PROSER_GEN_0016', // NUEVO (antes se reusaba 0001 para borrar)

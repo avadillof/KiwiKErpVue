@@ -8,6 +8,18 @@ const component = fs.readFileSync(new URL('../src/views/Ventas/Frm_Facturas/Frm_
 const guardSource = fs.readFileSync(new URL('../src/services/composables/useInvoiceIssueGuard.ts', import.meta.url), 'utf8');
 const compile = source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
 const ref = value => ({ value });
+// Select declarations through the TypeScript parser so component formatting cannot change coverage.
+const script = component.split('<script setup lang="ts">')[1].split('</script>')[0];
+const ast = ts.createSourceFile('invoice.ts', script, ts.ScriptTarget.Latest, true);
+function declaration(name) {
+  for (const statement of ast.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const item of statement.declarationList.declarations) {
+      if (item.name.getText(ast) === name) return `const ${item.getText(ast)};`;
+    }
+  }
+  throw new Error(`Missing invoice declaration: ${name}`);
+}
 function guard(storage = new Map()) {
   const exports = {};
   vm.runInNewContext(compile(guardSource), {
@@ -23,6 +35,7 @@ function scenario(post, refresh = async () => {}) {
   let saves = 0;
   const context = {
     backendUrl: path => 'http://test.invalid' + path,
+    auth: { portalSession: 'isolated-test-session', portalRequestConfig: () => ({ headers: { 'X-Portal-Session': 'isolated-test-session' } }) },
     ...protection, ref, computed: fn => ({ get value() { return fn(); } }),
     detail: ref({ ...invoice }), selected: ref({ ...invoice }), issuing: ref(false), detailSaving: ref(false),
     issueTarget: ref(invoice), issuePassword: ref('fake-test-secret'), issueRetry: ref(false),
@@ -32,7 +45,7 @@ function scenario(post, refresh = async () => {}) {
     axios: { post, get: async () => ({ data: { valid: true, errors: [] } }) }, saveDetail: async () => { saves++; return true; }, refresh,
     toast: { add: message => messages.push(message) },
   };
-  const handlers = component.slice(component.indexOf('const validateIssueTarget ='), component.indexOf('const verifactuSeverity='))
+  const handlers = ['validateIssueTarget', 'invoiceProtected', 'canEditDetail', 'issueInvoice', 'confirmIssue'].map(declaration).join('\n')
     .replaceAll('import.meta.env.VITE_API_URL', "'http://test.invalid'");
   vm.createContext(context);
   vm.runInContext(compile(handlers + '\n globalThis.testIssue = confirmIssue; globalThis.testProtected = invoiceProtected; globalThis.testValidate = validateIssueTarget;'), context);
@@ -166,7 +179,7 @@ test('customer form accepts the supported fiscal ID formats and rejects bad cont
 
 
 test('draft state aliases are editable but issued states never count as drafts', () => {
-  const source=component.slice(component.indexOf('const isDraft='),component.indexOf(',stateLabel='));
+  const source=declaration('isDraft');
   const context={};vm.createContext(context);vm.runInContext(compile(source+';globalThis.classify=isDraft;'),context);
   for(const state of ['DRAFT','Draft','Borrador','Borrador / Draft','Para Aprobar / To Approved Invoice'])assert.equal(context.classify(state),true,state);
   for(const state of ['Confirmada / Confirming','Cancelada / Canceled','ACCEPTED','ISSUED',null,''])assert.equal(context.classify(state),false,String(state));

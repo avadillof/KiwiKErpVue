@@ -6,7 +6,7 @@
                 <div>
                     <span class="breadcrumb">Portal / Tareas</span>
                     <h1>Tareas</h1>
-                    <p>Tablero Kanban de tus tareas asignadas: pulsa una tarjeta para ver el detalle y comentar.</p>
+                    <p>Registra solicitudes e incidencias, consulta su avance y conversa con el equipo responsable.</p>
                 </div>
             </div>
         </header>
@@ -37,8 +37,8 @@
                             :disabled="loading || !visibleTasks.length" @click="exportExcel" />
                         <Button icon="pi pi-refresh" text rounded title="Refrescar" aria-label="Refrescar" :loading="loading"
                             @click="emit('reload')" />
-                        <Button class="new-document" label="Nueva tarea" icon="pi pi-plus" size="small"
-                            @click="showCreate = true" />
+                        <Button class="new-document" label="Nueva solicitud" icon="pi pi-plus" size="small"
+                            @click="openCreate" />
                     </div>
                 </template>
             </Toolbar>
@@ -93,7 +93,8 @@
                             :draggable="canDrag(task)" @dragstart="onDragStart(task)" @dragend="onDragEnd"
                             @click="openTask(task)">
                             <div class="kanban-card-top">
-                                <span class="code-with-attachments"><span class="entity-code">{{ task.code || 'Sin código' }}</span><Tag
+                                <span class="code-with-attachments"><Tag :value="typeOf(task).label"
+                                    :severity="typeOf(task).severity" rounded /><span class="entity-code">{{ task.code || 'Sin código' }}</span><Tag
                                     v-if="Number(task.attachmentCount || 0) > 0" :value="String(task.attachmentCount)"
                                     icon="pi pi-paperclip" severity="info" rounded title="Documentos adjuntos" /><i
                                     v-if="isLockedTask(task)" class="pi pi-lock kanban-lock" title="Con factura vinculada" /></span>
@@ -146,17 +147,18 @@
                 <h3>{{ selected.name }}</h3>
                 <p class="task-desc">{{ selected.memo || 'Sin descripción.' }}</p>
                 <div class="task-detail-meta">
+                    <Tag :value="typeOf(selected).label" :severity="typeOf(selected).severity" rounded />
                     <Tag :value="columnLabel(selected.state)" :severity="columnSeverity(selected.state)" rounded />
                     <Tag :value="priorityOf(selected).label" :severity="priorityOf(selected).severity" rounded />
                     <span v-if="selected.dueDate">Vence: {{ formatTaskDate(selected.dueDate) }}</span>
                     <span>{{ Math.round(Number(selected.progress ?? 0)) }} % hecho</span>
                 </div>
-                <div v-if="isAuthor && !isLocked" class="task-state-row">
+                <div v-if="canManageState && !isLocked" class="task-state-row">
                     <label for="portal-task-state">Estado</label>
                     <Select id="portal-task-state" v-model="stateDraft" :options="stateOptions" optionLabel="label"
                         optionValue="value" size="small" :loading="changingState" @change="changeState" />
                 </div>
-                <p v-else-if="isAuthor && isLocked" class="task-locked">
+                <p v-else-if="canManageState && isLocked" class="task-locked">
                     <i class="pi pi-lock"></i> Con factura vinculada: el estado no se puede cambiar.
                 </p>
 
@@ -225,9 +227,17 @@
             <ConfirmDialog />
         </Dialog>
 
-        <Dialog v-model:visible="showCreate" modal class="kiwik-dialog" header="Nueva tarea"
+        <Dialog v-model:visible="showCreate" modal class="kiwik-dialog" header="Nueva solicitud"
             :style="{ width: 'min(560px, 95vw)' }">
             <div class="grid p-fluid">
+                <div class="col-12">
+                    <FloatLabel variant="on" class="w-full">
+                        <Select id="portal-new-type" v-model="newType" :options="TASK_TYPES" optionLabel="label"
+                            optionValue="value" class="w-full" />
+                        <label for="portal-new-type">Tipo de solicitud *</label>
+                    </FloatLabel>
+                    <small class="portal-field-help">Usa Incidencia cuando algo no funciona; usa Tarea para una petición o trabajo planificado.</small>
+                </div>
                 <div class="col-12">
                     <FloatLabel variant="on" class="w-full">
                         <InputText id="portal-new-name" v-model="newName" maxlength="120" class="w-full" />
@@ -263,7 +273,8 @@
                 </div>
             </div>
             <template #footer>
-                <Button label="Crear tarea" icon="pi pi-check" :loading="creating" :disabled="!canCreate"
+                <Button :label="newType === 'INCIDENT' ? 'Registrar incidencia' : 'Crear tarea'" icon="pi pi-check"
+                    :loading="creating" :disabled="!canCreate"
                     @click="createTask" />
             </template>
         </Dialog>
@@ -309,11 +320,14 @@ import { exportPortalTasksToExcel } from '@/services/Tasks/portalTaskExport';
 import {
     TASK_PRIORITIES,
     TASK_STATES,
+    TASK_TYPES,
     formatTaskDate,
     priorityOf,
+    typeOf,
     type TaskCommentDTO,
     type TaskDTO,
-    type TaskState
+    type TaskState,
+    type TaskType
 } from '@/services/Tasks/taskService';
 
 const props = defineProps<{
@@ -347,10 +361,11 @@ const sendingComment = ref(false);
 const threadRef = ref<HTMLElement | null>(null);
 const showCreate = ref(false);
 const newName = ref('');
+const newType = ref<TaskType>('INCIDENT');
 const newDesc = ref('');
 const newUser = ref<number | null>(null);
 const newContact = ref<number | null>(null);
-const assigneeType = ref<'user' | 'contact'>('user');
+const assigneeType = ref<'user' | 'contact'>('contact');
 const assigneeOptions = [
     { label: 'Usuario interno', value: 'user' },
     { label: 'Contacto de mi empresa', value: 'contact' }
@@ -366,7 +381,7 @@ const canCreate = computed(() =>
 
 function onAssigneeTypeChange() {
     newUser.value = null;
-    newContact.value = null;
+    newContact.value = assigneeType.value === 'contact' ? props.contactPkid : null;
 }
 
 async function loadContacts() {
@@ -395,6 +410,11 @@ const isAuthor = computed(() =>
     selected.value != null && selected.value.contactAuthorPkid != null
     && selected.value.contactAuthorPkid === props.contactPkid
 );
+const isAssignee = computed(() =>
+    selected.value != null && selected.value.contactPkid != null
+    && selected.value.contactPkid === props.contactPkid
+);
+const canManageState = computed(() => isAuthor.value || isAssignee.value);
 const isLocked = computed(() =>
     selected.value != null && (selected.value.billingState === 'FACTURADA' || selected.value.billingState === 'PARCIAL')
 );
@@ -495,7 +515,9 @@ function isAuthorTask(t: TaskDTO): boolean {
 }
 
 function canDrag(t: TaskDTO): boolean {
-    return t.pkid != null && isAuthorTask(t) && !isLockedTask(t);
+    const contactPkid = Number(props.contactPkid);
+    const canManage = isAuthorTask(t) || Number(t.contactPkid) === contactPkid;
+    return t.pkid != null && canManage && !isLockedTask(t);
 }
 
 const dragPkid = ref<number | null>(null);
@@ -715,13 +737,15 @@ async function createTask() {
         await portalCreateTask({
             token: props.token,
             name: newName.value.trim(),
+            type: newType.value,
             description: newDesc.value,
             userPkid: assigneeType.value === 'user' ? newUser.value : null,
             contactPkid: assigneeType.value === 'contact' ? newContact.value : null
         });
-        toast.add({ severity: 'success', summary: 'Tarea creada', life: 3000 });
+        toast.add({ severity: 'success', summary: newType.value === 'INCIDENT' ? 'Incidencia registrada' : 'Tarea creada', life: 3000 });
         showCreate.value = false;
         newName.value = '';
+        newType.value = 'INCIDENT';
         newDesc.value = '';
         newUser.value = null;
         newContact.value = null;
@@ -734,6 +758,10 @@ async function createTask() {
 }
 
 function openCreate() {
+    newType.value = 'INCIDENT';
+    assigneeType.value = 'contact';
+    newUser.value = null;
+    newContact.value = props.contactPkid;
     showCreate.value = true;
 }
 
@@ -768,6 +796,7 @@ function showOverdue() {
 defineExpose({ openCreate, openTaskByPkid, refreshOpenDetail, focusSearch, showOverdue });
 
 onMounted(() => {
+    newContact.value = props.contactPkid;
     void loadUsers();
     void loadContacts();
 });
@@ -778,6 +807,13 @@ onMounted(() => {
     --kiwi: #9cc10a;
     --kiwi-dark: #648506;
     color: #243044;
+}
+
+.portal-field-help {
+    display: block;
+    margin-top: .45rem;
+    color: #667085;
+    line-height: 1.35;
 }
 .entities-header {
     display: flex;

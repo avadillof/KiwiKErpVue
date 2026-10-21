@@ -561,7 +561,6 @@
         />
       </template>
     </Dialog>
-    <ConfirmDialog />
     <DialogNotes
       v-model:visible="showNotes"
       :request="noteRequest"
@@ -585,7 +584,7 @@
 </template>
 
 <script setup lang="ts">
-import { backendUrl } from '@/services/backendUrl';
+import { backendUrl } from "@/services/backendUrl";
 import { computed, onMounted, ref, watch } from "vue";
 import axios from "axios";
 import { useRouter, useRoute } from "vue-router";
@@ -601,7 +600,6 @@ import Select from "primevue/select";
 import Dialog from "primevue/dialog";
 import RadioButton from "primevue/radiobutton";
 import Chart from "primevue/chart";
-import ConfirmDialog from "primevue/confirmdialog";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import GenericDataTable from "@/components/shared/GenericDataTable.vue";

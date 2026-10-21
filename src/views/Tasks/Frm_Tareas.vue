@@ -177,6 +177,10 @@
                     <Column field="code" header="Código" sortable frozen style="width: 115px">
                         <template #body="{ data }"><span class="table-code">{{ data.code || '—' }}</span></template>
                     </Column>
+                    <Column field="type" header="Tipo" sortable style="width: 125px">
+                        <template #body="{ data }"><Tag :value="typeOf(data).label" :severity="typeOf(data).severity"
+                            rounded /></template>
+                    </Column>
                     <Column field="name" header="Tarea" sortable style="min-width: 245px">
                         <template #body="{ data }">
                             <button type="button" class="task-name-cell" @click="openEdit(data)">
@@ -255,7 +259,8 @@
                             @dragover.prevent="onCardOver($event, col.value, idx)" @drop.stop="onCardDrop(col.value, idx)"
                             @click="openEdit(task)">
                             <div class="kanban-card-top">
-                                <span class="code-with-attachments"><span class="entity-code">{{ task.code || 'Sin código' }}</span><Tag
+                                <span class="code-with-attachments"><Tag :value="typeOf(task).label"
+                                    :severity="typeOf(task).severity" rounded /><span class="entity-code">{{ task.code || 'Sin código' }}</span><Tag
                                     v-if="Number(task.attachmentCount || 0) > 0" :value="String(task.attachmentCount)"
                                     icon="pi pi-paperclip" severity="info" rounded title="Documentos adjuntos" /><i
                                     v-if="isLockedState(task)" class="pi pi-lock kanban-lock" title="Con factura vinculada" /></span>
@@ -371,6 +376,7 @@ import {
     isOpenState,
     notifyOverdueTasks as notifyOverdueApi,
     priorityOf,
+    typeOf,
     saveTaskOrder,
     saveTaskTime,
     type TaskDTO,

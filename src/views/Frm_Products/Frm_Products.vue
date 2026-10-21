@@ -26,6 +26,9 @@
                     </div>
                 </template>
                 <template #end>
+                    <Button v-if="canImportProducts" label="Importar desde Excel"
+                        icon="pi pi-file-excel" severity="secondary" outlined size="small" class="mr-2"
+                        @click="productImportRef?.open(esCompras)" />
                     <Button v-if="securityStore.hasPermission(PERM.PROD_EDIT)" label="Impresión etiquetas" icon="pi pi-barcode"
                         size="small" severity="secondary" @click="openLabelBulk()" class="mr-2" />
                     <Button v-if="securityStore.hasPermission(PERM.PROD_EDIT)" class="new-document" label="Nuevo artículo" icon="pi pi-plus"
@@ -130,6 +133,7 @@
         :title="`Documentos indexados a ${productSelected?.description ?? ''}`" :entityId="productSelected?.pkid" @update:visible="onAttachmentsVisible" />
     <ConfirmDialog />
     <Frm_Product ref="productFormRef" @saved="refreshTable" />
+    <ProductImportDialog ref="productImportRef" @saved="refreshTable" />
     <Pn_LabelPrint v-model:visible="showLabelPrint" :product="productSelected" />
     <Pn_LabelBulkPrint v-model:visible="showLabelBulk" :seed="bulkSeed" />
 
@@ -212,11 +216,15 @@ import { PERM } from '@/services/Frm_Main/permissions';
 import GenericDataTable from '@/components/shared/GenericDataTable.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import Frm_Product from './Frm_Product.vue';
+import ProductImportDialog from './ProductImportDialog.vue';
+import { canImportMasterData } from '@/services/importSecurity';
 import Pn_LabelPrint from './Frm_Etiquetas/Pn_LabelPrint.vue';
 import Pn_LabelBulkPrint from './Frm_Etiquetas/Pn_LabelBulkPrint.vue';
 
 const productFormRef = ref();
+const productImportRef = ref<InstanceType<typeof ProductImportDialog>>();
 const securityStore = useSecurityStore();
+const canImportProducts = computed(() => canImportMasterData(securityStore, 'products'));
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();

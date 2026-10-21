@@ -9,12 +9,15 @@ setActivePinia(createPinia());
 function moduleUrl(source) {
   let code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
   for(const name of ['axios','vue','pinia']) code=code.replaceAll("from '"+name+"'", "from '"+import.meta.resolve(name)+"'");
+  code=code.replaceAll('import.meta.env.VITE_API_URL', "'http://pricing-test.invalid'");
   return 'data:text/javascript;base64,'+Buffer.from(code).toString('base64');
 }
-const authUrl=moduleUrl(fs.readFileSync('src/stores/authStore.ts','utf8'));
+const backendUrl=moduleUrl(fs.readFileSync('src/services/backendUrl.ts','utf8'));
+const securityUrl=moduleUrl(fs.readFileSync('src/stores/securityStore.ts','utf8').replaceAll('@/services/backendUrl',backendUrl));
+const authUrl=moduleUrl(fs.readFileSync('src/stores/authStore.ts','utf8').replaceAll('@/services/backendUrl',backendUrl).replaceAll('./securityStore',securityUrl));
 const {useAuthStore}=await import(authUrl);
 const auth=useAuthStore();
-const source=fs.readFileSync('src/services/salesPricing.ts','utf8').replaceAll('import.meta.env.VITE_API_URL',"'http://pricing-test.invalid'").replace('@/stores/authStore',authUrl);
+const source=fs.readFileSync('src/services/salesPricing.ts','utf8').replaceAll('import.meta.env.VITE_API_URL',"'http://pricing-test.invalid'").replace('@/stores/authStore',authUrl).replaceAll('@/services/backendUrl',backendUrl);
 const {useSalesPricing,resolveSalesPrice,pricingErrorMessage}=await import(moduleUrl(source));
 let handler=async config=>({priceUnit:85,salesTarifaId:config.params.tarifaId||1,source:'Regla de familia',currencyCode:'EUR'});
 let requests=0;

@@ -5,10 +5,13 @@ export type TaskState = 'PLANIFICADA' | 'EN_CURSO' | 'EN_VALIDACION' | 'FINALIZA
 
 export type TaskPriority = 'BAJA' | 'MEDIA' | 'ALTA' | 'URGENTE';
 
+export type TaskType = 'TASK' | 'INCIDENT';
+
 export interface TaskDTO {
   pkid: number | null;
   code: string;
   name: string;
+  type: TaskType;
   memo: string;
   state: TaskState;
   discardReason: string;
@@ -103,6 +106,16 @@ export const TASK_PRIORITIES: { value: TaskPriority; label: string; severity: st
   { value: 'URGENTE', label: 'Urgente', severity: 'danger' }
 ];
 
+export const TASK_TYPES: { value: TaskType; label: string; severity: string; icon: string }[] = [
+  { value: 'TASK', label: 'Tarea', severity: 'info', icon: 'pi pi-check-square' },
+  { value: 'INCIDENT', label: 'Incidencia', severity: 'danger', icon: 'pi pi-exclamation-triangle' }
+];
+
+export function typeOf(task: { type?: string | null }) {
+  return TASK_TYPES.find((item) => item.value === task.type)
+    ?? TASK_TYPES[0];
+}
+
 export function priorityOf(task: { priority?: string | null }): { label: string; severity: string } {
   return TASK_PRIORITIES.find((p) => p.value === task.priority)
     ?? { label: task.priority ?? 'Media', severity: 'info' };
@@ -113,6 +126,7 @@ export function emptyTask(): TaskDTO {
     pkid: null,
     code: '',
     name: '',
+    type: 'TASK',
     memo: '',
     state: 'PLANIFICADA',
     discardReason: '',

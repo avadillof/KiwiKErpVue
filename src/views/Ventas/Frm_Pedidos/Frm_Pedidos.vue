@@ -68,7 +68,6 @@
         <AttachmentsDialog v-model:visible="showAttachments" moduleFolder="ATTACHEMENTS_SALESPEDIDOS_DOCUMENTS" :title="`Documentos indexados al pedido ${selectedOrder?.code ?? ''}`" :entityId="selectedOrder?.pkid" @update:visible="onAttachmentsVisible" />
         <DialogNotes v-model:visible="showNotes" :request="noteRequest" @saved="onNotesSaved" />
         <Dialog v-model:visible="showProformas" modal maximizable header="Proformas del pedido" :style="{ width: '42rem' }" :contentStyle="{ padding: '1.25rem', minHeight: '260px' }" :pt="{ root: { class: 'kiwik-dialog' }, header: { class: 'kiwik-dialog-header' }, content: { class: 'kiwik-dialog-content' }, footer: { class: 'kiwik-dialog-footer' } }"><div v-if="loadingProformas" class="flex justify-content-center py-5"><i class="pi pi-spin pi-spinner text-primary text-2xl"></i></div><Message v-else-if="!proformas.length" severity="info" :closable="false">Este pedido todavía no tiene proformas generadas.</Message><DataTable v-else :value="proformas" size="small" stripedRows><Column field="code" header="Código" /><Column field="state" header="Estado"><template #body="{ data }"><Tag :value="data.state" :severity="data.state?.includes('Reemplazada') ? 'secondary' : 'info'" rounded /></template></Column><Column field="createDate" header="Fecha"><template #body="{ data }">{{ formatDateTime(data.createDate) }}</template></Column><Column field="totalTotal" header="Total" bodyStyle="text-align:right"><template #body="{ data }">{{ formatCurrency(data.totalTotal) }}</template></Column><Column header="PDF" style="width:4rem" bodyStyle="text-align:center"><template #body="{ data }"><Button icon="pi pi-download" text rounded severity="danger" v-tooltip.top="'Descargar PDF'" @click="downloadProforma(data)" /></template></Column></DataTable><template #footer><div class="dialog-footer"><div class="kiwik-separator"></div><div class="dialog-footer-actions"><Button label="Cerrar" severity="secondary" text @click="showProformas = false" /></div></div></template></Dialog>
-        <ConfirmDialog />
         <OverlayPanel ref="creationDatePanel" appendTo="body"><DateRangePicker v-model="creationDateRange" /></OverlayPanel>
     </div>
 </template>
@@ -82,7 +81,6 @@ import Button from 'primevue/button';
 import Avatar from 'primevue/avatar';
 import Chart from 'primevue/chart';
 import Column from 'primevue/column';
-import ConfirmDialog from 'primevue/confirmdialog';
 import Dialog from 'primevue/dialog';
 import DataTable from 'primevue/datatable';
 import Menu from 'primevue/menu';
@@ -141,7 +139,8 @@ const progressTooltip = (order: any) => `${order.deliveryPendingLines ?? 0} lín
 const stateSeverity = (state = '') => { if (state.includes('Completado')) return 'success'; if (state.includes('Entregado')) return 'info'; if (state.includes('Parcialmente')) return 'warn'; if (state.includes('Cancelado')) return 'danger'; if (state.includes('Confirmado') || state.includes('Albarán')) return 'info'; return 'secondary'; };
 const pendingFlowSeverity = (value = '') => value === 'delivery' ? 'info' : 'warn';
 const deliveryDeadlineSeverity = (value = '') => value === 'OVERDUE' ? 'danger' : value === 'TODAY' ? 'warn' : value === 'NO_DATE' ? 'secondary' : 'info';
-const canGenerateDelivery = (order: any) => ['Para Generar Albarán / To Make Delivery Note', 'Confirmado / In Progress', 'Parcialmente completado / Partially completed'].includes(order?.state)
+const canGenerateDelivery = (order: any) => order?.canGenerateDelivery !== false && !order?.locked
+    && ['Para Generar Albarán / To Make Delivery Note', 'Confirmado / In Progress', 'Parcialmente completado / Partially completed'].includes(order?.state)
     && Number(order?.deliveryPendingLines ?? 0) > 0 && Number(order?.deliveryPendingQuantity ?? 0) > 0.0001;
 const monthlyChartData = computed(() => ({ labels: statistics.value.months, datasets: [{ label: 'Pedidos creados', data: statistics.value.monthlyTotal, backgroundColor: '#d9ef9c', borderColor: '#b1d70e', borderWidth: 1, borderRadius: 4 }, { label: 'Pedidos completados', data: statistics.value.monthlyCompleted, backgroundColor: '#5aa2de', borderColor: '#2875b6', borderWidth: 1, borderRadius: 4 }] }));
 const flowChartData = computed(() => ({ labels: Object.keys(statistics.value.flowCounts), datasets: [{ data: Object.values(statistics.value.flowCounts), backgroundColor: ['#dcebfa', '#f2e6f8', '#e4f5dd'], borderColor: ['#2875b6', '#9253b5', '#569419'], borderWidth: 2 }] }));
@@ -164,7 +163,18 @@ const orderMenuItems = computed(() => {
         }
     }
     if (selectedOrder.value?.canInvoiceFromOrder && securityStore.hasPermission(PERM.ORDER_TO_INVOICE)) items.push({label:'Facturar desde pedido',icon:'pi pi-receipt',command:()=>orderInvoiceDialogRef.value?.open(selectedOrder.value.pkid)});
-    if (canGenerateDelivery(selectedOrder.value) && securityStore.hasPermission(PERM.ORDER_TO_DELIVERY)) items.push({ label: 'Generar albarán', icon: 'pi pi-truck', command: () => deliveryDialogRef.value?.open(selectedOrder.value?.pkid) });
+    if (securityStore.hasPermission(PERM.ORDER_TO_DELIVERY)) {
+        items.push({
+            label: 'Generar albarán',
+            icon: 'pi pi-truck',
+            disabled: !canGenerateDelivery(selectedOrder.value),
+            command: () => {
+                if (canGenerateDelivery(selectedOrder.value)) {
+                    deliveryDialogRef.value?.open(selectedOrder.value.pkid);
+                }
+            },
+        });
+    }
     items.push({ separator: true },
         { label: 'Trazabilidad comercial', icon: 'pi pi-sitemap', command: () => traceabilityRef.value?.open('ORDER', selectedOrder.value?.pkid) },
         { label: 'Notas', icon: 'pi pi-comments', visible: securityStore.hasPermission(PERM.ORDER_NOTES), command: openNotes },

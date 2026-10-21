@@ -1,6 +1,6 @@
 <template>
     <Dialog v-model:visible="visible" modal
-        :header="form.pkid ? `Tarea ${form.code || ''}` : 'Nueva tarea'"
+        :header="form.pkid ? `${form.type === 'INCIDENT' ? 'Incidencia' : 'Tarea'} ${form.code || ''}` : `Nueva ${form.type === 'INCIDENT' ? 'incidencia' : 'tarea'}`"
         :style="{ width: '75rem', maxWidth: '95vw' }" class="kiwik-dialog task-dialog" :dismissableMask="true" :pt="{
             content: {
                 class: 'overflow-y-auto'
@@ -17,7 +17,7 @@
                             <i class="pi pi-clipboard text-primary"></i>
                         </div>
                         <span class="font-bold">
-                            Datos de la tarea
+                            Datos de {{ form.type === 'INCIDENT' ? 'la incidencia' : 'la tarea' }}
                         </span>
                     </div>
                 </template>
@@ -32,7 +32,15 @@
                         </FloatLabel>
                     </div>
 
-                    <div class="col-12 md:col-8">
+                    <div class="col-12 md:col-4">
+                        <FloatLabel variant="on" class="w-full">
+                            <Select id="task-type" v-model="form.type" :options="TASK_TYPES" optionLabel="label"
+                                optionValue="value" class="w-full" />
+                            <label for="task-type">Tipo *</label>
+                        </FloatLabel>
+                    </div>
+
+                    <div class="col-12 md:col-4">
                         <FloatLabel variant="on" class="w-full">
                             <InputText id="task-name" v-model="form.name" maxlength="120" class="w-full" />
                             <label for="task-name">
@@ -505,6 +513,7 @@ import { clearTimer, formatElapsed, isTimerRunning, runningCount, startTimer, st
 import {
     TASK_PRIORITIES,
     TASK_STATES,
+    TASK_TYPES,
     deleteTaskTime,
     deleteTaskChecklistItem,
     emptyTask,

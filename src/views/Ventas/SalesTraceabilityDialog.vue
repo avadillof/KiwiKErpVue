@@ -143,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { backendUrl } from '@/services/backendUrl';
+import { backendUrl } from "@/services/backendUrl";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
@@ -269,9 +269,10 @@ const formatDate = (value?: string) => {
 };
 
 const formatCurrency = (value?: number) =>
-  new Intl.NumberFormat("es-ES", {
+  new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency: "EUR",
+    useGrouping: true,
     minimumFractionDigits: 2,
   }).format(Number(value ?? 0));
 
