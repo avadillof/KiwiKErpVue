@@ -1,0 +1,42 @@
+name: kiwikerp-clientes
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        PUBLIC_BASE: ${PUBLIC_BASE:-/}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CLIENT_MANAGER_HTTP_PORT:-9084}:80"
+    networks:
+      app:
+        aliases:
+          - kiwikerp-clientes
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      CLIENT_MANAGER_USER: ${CLIENT_MANAGER_USER:-admin}
+      CLIENT_MANAGER_PASSWORD: ${CLIENT_MANAGER_PASSWORD:?Configura una contraseña de al menos 16 caracteres}
+      PROVISIONING_READ_URL: ${PROVISIONING_READ_URL:-}
+      PROVISIONING_READ_USER: ${PROVISIONING_READ_USER:-}
+      PROVISIONING_READ_PASSWORD: ${PROVISIONING_READ_PASSWORD:-}
+    volumes:
+      - clientes-data:/data
+    networks:
+      - app
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  app:
+volumes:
+  clientes-data:

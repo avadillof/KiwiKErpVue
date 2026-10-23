@@ -23,24 +23,7 @@
                 </template>
 
                 <div class="grid p-fluid">
-                    <div class="col-12 md:col-4">
-                        <FloatLabel variant="on" class="w-full">
-                            <InputText id="task-code" v-model="form.code" class="w-full" disabled />
-                            <label for="task-code">
-                                Código
-                            </label>
-                        </FloatLabel>
-                    </div>
-
-                    <div class="col-12 md:col-4">
-                        <FloatLabel variant="on" class="w-full">
-                            <Select id="task-type" v-model="form.type" :options="TASK_TYPES" optionLabel="label"
-                                optionValue="value" class="w-full" />
-                            <label for="task-type">Tipo *</label>
-                        </FloatLabel>
-                    </div>
-
-                    <div class="col-12 md:col-4">
+                    <div class="col-12">
                         <FloatLabel variant="on" class="w-full">
                             <InputText id="task-name" v-model="form.name" maxlength="120" class="w-full" />
                             <label for="task-name">
@@ -50,6 +33,23 @@
                         <InlineMessage v-if="errors.name" severity="error">
                             {{ errors.name }}
                         </InlineMessage>
+                    </div>
+
+                    <div class="col-12 md:col-6">
+                        <FloatLabel variant="on" class="w-full">
+                            <InputText id="task-code" v-model="form.code" class="w-full" disabled />
+                            <label for="task-code">
+                                Código
+                            </label>
+                        </FloatLabel>
+                    </div>
+
+                    <div class="col-12 md:col-6">
+                        <FloatLabel variant="on" class="w-full">
+                            <Select id="task-type" v-model="form.type" :options="TASK_TYPES" optionLabel="label"
+                                optionValue="value" class="w-full" />
+                            <label for="task-type">Tipo *</label>
+                        </FloatLabel>
                     </div>
 
                     <div class="col-12 md:col-6">

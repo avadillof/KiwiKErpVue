@@ -1,0 +1,15 @@
+# Complemento opcional para el portal existente; el stack funciona sin él.
+services:
+  frontend:
+    build:
+      args:
+        PUBLIC_BASE: /gestion-clientes/
+    networks:
+      portal:
+        aliases:
+          - kiwikerp-clientes
+
+networks:
+  portal:
+    external: true
+    name: ${PORTAL_NETWORK:?Indica la red compartida con el portal}
