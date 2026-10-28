@@ -600,7 +600,7 @@ import { ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
 import { useFormValidator } from '../../../libs/HelperView';
-import { HelperDates } from '../../../libs/HelperDates';
+import { HelperDates, parseCalendarDate } from '../../../libs/HelperDates';
 import { HelperString } from '@/libs/HelperString';
 import { provincias } from '@/data/provinces';
 import { countries } from '@/data/paises';
@@ -1027,7 +1027,7 @@ const loadEntity = async (pkid: number) => {
         ...createEntity(),
         ...data,
 
-        dateUp: data.dateUp ? new Date(data.dateUp) : null,
+        dateUp: parseCalendarDate(data.dateUp),
 
         salesAttributes: {
             salesTermId: data.salesAttributes?.salesTermId ?? null,

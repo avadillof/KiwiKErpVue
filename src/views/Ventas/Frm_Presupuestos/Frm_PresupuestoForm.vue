@@ -82,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+import { HelperDates, parseCalendarDate } from '@/libs/HelperDates';
 import { backendUrl } from '@/services/backendUrl';
 import { computed, nextTick, ref, watch } from 'vue';
 import axios from 'axios';
@@ -116,7 +117,37 @@ const isEditable = computed(() => stateEditable.value && canEditDoc.value);
 const pricing = useSalesPricing({lines:()=>quote.value.lines,tarifa:computed({get:()=>quote.value.salesTarifaId,set:(v)=>{quote.value.salesTarifaId=v}}),enabled:()=>visible.value&&!loadingQuote.value&&!saving.value&&isEditable.value,currency:(id)=>rates.value.find(r=>r.pkid===id)?.currencyCode});
 const errors = ref({ createDate: '', validityDate: '', recipient: '', salesTarifaId: '', salesTermId: '', retentionId: '', lines: '' });
 const canAddLine = computed(() => { const lastLine = quote.value.lines[quote.value.lines.length - 1]; return !lastLine || Boolean(lastLine.productId && lastLine.nameProduct?.trim() && lastLine.uomId); });
-const toPickerDate = (value: string | null): Date | null => { if (!value) return null; const parsed = new Date(value); if (!Number.isNaN(parsed.getTime())) return parsed; const european = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/.exec(value); if (european) return new Date(Number(european[3]), Number(european[2]) - 1, Number(european[1]), Number(european[4] ?? 0), Number(european[5] ?? 0), Number(european[6] ?? 0)); const sql = /^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/.exec(value); if (sql) return new Date(Number(sql[1]), Number(sql[2]) - 1, Number(sql[3]), Number(sql[4] ?? 0), Number(sql[5] ?? 0), Number(sql[6] ?? 0)); const localized = value.replace(/\u00a0/g, ' ').match(/^([a-záéíóú]+)\.?\s+(\d{1,2}),\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s+([ap])\.\s*m\.$/i); if (!localized) return null; const months: Record<string, number> = { ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sept: 8, oct: 9, nov: 10, dic: 11 }; const month = months[localized[1].toLowerCase()]; if (month === undefined) return null; let hour = Number(localized[4]); if (localized[7].toLowerCase() === 'p' && hour < 12) hour += 12; if (localized[7].toLowerCase() === 'a' && hour === 12) hour = 0; return new Date(Number(localized[3]), month, Number(localized[2]), hour, Number(localized[5]), Number(localized[6])); };
+const toPickerDate = (value: string | null): Date | null => {
+    if (!value) return null;
+    const calendar = parseCalendarDate(value);
+    if (calendar) return calendar;
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+
+    const european = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/.exec(value);
+    if (european) {
+        return new Date(Number(european[3]), Number(european[2]) - 1, Number(european[1]),
+            Number(european[4] ?? 0), Number(european[5] ?? 0), Number(european[6] ?? 0));
+    }
+    const sql = /^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/.exec(value);
+    if (sql) {
+        return new Date(Number(sql[1]), Number(sql[2]) - 1, Number(sql[3]),
+            Number(sql[4] ?? 0), Number(sql[5] ?? 0), Number(sql[6] ?? 0));
+    }
+    const localized = value.replace(/\u00a0/g, ' ').match(/^([a-záéíóú]+)\.?\s+(\d{1,2}),\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s+([ap])\.\s*m\.$/i);
+    if (!localized) return null;
+    const months: Record<string, number> = {
+        ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5,
+        jul: 6, ago: 7, sept: 8, oct: 9, nov: 10, dic: 11
+    };
+    const month = months[localized[1].toLowerCase()];
+    if (month === undefined) return null;
+    let hour = Number(localized[4]);
+    if (localized[7].toLowerCase() === 'p' && hour < 12) hour += 12;
+    if (localized[7].toLowerCase() === 'a' && hour === 12) hour = 0;
+    return new Date(Number(localized[3]), month, Number(localized[2]), hour,
+        Number(localized[5]), Number(localized[6]));
+};
 const createDate = ref<Date | null>(new Date());
 const validityDate = ref<Date | null>(null);
 const addLine = async () => { quote.value.lines.push({ pkid: null, productId: null, nameProduct: '', uomId: null, uomDescription: '', uomFactor: 1, basePriceUnit: 0, quantity: 1, priceUnit: 0, tax: 0, productTax: 0, discountPercent: 0, incrementPercent: 0 }); await nextTick(); requestAnimationFrame(() => { const containers = quoteLinesTable.value?.$el?.querySelectorAll('.p-datatable-table-container, .p-datatable-wrapper, .p-datatable-scrollable-body') as NodeListOf<HTMLElement> | undefined; containers?.forEach(container => { container.scrollTop = container.scrollHeight; }); }); };
@@ -199,7 +230,28 @@ const loadCatalogs = async () => { const { data } = await axios.get(backendUrl(`
 const open = async (pkid: number | null) => { pricing.cancel(); quote.value = createQuote(); createDate.value = new Date(); validityDate.value = null; loadingQuote.value = true; visible.value = true; try { const catalog = await loadCatalogs(); if (pkid) { const { data } = await axios.get(backendUrl(`/${detailEndpoint.value}/${pkid}`)); quote.value = { ...createQuote(), ...data, type: isOrder.value ? 'S' : 'P', lines: (data.lines ?? []).map((line: SalesQuoteLineDTO) => { const uom = uoms.value.find(item => item.pkid === line.uomId); return { ...line, productTax: line.productTax ?? line.tax, uomDescription: line.uomDescription ?? uom?.description ?? '', uomFactor: Number(uom?.factor ?? 1), basePriceUnit: Number(line.priceUnit ?? 0) * Number(uom?.factor ?? 1) }; }) }; if (data.entityId && data.entityName && !customers.value.some(item => item.pkid === data.entityId)) customers.value.push({ pkid: data.entityId, name: data.entityName }); quote.value.lines.forEach(line => { if (line.productId && line.productCode && !products.value.some(item => item.pkid === line.productId)) products.value.push({ pkid: line.productId, code: line.productCode }); }); await nextTick(); createDate.value = toPickerDate(data.createDate); validityDate.value = toPickerDate(data.validityDate); applyFiscalPosition(); } else { quote.value.terms = catalog.defaultTerms ?? ''; quote.value.salesTarifaId=catalog.defaultTarifaId??null; } } catch (error) { console.error(error); toast.add({ severity: 'error', summary: 'Error', detail: `No se pudo cargar el ${documentLabel.value.toLowerCase()} o sus datos auxiliares.`, life: companyStore.companyInfo.toastDuration ?? 3000 }); } finally { loadingQuote.value = false; } };
 const emit = defineEmits<{ saved: [] }>();
 const validate = () => { errors.value = { createDate: '', validityDate: '', recipient: '', salesTarifaId: '', salesTermId: '', retentionId: '', lines: '' }; if (!createDate.value) errors.value.createDate = 'Obligatorio'; if (!isOrder.value && !validityDate.value) errors.value.validityDate = 'Obligatorio'; if (!quote.value.entityId && !quote.value.contact?.trim()) errors.value.recipient = 'Indica un cliente o una persona de contacto.'; if (!quote.value.salesTarifaId) errors.value.salesTarifaId = 'Obligatorio'; if (!quote.value.salesTermId) errors.value.salesTermId = 'Obligatorio'; if (!quote.value.retentionId) errors.value.retentionId = 'Obligatorio'; if (!quote.value.lines.length || quote.value.lines.some(line => !line.productId || !line.nameProduct?.trim() || !line.uomId || Number(line.quantity) <= 0)) errors.value.lines = 'Añade al menos una línea completa.'; if (errors.value.lines) toast.add({ severity: 'warn', summary: `Líneas del ${documentLabel.value.toLowerCase()}`, detail: errors.value.lines, life: companyStore.companyInfo.toastDuration ?? 3000 }); return !Object.values(errors.value).some(Boolean); };
-const save = async () => { if (saving.value || pricing.invalid.value || !validate()) return; saving.value = true; try { await axios.post(backendUrl(`/${saveEndpoint.value}`), { ...quote.value, createDate: createDate.value?.toISOString() ?? null, validityDate: validityDate.value?.toISOString() ?? null, userId: authStore.user?.pkid ?? null }); toast.add({ severity: 'success', summary: 'Guardado correctamente', life: companyStore.companyInfo.toastDuration ?? 3000 }); visible.value = false; emit('saved'); } catch (error: any) { toast.add({ severity: 'error', summary: 'Error', detail: error.response?.data ?? `No se pudo guardar el ${documentLabel.value.toLowerCase()}.`, life: companyStore.companyInfo.toastDuration ?? 3000 }); } finally { saving.value = false; } };
+const save = async () => {
+    if (saving.value || pricing.invalid.value || !validate()) return;
+    saving.value = true;
+    try {
+        await axios.post(backendUrl(`/${saveEndpoint.value}`), {
+            ...quote.value,
+            createDate: createDate.value?.toISOString() ?? null,
+            // La validez del presupuesto es un día, sin conversión a UTC.
+            validityDate: isOrder.value
+                ? validityDate.value?.toISOString() ?? null
+                : HelperDates.formatDateObjectNoTime(validityDate.value),
+            userId: authStore.user?.pkid ?? null
+        });
+        toast.add({ severity: 'success', summary: 'Guardado correctamente', life: companyStore.companyInfo.toastDuration ?? 3000 });
+        visible.value = false;
+        emit('saved');
+    } catch (error: any) {
+        toast.add({ severity: 'error', summary: 'Error', detail: error.response?.data ?? `No se pudo guardar el ${documentLabel.value.toLowerCase()}.`, life: companyStore.companyInfo.toastDuration ?? 3000 });
+    } finally {
+        saving.value = false;
+    }
+};
 defineExpose({ open });
 </script>
 

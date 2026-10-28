@@ -22,6 +22,16 @@ export function formatCalendarDate(value: string | null | undefined): string {
     return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : text;
 }
 
+/** Parse a calendar day in local time so UTC offsets cannot move it to the previous day. */
+export function parseCalendarDate(value: string | null | undefined): Date | null {
+    if (!value) return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+    if (!match) return null;
+    const year = Number(match[1]), month = Number(match[2]) - 1, day = Number(match[3]);
+    const date = new Date(year, month, day);
+    return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day ? date : null;
+}
+
 export const HelperDates = {
     formatDateFromLocale: (dateStr: string | null | undefined): string => {
         if (!dateStr || dateStr.trim() === '') {
@@ -71,6 +81,11 @@ export const HelperDates = {
     formatDateNoTimeFromLocale: (dateStr: string | null | undefined): string => {
         if (!dateStr || dateStr.trim() === '') {
             return 'Sin fecha';
+        }
+
+        const calendarDate = parseCalendarDate(dateStr);
+        if (calendarDate) {
+            return `${String(calendarDate.getDate()).padStart(2, '0')}-${String(calendarDate.getMonth() + 1).padStart(2, '0')}-${calendarDate.getFullYear()}`;
         }
 
         try {

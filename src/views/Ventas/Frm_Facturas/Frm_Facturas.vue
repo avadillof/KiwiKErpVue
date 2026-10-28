@@ -57,7 +57,8 @@
             icon="pi pi-plus"
             @click="manualInvoiceDialog?.open()" /></template></Toolbar
       ><Message v-if="loadError" severity="error" :closable="false"
-        >No se pudo cargar el listado. Reinicia el backend.</Message
+        >No se pudo cargar el listado de facturas. Pulsa Refrescar para
+        reintentarlo. Si el problema persiste, comunica la incidencia.</Message
       ><GenericDataTable
         ref="tableRef"
         class="table"

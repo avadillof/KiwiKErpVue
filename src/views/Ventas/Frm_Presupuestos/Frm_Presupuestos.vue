@@ -610,6 +610,7 @@ import DialogNotes from "@/components/dialogs/DialogNotes.vue";
 import Frm_PresupuestoForm from "./Frm_PresupuestoForm.vue";
 import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
 import { useSecurityStore } from "@/stores/securityStore";
+import { parseCalendarDate } from '@/libs/HelperDates';
 import { PERM } from "@/services/Frm_Main/permissions";
 
 const securityStore = useSecurityStore();
@@ -1118,6 +1119,8 @@ const pad = (value: number) => String(value).padStart(2, "0");
 const formatDateParts = (date: Date) =>
   `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 const parseServerDate = (value: string): Date | null => {
+  const calendar = parseCalendarDate(value);
+  if (calendar) return calendar;
   const parsed = new Date(value);
   if (!Number.isNaN(parsed.getTime())) return parsed;
 
