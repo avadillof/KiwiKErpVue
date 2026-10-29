@@ -141,7 +141,7 @@ export function DashboardController() {
             },
             {
                 key: 'orders', icon: 'pi pi-shopping-cart', label: 'Pedidos de venta pendientes',
-                value: o ? (o.deliveryPendingLines ?? 0) + (o.directInvoiceLines ?? 0) : null,
+                value: o?.pendingOrders ?? null,
                 sub: o ? `${fmt(o.deliveryPendingQuantity)} uds. a servir` : 'Pendiente de carga',
                 route: 'Pedidos',
                 perm: PERM.SALES_NAV_ORDERS,

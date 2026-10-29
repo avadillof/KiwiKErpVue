@@ -2372,7 +2372,9 @@ const loadStats = async () => {
         salesTarifaId: detail.value.salesTarifaId,
         salesTermId: detail.value.salesTermId,
         createDate: detail.value.createDate?.toISOString(),
-        toPayDate: detail.value.toPayDate?.toISOString() || null,
+        toPayDate: detail.value.toPayDate
+          ? `${detail.value.toPayDate.getFullYear()}-${pad(detail.value.toPayDate.getMonth() + 1)}-${pad(detail.value.toPayDate.getDate())}`
+          : null,
         dueDateOverride: Boolean(detail.value.dueDateOverride),
         dueDateReason: detail.value.dueDateReason,
         terms: detail.value.terms,

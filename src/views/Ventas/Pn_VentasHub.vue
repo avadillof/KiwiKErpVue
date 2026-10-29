@@ -180,10 +180,7 @@ const kpiCards = computed(() => {
         0,
       )
     : null;
-  const orderPending =
-    o === null
-      ? null
-      : Number(o.deliveryPendingLines || 0) + Number(o.directInvoiceLines || 0);
+  const orderPending = o?.pendingOrders ?? null;
   const all = [
     {
       key: "quotes",
@@ -202,7 +199,7 @@ const kpiCards = computed(() => {
       label: "Pedidos pendientes",
       value: orderPending,
       sub:
-        o === null ? "Líneas por entregar / facturar" : `${fmt(o.completedOrders)} completados`,
+        o === null ? "Pedidos por completar" : `${fmt(o.completedOrders)} completados`,
     },
     {
       key: "invoices",
