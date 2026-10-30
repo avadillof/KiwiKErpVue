@@ -215,7 +215,12 @@ export function DashboardController() {
     }
 
     function fmtMoney(value: unknown): string {
-        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+        return new Intl.NumberFormat('es-ES', {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(Number(value ?? 0));
     }
 
     function navegarA(nombreRuta: string, disponible = true): void {
