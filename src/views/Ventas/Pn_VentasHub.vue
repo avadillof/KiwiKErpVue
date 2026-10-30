@@ -150,6 +150,11 @@ api.interceptors.request.use((config) => {
 });
 const fmt = (n: number) =>
   Number(n ?? 0).toLocaleString("es-ES", { maximumFractionDigits: 0 });
+const fmtMoney = (n: number | null) =>
+  Number(n ?? 0).toLocaleString("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 const stats = reactive<Record<string, any>>({
   quotes: null,
   orders: null,
@@ -217,7 +222,10 @@ const kpiCards = computed(() => {
       gradient: "linear-gradient(135deg,#e56b6f,#bd3e43)",
       label: "Rectificativas pendientes de pago",
       value: rectPending,
-      sub: rectPending === null ? "Abonos y correcciones" : `${fmt(rectPendingAmount)} € por pagar`,
+      sub:
+        rectPending === null
+          ? "Abonos y correcciones"
+          : `${fmtMoney(rectPendingAmount)} € por pagar`,
     },
   ];
   const KPI_PERM: Record<string, string> = { quotes: PERM.SALES_NAV_QUOTES, orders: PERM.SALES_NAV_ORDERS, invoices: PERM.SALES_NAV_INVOICES, rects: PERM.SALES_NAV_CREDIT };
