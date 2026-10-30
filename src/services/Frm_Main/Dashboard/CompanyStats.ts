@@ -20,6 +20,7 @@ export function useCompanyStats() {
   const quotes = ref<Record<string, any> | null>(null);
   const orders = ref<Record<string, any> | null>(null);
   const invoices = ref<Record<string, any> | null>(null);
+  const rects = ref<Record<string, any> | null>(null);
   const topYear = new Date().getFullYear();
   const prevYear = topYear - 1;
   const prevInvoices = ref<Record<string, any> | null>(null);
@@ -34,15 +35,17 @@ export function useCompanyStats() {
     const paths = [
       '/WebGetSalesQuoteStatistics',
       '/WebGetSalesOrderStatistics',
-      '/WebGetSalesInvoiceStatistics'
+      '/WebGetSalesInvoiceStatistics',
+      '/WebGetSalesRecInvoiceSummary'
     ];
     try {
       const results = await Promise.allSettled(
-        paths.map((path) => axios.get(backendUrl(path), { ...auth.portalRequestConfig() }))
+        paths.map((path) => axios.get(backendUrl(path), { params: { year: topYear }, ...auth.portalRequestConfig() }))
       );
       quotes.value = (results[0] as PromiseFulfilledResult<any>)?.value?.data ?? null;
       orders.value = (results[1] as PromiseFulfilledResult<any>)?.value?.data ?? null;
       invoices.value = (results[2] as PromiseFulfilledResult<any>)?.value?.data ?? null;
+      rects.value = (results[3] as PromiseFulfilledResult<any>)?.value?.data ?? null;
     } catch {
       error.value = 'No se pudieron cargar las estadísticas de la empresa.';
     }
@@ -86,6 +89,7 @@ export function useCompanyStats() {
     quotes,
     orders,
     invoices,
+    rects,
     topYear,
     prevYear,
     prevInvoices,

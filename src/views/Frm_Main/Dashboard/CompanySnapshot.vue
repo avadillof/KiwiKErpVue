@@ -22,6 +22,8 @@
         <div class="summary-kpis">
           <div><small>Facturado</small><strong>{{ money(invoices?.issuedAmount) }}</strong></div>
           <div><small>Pendiente de cobro</small><strong>{{ money(invoices?.pendingAmount) }}</strong></div>
+          <div><small>Abonos pagados</small><strong>{{ rects ? money(rects.paidAmount) : "—" }}</strong></div>
+          <div><small>Cobrado neto</small><strong>{{ netCollected === null ? "—" : money(netCollected) }}</strong></div>
           <div><small>Pedidos</small><strong>{{ integer(orders?.totalCount) }}</strong></div>
           <div><small>Facturas vencidas</small><strong>{{ integer(invoices?.overdueCount) }}</strong></div>
         </div>
@@ -99,6 +101,10 @@
               <strong>{{ money(row.value) }}</strong>
             </div>
           </div>
+        </div>
+        <div class="widget-bars">
+          <div class="widget-row"><span class="widget-row__label">Abonos pagados</span><strong>{{ rects ? money(rects.paidAmount) : "—" }}</strong></div>
+          <div class="widget-row"><span class="widget-row__label">Cobrado neto</span><strong>{{ netCollected === null ? "—" : money(netCollected) }}</strong></div>
         </div>
         <div class="widget-yearchart">
           <span class="widget-yearchart__title">Facturación del año pasado ({{ prevYear }})</span>
@@ -227,6 +233,10 @@ export default {
   name: 'CompanySnapshot',
   setup() {
     const stats = useCompanyStats();
+    // El neto descuenta los abonos pagados y conserva los cobros brutos.
+    const netCollected = computed(() => stats.invoices.value && stats.rects.value
+      ? Math.round((Number(stats.invoices.value.paidAmount ?? 0) - Number(stats.rects.value.paidAmount ?? 0)) * 100) / 100
+      : null);
     const auth = useAuthStore();
     const security = useSecurityStore();
     const canPurchases = computed(() => auth.user?.admin === true || security.hasPermission(PERM.PURCHASE_OPTIONS));
@@ -372,6 +382,7 @@ export default {
 
     return {
       ...stats,
+      netCollected,
       chartLine,
       doughnutRows,
       donut,

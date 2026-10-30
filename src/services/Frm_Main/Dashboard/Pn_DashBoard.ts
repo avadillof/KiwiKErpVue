@@ -56,7 +56,7 @@ export function DashboardController() {
             "/WebGetSalesQuoteStatistics",
             "/WebGetSalesOrderStatistics",
             "/WebGetSalesInvoiceStatistics",
-            "/WebGetSalesRecInvoiceStatistics",
+            "/WebGetSalesRecInvoiceSummary",
         ];
         const settled = await Promise.allSettled(
             paths.map((p) => axios.get(backendUrl(p), apiConfig()))
@@ -108,9 +108,7 @@ export function DashboardController() {
         const b = stats.value.billing;
         const pd = stats.value.purchaseDeliveries;
         const pi = stats.value.purchaseInvoices;
-        const rectTotal = Array.isArray(r)
-            ? r.filter((item: any) => item && item.state?.toLowerCase().includes('confirm')).reduce((acc: number, item: any) => acc + (item.count || 0), 0)
-            : null;
+        const rectTotal = r?.issuedCount ?? null;
         return [
             {
                 key: 'tasks', icon: 'pi pi-clipboard', label: 'Mis tareas abiertas',
