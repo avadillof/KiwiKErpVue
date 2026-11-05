@@ -73,6 +73,24 @@
           >
           <button
             type="button"
+            class="p-sidebar__item"
+            :class="{ 'p-sidebar__item--active': section === 'quotes' }"
+            :title="sidebarCollapsed ? 'Presupuestos' : ''"
+            @click="section = 'quotes'"
+          >
+            <span class="p-sidebar__item-icon p-icon-kiwi"
+              ><i class="pi pi-file-edit"></i
+            ></span>
+            <span v-if="!sidebarCollapsed" class="p-sidebar__item-label"
+              >Presupuestos</span
+            >
+            <i
+              v-if="!sidebarCollapsed"
+              class="p-sidebar__item-arrow pi pi-angle-right"
+            ></i>
+          </button>
+          <button
+            type="button"
             class="p-sidebar__toggle"
             :title="sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'"
             @click="toggleSidebar"
@@ -272,6 +290,12 @@
             @correction-created="openCreatedCorrection"
           />
         </section>
+        <section v-if="section === 'quotes'" class="tasks-section">
+          <Frm_Portal_Quotes
+            :token="session.token"
+            :initial-version="initialQuoteVersion"
+          />
+        </section>
         <section v-if="section === 'profile'">
           <Frm_Portal_Profile
             :token="session.token"
@@ -313,12 +337,14 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { useRoute } from "vue-router";
 import { useToast } from "primevue/usetoast";
 import Avatar from "primevue/avatar";
 import OverlayBadge from "primevue/overlaybadge";
 import Frm_Portal_Tasks from "./Frm_Portal_Tasks.vue";
 import Frm_Portal_Billing from "./Frm_Portal_Billing.vue";
 import Frm_Portal_Profile from "./Frm_Portal_Profile.vue";
+import Frm_Portal_Quotes from "./Frm_Portal_Quotes.vue";
 import PortalNotificationPanel from "./PortalNotificationPanel.vue";
 import {
   portalNotifications,
@@ -338,8 +364,16 @@ const emit = defineEmits<{
 }>();
 
 const toast = useToast();
+const route = useRoute();
 
-const section = ref<"dashboard" | "tasks" | "billing" | "profile">("dashboard");
+type PortalSection = "dashboard" | "tasks" | "billing" | "quotes" | "profile";
+const requestedSection = String(route.query.section || "");
+const section = ref<PortalSection>(
+  ["tasks", "billing", "quotes", "profile"].includes(requestedSection)
+    ? (requestedSection as PortalSection)
+    : "dashboard",
+);
+const initialQuoteVersion = Number(route.query.version) || null;
 const contactName = ref(props.session.contactName);
 const profilePhotoUrl = ref<string | null>(null);
 const tasks = ref<TaskDTO[]>([]);

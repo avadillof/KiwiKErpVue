@@ -42,7 +42,8 @@
                 selectedQuote = null;
                 refreshTable();
               "
-            /><Button v-if="securityStore.hasPermission(PERM.QUOTE_EDIT)"
+            /><Button
+              v-if="securityStore.hasPermission(PERM.QUOTE_EDIT)"
               class="new-document"
               label="Nuevo presupuesto"
               icon="pi pi-plus"
@@ -260,6 +261,41 @@
           <template #body="{ data }">{{
             data.sendDate ? formatDateTime(data.sendDate) : "-"
           }}</template>
+        </Column>
+        <Column
+          field="nextActionDate"
+          header="Próxima acción"
+          sortable
+          style="width: 12%"
+        >
+          <template #body="{ data }">
+            <div
+              v-if="data.nextActionDate"
+              class="next-action-cell"
+              :class="{
+                overdue:
+                  !data.followUpDone &&
+                  new Date(data.nextActionDate) < new Date(),
+              }"
+            >
+              <span
+                ><i
+                  :class="
+                    data.followUpDone
+                      ? 'pi pi-check-circle'
+                      : 'pi pi-calendar-clock'
+                  "
+                ></i
+                >{{ formatDateTime(data.nextActionDate) }}</span
+              >
+              <small>{{
+                data.followUpDone
+                  ? "Realizada"
+                  : data.nextAction || "Seguimiento pendiente"
+              }}</small>
+            </div>
+            <span v-else>—</span>
+          </template>
         </Column>
         <Column
           field="totalTotal"
@@ -494,6 +530,7 @@
     </section>
 
     <Frm_PresupuestoForm ref="quoteFormRef" @saved="onQuoteSaved" />
+    <QuoteVersionsDialog ref="versionsRef" />
     <Dialog
       v-model:visible="showSendDialog"
       modal
@@ -554,7 +591,9 @@
         <Button
           label="Enviar presupuesto"
           icon="pi pi-send"
-          v-tooltip.bottom="'Envía el PDF al contacto del cliente seleccionado. Queda registrado el envío.'"
+          v-tooltip.bottom="
+            'Envía el PDF al contacto del cliente seleccionado. Queda registrado el envío.'
+          "
           :loading="sendingQuote"
           :disabled="!selectedRecipientId || !emailRecipients.length"
           @click="sendQuoteByEmail"
@@ -608,9 +647,10 @@ import DateRangePicker from "@/components/shared/DateRangePicker.vue";
 import AttachmentsDialog from "@/components/attachments/AttachmentsDialog.vue";
 import DialogNotes from "@/components/dialogs/DialogNotes.vue";
 import Frm_PresupuestoForm from "./Frm_PresupuestoForm.vue";
+import QuoteVersionsDialog from "./QuoteVersionsDialog.vue";
 import SalesTraceabilityDialog from "../SalesTraceabilityDialog.vue";
 import { useSecurityStore } from "@/stores/securityStore";
-import { parseCalendarDate } from '@/libs/HelperDates';
+import { parseCalendarDate } from "@/libs/HelperDates";
 import { PERM } from "@/services/Frm_Main/permissions";
 
 const securityStore = useSecurityStore();
@@ -620,6 +660,7 @@ const confirm = useConfirm();
 const toast = useToast();
 const tableRef = ref();
 const quoteFormRef = ref();
+const versionsRef = ref<InstanceType<typeof QuoteVersionsDialog> | null>(null);
 const traceabilityRef = ref<any>();
 const menuTable = ref();
 const quoteMenu = ref();
@@ -692,7 +733,11 @@ const expirationQuickFilters = [
 
 const tableMenuItems = computed(() => {
   const t: any[] = [
-    { label: "Refrescar", icon: "pi pi-refresh", command: () => refreshTable() },
+    {
+      label: "Refrescar",
+      icon: "pi pi-refresh",
+      command: () => refreshTable(),
+    },
   ];
   if (securityStore.hasPermission(PERM.RPT_EXPORT))
     t.push({
@@ -801,7 +846,15 @@ const quoteMenuItems = computed(() => {
       icon: "pi pi-file-pdf",
       command: () => openQuotePdf(),
     });
-  if (isDraftQuote(selectedQuote.value) && securityStore.hasPermission(PERM.QUOTE_EDIT)) {
+  items.push({
+    label: `Versiones enviadas${Number(selectedQuote.value?.versionCount || 0) ? ` (${selectedQuote.value.versionCount})` : ""}`,
+    icon: "pi pi-history",
+    command: () => versionsRef.value?.open(selectedQuote.value?.pkid),
+  });
+  if (
+    isDraftQuote(selectedQuote.value) &&
+    securityStore.hasPermission(PERM.QUOTE_EDIT)
+  ) {
     items.push({ separator: true });
     items.push({
       label: "Regenerar PDF",
@@ -810,7 +863,10 @@ const quoteMenuItems = computed(() => {
     });
   }
   if (isPendingQuote(selectedQuote.value)) {
-    if (selectedQuote.value?.entityId && securityStore.hasPermission(PERM.QUOTE_EMAIL))
+    if (
+      selectedQuote.value?.entityId &&
+      securityStore.hasPermission(PERM.QUOTE_EMAIL)
+    )
       items.push({
         label: isSentQuote(selectedQuote.value)
           ? "Reenviar presupuesto por correo"
@@ -955,7 +1011,12 @@ const sendQuoteByEmail = async () => {
     await axios.post(
       backendUrl(`/WebSendSalesQuote/${selectedQuote.value.pkid}`),
       null,
-      { params: { contactId: selectedRecipientId.value } },
+      {
+        params: {
+          contactId: selectedRecipientId.value,
+          portalBase: window.location.origin,
+        },
+      },
     );
     showSendDialog.value = false;
     toast.add({
@@ -1099,7 +1160,8 @@ watch(
 watch(selectedStatisticsYear, loadQuoteStatistics);
 onMounted(() => {
   loadQuoteStatistics();
-  if (route.query.quoteId) quoteFormRef.value?.open(Number(route.query.quoteId));
+  if (route.query.quoteId)
+    quoteFormRef.value?.open(Number(route.query.quoteId));
 });
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
@@ -1190,7 +1252,7 @@ const stateSeverity = (state = "") => {
   --kiwi: #9cc10a;
   --kiwi-dark: #648506;
   width: 100%;
-  background: rgba(247, 248, 250, .58);
+  background: rgba(247, 248, 250, 0.58);
   height: auto;
   min-height: calc(100dvh - 66px);
   box-sizing: border-box;
@@ -1729,6 +1791,32 @@ const stateSeverity = (state = "") => {
 .ranking-row strong,
 .empty-ranking {
   font-size: 0.9rem;
+}
+.next-action-cell span,
+.next-action-cell small {
+  display: block;
+}
+.next-action-cell span {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.next-action-cell small {
+  max-width: 180px;
+  margin-top: 0.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-color-secondary);
+}
+.next-action-cell.overdue span,
+.next-action-cell.overdue i {
+  color: #c2413b;
+}
+.next-action-cell.overdue small {
+  color: #9f3b36;
 }
 @media (max-width: 700px) {
   .page-header {
