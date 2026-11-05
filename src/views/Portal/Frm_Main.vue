@@ -73,24 +73,6 @@
           >
           <button
             type="button"
-            class="p-sidebar__item"
-            :class="{ 'p-sidebar__item--active': section === 'quotes' }"
-            :title="sidebarCollapsed ? 'Presupuestos' : ''"
-            @click="section = 'quotes'"
-          >
-            <span class="p-sidebar__item-icon p-icon-kiwi"
-              ><i class="pi pi-file-edit"></i
-            ></span>
-            <span v-if="!sidebarCollapsed" class="p-sidebar__item-label"
-              >Presupuestos</span
-            >
-            <i
-              v-if="!sidebarCollapsed"
-              class="p-sidebar__item-arrow pi pi-angle-right"
-            ></i>
-          </button>
-          <button
-            type="button"
             class="p-sidebar__toggle"
             :title="sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'"
             @click="toggleSidebar"
@@ -153,6 +135,24 @@
             ></span>
             <span v-if="!sidebarCollapsed" class="p-sidebar__item-label"
               >Facturación</span
+            >
+            <i
+              v-if="!sidebarCollapsed"
+              class="p-sidebar__item-arrow pi pi-angle-right"
+            ></i>
+          </button>
+          <button
+            type="button"
+            class="p-sidebar__item"
+            :class="{ 'p-sidebar__item--active': section === 'quotes' }"
+            :title="sidebarCollapsed ? 'Presupuestos' : ''"
+            @click="section = 'quotes'"
+          >
+            <span class="p-sidebar__item-icon p-icon-kiwi"
+              ><i class="pi pi-file-edit"></i
+            ></span>
+            <span v-if="!sidebarCollapsed" class="p-sidebar__item-label"
+              >Presupuestos</span
             >
             <i
               v-if="!sidebarCollapsed"
