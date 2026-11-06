@@ -33,10 +33,21 @@
       >
       <Column header="Destinatario"
         ><template #body="{ data }"
-          ><b>{{ data.recipientName }}</b
-          ><small class="recipient-mail">{{
-            data.recipientEmail
-          }}</small></template
+          ><template v-if="data.recipients?.length">
+            <span
+              v-for="recipient in data.recipients"
+              :key="recipient.contactId"
+              class="version-recipient"
+              ><b>{{ recipient.name }}</b
+              ><small class="recipient-mail">{{ recipient.email }}</small></span
+            >
+          </template>
+          <template v-else
+            ><b>{{ data.recipientName }}</b
+            ><small class="recipient-mail">{{
+              data.recipientEmail
+            }}</small></template
+          ></template
         ></Column
       >
       <Column header="Estado"
@@ -157,6 +168,12 @@ defineExpose({ open });
   display: block;
   margin-top: 0.2rem;
   color: var(--text-color-secondary);
+}
+.version-recipient {
+  display: block;
+}
+.version-recipient + .version-recipient {
+  margin-top: 0.45rem;
 }
 .response-note {
   max-width: 240px;

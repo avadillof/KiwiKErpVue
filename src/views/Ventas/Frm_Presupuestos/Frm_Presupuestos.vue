@@ -541,7 +541,7 @@
       <div class="send-dialog-intro">
         <i class="pi pi-send"></i
         ><span
-          >Selecciona el contacto que recibirá el presupuesto
+          >Selecciona los contactos que recibirán el presupuesto
           <b>{{ selectedQuote?.code }}</b
           >.</span
         >
@@ -561,13 +561,9 @@
           v-for="contact in emailRecipients"
           :key="contact.pkid"
           class="recipient-item"
-          :class="{ selected: selectedRecipientId === contact.pkid }"
+          :class="{ selected: selectedRecipientIds.includes(contact.pkid) }"
         >
-          <RadioButton
-            v-model="selectedRecipientId"
-            name="quoteRecipient"
-            :value="contact.pkid"
-          />
+          <Checkbox v-model="selectedRecipientIds" :value="contact.pkid" />
           <span class="recipient-data"
             ><b>{{ contact.name }}</b
             ><small>{{ contact.email }}</small></span
@@ -638,7 +634,7 @@
           "
           :loading="sendingQuote"
           :disabled="
-            !selectedRecipientId ||
+            !selectedRecipientIds.length ||
             !emailRecipients.length ||
             !!attachmentSelectionError
           "
@@ -683,7 +679,6 @@ import Toolbar from "primevue/toolbar";
 import OverlayPanel from "primevue/overlaypanel";
 import Select from "primevue/select";
 import Dialog from "primevue/dialog";
-import RadioButton from "primevue/radiobutton";
 import Checkbox from "primevue/checkbox";
 import Chart from "primevue/chart";
 import { useConfirm } from "primevue/useconfirm";
@@ -724,7 +719,7 @@ const emailAttachments = ref<
   Array<{ name: string; extension: string; size: number; selected: boolean }>
 >([]);
 const selectedAttachmentNames = ref<string[]>([]);
-const selectedRecipientId = ref<number | null>(null);
+const selectedRecipientIds = ref<number[]>([]);
 const selectedAttachmentsSize = computed(() =>
   emailAttachments.value
     .filter((file) => selectedAttachmentNames.value.includes(file.name))
@@ -1045,7 +1040,7 @@ const openSendDialog = async () => {
   emailRecipients.value = [];
   emailAttachments.value = [];
   selectedAttachmentNames.value = [];
-  selectedRecipientId.value = null;
+  selectedRecipientIds.value = [];
   loadingRecipients.value = true;
   showSendDialog.value = true;
   try {
@@ -1066,10 +1061,14 @@ const openSendDialog = async () => {
     selectedAttachmentNames.value = emailAttachments.value
       .filter((file) => file.selected)
       .map((file) => file.name);
-    selectedRecipientId.value =
-      emailRecipients.value.find((contact) => contact.defaultContact)?.pkid ??
-      emailRecipients.value[0]?.pkid ??
-      null;
+    const defaultRecipient = emailRecipients.value.find(
+      (contact) => contact.defaultContact,
+    );
+    selectedRecipientIds.value = defaultRecipient
+      ? [defaultRecipient.pkid]
+      : emailRecipients.value[0]
+        ? [emailRecipients.value[0].pkid]
+        : [];
   } catch (error: any) {
     showSendDialog.value = false;
     toast.add({
@@ -1083,28 +1082,34 @@ const openSendDialog = async () => {
   }
 };
 const sendQuoteByEmail = async () => {
-  if (!selectedQuote.value?.pkid || !selectedRecipientId.value) return;
+  if (!selectedQuote.value?.pkid || !selectedRecipientIds.value.length) return;
   sendingQuote.value = true;
   try {
-    await axios.post(
+    const response = await axios.post(
       backendUrl(`/WebSendSalesQuote/${selectedQuote.value.pkid}`),
       null,
       {
         params: {
-          contactId: selectedRecipientId.value,
+          contactIds: JSON.stringify(selectedRecipientIds.value),
           portalBase: window.location.origin,
           attachmentNames: JSON.stringify(selectedAttachmentNames.value),
         },
       },
     );
     showSendDialog.value = false;
+    const partialWarning =
+      response.status === 207 ? response.data?.warning : "";
     toast.add({
-      severity: "success",
-      summary: "Presupuesto enviado",
-      detail: selectedAttachmentNames.value.length
-        ? `El PDF y ${selectedAttachmentNames.value.length} anexo(s) se han enviado al contacto seleccionado.`
-        : "El PDF se ha enviado al contacto seleccionado, sin anexos.",
-      life: 4000,
+      severity: partialWarning ? "warn" : "success",
+      summary: partialWarning
+        ? "Presupuesto enviado parcialmente"
+        : "Presupuesto enviado",
+      detail:
+        partialWarning ||
+        (selectedAttachmentNames.value.length
+          ? `El PDF y ${selectedAttachmentNames.value.length} anexo(s) se han enviado a ${selectedRecipientIds.value.length} destinatario(s).`
+          : `El PDF se ha enviado a ${selectedRecipientIds.value.length} destinatario(s), sin anexos.`),
+      life: partialWarning ? 7000 : 4000,
     });
     selectedQuote.value = null;
     tableRef.value?.refresh();
