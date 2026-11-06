@@ -1088,11 +1088,12 @@ const sendQuoteByEmail = async () => {
   try {
     await axios.post(
       backendUrl(`/WebSendSalesQuote/${selectedQuote.value.pkid}`),
-      { attachmentNames: selectedAttachmentNames.value },
+      null,
       {
         params: {
           contactId: selectedRecipientId.value,
           portalBase: window.location.origin,
+          attachmentNames: JSON.stringify(selectedAttachmentNames.value),
         },
       },
     );
