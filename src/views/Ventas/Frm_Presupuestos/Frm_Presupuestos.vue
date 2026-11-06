@@ -580,6 +580,48 @@
           />
         </label>
       </div>
+      <section v-if="!loadingRecipients" class="email-attachments">
+        <div class="email-attachments__heading">
+          <div>
+            <b>Anexos para el cliente</b>
+            <small>La selección se conservará para el próximo envío.</small>
+          </div>
+          <Tag
+            :value="`${selectedAttachmentNames.length} seleccionados`"
+            severity="info"
+            rounded
+          />
+        </div>
+        <Message severity="info" :closable="false">
+          Por seguridad, solo se enviarán los documentos marcados. Los demás
+          permanecerán como documentación interna del presupuesto.
+        </Message>
+        <div v-if="emailAttachments.length" class="attachment-list">
+          <label
+            v-for="file in emailAttachments"
+            :key="file.name"
+            class="attachment-item"
+          >
+            <Checkbox v-model="selectedAttachmentNames" :value="file.name" />
+            <i class="pi pi-paperclip"></i>
+            <span class="attachment-data">
+              <b>{{ file.name }}</b>
+              <small>{{ formatFileSize(file.size) }}</small>
+            </span>
+          </label>
+        </div>
+        <div v-else class="attachment-empty">
+          <i class="pi pi-folder-open"></i>
+          Este presupuesto no tiene anexos disponibles.
+        </div>
+        <Message
+          v-if="attachmentSelectionError"
+          severity="error"
+          :closable="false"
+        >
+          {{ attachmentSelectionError }}
+        </Message>
+      </section>
       <template #footer>
         <Button
           label="Cancelar"
@@ -595,7 +637,11 @@
             'Envía el PDF al contacto del cliente seleccionado. Queda registrado el envío.'
           "
           :loading="sendingQuote"
-          :disabled="!selectedRecipientId || !emailRecipients.length"
+          :disabled="
+            !selectedRecipientId ||
+            !emailRecipients.length ||
+            !!attachmentSelectionError
+          "
           @click="sendQuoteByEmail"
         />
       </template>
@@ -638,6 +684,7 @@ import OverlayPanel from "primevue/overlaypanel";
 import Select from "primevue/select";
 import Dialog from "primevue/dialog";
 import RadioButton from "primevue/radiobutton";
+import Checkbox from "primevue/checkbox";
 import Chart from "primevue/chart";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -673,7 +720,23 @@ const sendingQuote = ref(false);
 const emailRecipients = ref<
   Array<{ pkid: number; name: string; email: string; defaultContact: boolean }>
 >([]);
+const emailAttachments = ref<
+  Array<{ name: string; extension: string; size: number; selected: boolean }>
+>([]);
+const selectedAttachmentNames = ref<string[]>([]);
 const selectedRecipientId = ref<number | null>(null);
+const selectedAttachmentsSize = computed(() =>
+  emailAttachments.value
+    .filter((file) => selectedAttachmentNames.value.includes(file.name))
+    .reduce((total, file) => total + Number(file.size || 0), 0),
+);
+const attachmentSelectionError = computed(() => {
+  if (selectedAttachmentNames.value.length > 10)
+    return "Puedes seleccionar como máximo 10 anexos.";
+  if (selectedAttachmentsSize.value > 20 * 1024 * 1024)
+    return "Los anexos seleccionados superan el límite de 20 MB.";
+  return "";
+});
 const creationDatePanel = ref();
 const validityDatePanel = ref();
 const creationDateRange = ref<[Date | null, Date | null] | null>(null);
@@ -980,14 +1043,29 @@ const onQuoteSaved = () => {
 const openSendDialog = async () => {
   if (!selectedQuote.value?.pkid) return;
   emailRecipients.value = [];
+  emailAttachments.value = [];
+  selectedAttachmentNames.value = [];
   selectedRecipientId.value = null;
   loadingRecipients.value = true;
   showSendDialog.value = true;
   try {
-    const { data } = await axios.get(
-      backendUrl(`/WebGetSalesQuoteEmailContacts/${selectedQuote.value.pkid}`),
-    );
-    emailRecipients.value = data ?? [];
+    const [contactsResponse, attachmentsResponse] = await Promise.all([
+      axios.get(
+        backendUrl(
+          `/WebGetSalesQuoteEmailContacts/${selectedQuote.value.pkid}`,
+        ),
+      ),
+      axios.get(
+        backendUrl(
+          `/WebGetSalesQuoteEmailAttachments/${selectedQuote.value.pkid}`,
+        ),
+      ),
+    ]);
+    emailRecipients.value = contactsResponse.data ?? [];
+    emailAttachments.value = attachmentsResponse.data ?? [];
+    selectedAttachmentNames.value = emailAttachments.value
+      .filter((file) => file.selected)
+      .map((file) => file.name);
     selectedRecipientId.value =
       emailRecipients.value.find((contact) => contact.defaultContact)?.pkid ??
       emailRecipients.value[0]?.pkid ??
@@ -1010,7 +1088,7 @@ const sendQuoteByEmail = async () => {
   try {
     await axios.post(
       backendUrl(`/WebSendSalesQuote/${selectedQuote.value.pkid}`),
-      null,
+      { attachmentNames: selectedAttachmentNames.value },
       {
         params: {
           contactId: selectedRecipientId.value,
@@ -1022,7 +1100,9 @@ const sendQuoteByEmail = async () => {
     toast.add({
       severity: "success",
       summary: "Presupuesto enviado",
-      detail: "El PDF se ha enviado al contacto seleccionado.",
+      detail: selectedAttachmentNames.value.length
+        ? `El PDF y ${selectedAttachmentNames.value.length} anexo(s) se han enviado al contacto seleccionado.`
+        : "El PDF se ha enviado al contacto seleccionado, sin anexos.",
       life: 4000,
     });
     selectedQuote.value = null;
@@ -1038,6 +1118,12 @@ const sendQuoteByEmail = async () => {
   } finally {
     sendingQuote.value = false;
   }
+};
+const formatFileSize = (bytes: number) => {
+  const size = Number(bytes || 0);
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 const requestQuoteAction = (action: "accept" | "cancel" | "reopen") => {
   const accepting = action === "accept";
@@ -1764,6 +1850,71 @@ const stateSeverity = (state = "") => {
 .recipient-data small {
   color: var(--text-color-secondary);
   margin-top: 0.15rem;
+}
+.email-attachments {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-200);
+}
+.email-attachments__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.email-attachments__heading > div,
+.attachment-data {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.email-attachments__heading small,
+.attachment-data small {
+  color: var(--text-color-secondary);
+  margin-top: 0.15rem;
+}
+.attachment-list {
+  max-height: 13rem;
+  overflow-y: auto;
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+}
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--surface-200);
+  cursor: pointer;
+}
+.attachment-item:last-child {
+  border-bottom: 0;
+}
+.attachment-item:hover {
+  background: var(--surface-50);
+}
+.attachment-item > .pi {
+  color: var(--primary-color);
+}
+.attachment-data {
+  flex: 1;
+}
+.attachment-data b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 4rem;
+  color: var(--text-color-secondary);
+  border: 1px dashed var(--surface-300);
+  border-radius: 8px;
 }
 .list-card :deep(.p-datatable-thead > tr > th),
 .list-card :deep(.p-datatable-tbody > tr > td) {
