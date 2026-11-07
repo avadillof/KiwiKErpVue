@@ -20,6 +20,10 @@ export interface SalesQuoteLineDTO {
   quantityDelivered?: number;
   quantityCanceled?: number;
   quantityInvoiced?: number;
+  maintenanceQuantity?: number;
+  maintenancePerformedAt?: string;
+  maintenanceReason?: string;
+  maintenanceUser?: string;
   requireDelivery?: boolean;
   invoicingPolicy?: "ORDERED" | "DELIVERED";
 }

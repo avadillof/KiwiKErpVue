@@ -63,6 +63,7 @@
 
         <Frm_PresupuestoForm ref="orderFormRef" document-type="order" @saved="onOrderSaved" />
         <SalesTraceabilityDialog ref="traceabilityRef" />
+        <MaintenanceCompletionDialog ref="maintenanceDialogRef" @saved="onOrderSaved" />
         <OrderInvoiceDialog ref="orderInvoiceDialogRef" @generated="onOrderInvoiceGenerated" />
         <DeliveryPreparationDialog ref="deliveryDialogRef" :order-id="selectedOrder?.pkid" @generated="onDeliveryGenerated" />
         <AttachmentsDialog v-model:visible="showAttachments" moduleFolder="ATTACHEMENTS_SALESPEDIDOS_DOCUMENTS" :title="`Documentos indexados al pedido ${selectedOrder?.code ?? ''}`" :entityId="selectedOrder?.pkid" @update:visible="onAttachmentsVisible" />
@@ -97,6 +98,7 @@ import DateRangePicker from '@/components/shared/DateRangePicker.vue';
 import Frm_PresupuestoForm from '../Frm_Presupuestos/Frm_PresupuestoForm.vue';
 import DeliveryPreparationDialog from '../Frm_Albaranes/DeliveryPreparationDialog.vue';
 import OrderInvoiceDialog from './OrderInvoiceDialog.vue';
+import MaintenanceCompletionDialog from './MaintenanceCompletionDialog.vue';
 import AttachmentsDialog from '@/components/attachments/AttachmentsDialog.vue';
 import DialogNotes from '@/components/dialogs/DialogNotes.vue';
 import SalesTraceabilityDialog from '../SalesTraceabilityDialog.vue';
@@ -104,6 +106,7 @@ import { useSecurityStore } from '@/stores/securityStore';
 import { PERM } from '@/services/Frm_Main/permissions';
 
 const orderInvoiceDialogRef = ref<any>();
+const maintenanceDialogRef = ref<any>();
 const traceabilityRef = ref<any>();
 const onOrderInvoiceGenerated = (invoice:any) => { tableRef.value?.refresh(); loadOrderStatistics(); router.push({name:'Facturas',query:{invoiceId:String(invoice.pkid)}}); };
 const securityStore = useSecurityStore();
@@ -135,7 +138,7 @@ const stateLabel = (state = '') => ({ 'Para Aprobar / To Approved Sale': 'Borrad
 const getCreatorPhotoUrl = (userId: number) => backendUrl(`/gestdoc/users/${userId}/photoPerfil.jpg`);
 const handleCreatorPhotoError = (userId: number) => { creatorPhotoErrors.value[userId] = true; };
 const creatorInitials = (creator?: string) => (creator || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('');
-const progressTooltip = (order: any) => `${order.deliveryPendingLines ?? 0} líneas pendientes de entrega — ${order.deliveryPendingQuantity ?? 0} uds.\n${order.directInvoiceLines ?? 0} líneas pendientes de facturación\n${order.completedLines ?? 0} líneas entregadas y facturadas`;
+const progressTooltip = (order: any) => `${order.deliveryPendingLines ?? 0} líneas pendientes de entrega — ${order.deliveryPendingQuantity ?? 0} uds.\n${order.directInvoiceLines ?? 0} líneas pendientes de facturación\n${order.completedLines ?? 0} líneas completadas`;
 const stateSeverity = (state = '') => { if (state.includes('Completado')) return 'success'; if (state.includes('Entregado')) return 'info'; if (state.includes('Parcialmente')) return 'warn'; if (state.includes('Cancelado')) return 'danger'; if (state.includes('Confirmado') || state.includes('Albarán')) return 'info'; return 'secondary'; };
 const pendingFlowSeverity = (value = '') => value === 'delivery' ? 'info' : 'warn';
 const deliveryDeadlineSeverity = (value = '') => value === 'OVERDUE' ? 'danger' : value === 'TODAY' ? 'warn' : value === 'NO_DATE' ? 'secondary' : 'info';
@@ -162,6 +165,7 @@ const orderMenuItems = computed(() => {
             if (!selectedOrder.value?.locked && Number(selectedOrder.value?.cancellablePendingQuantity ?? 0) > 0) items.push({ label: 'Cancelar cantidades pendientes', icon: 'pi pi-ban', command: cancelPendingOrder });
         }
     }
+    if (selectedOrder.value?.canCompleteMaintenance && securityStore.hasPermission(PERM.ORDER_STATE)) items.push({ label: 'Registrar servicio incluido en mantenimiento', icon: 'pi pi-check-circle', command: () => maintenanceDialogRef.value?.open(selectedOrder.value.pkid) });
     if (selectedOrder.value?.canInvoiceFromOrder && securityStore.hasPermission(PERM.ORDER_TO_INVOICE)) items.push({label:'Facturar desde pedido',icon:'pi pi-receipt',command:()=>orderInvoiceDialogRef.value?.open(selectedOrder.value.pkid)});
     if (securityStore.hasPermission(PERM.ORDER_TO_DELIVERY)) {
         items.push({

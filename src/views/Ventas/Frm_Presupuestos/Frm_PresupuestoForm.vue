@@ -71,7 +71,7 @@
               <div>
                 <b>{{ orderProgress.completedLines }}</b
                 ><span>Líneas completadas</span
-                ><small>Entregadas o facturadas</small>
+                ><small>Entrega y facturación resueltas</small>
               </div>
             </div>
           </div>
@@ -424,6 +424,16 @@
               }}</span></template
             ></Column
           >
+          <Column v-if="isOrder" header="Incluido en mantenimiento" style="min-width: 140px">
+            <template #body="{ data }">
+              <span v-if="data.maintenanceQuantity" :title="[data.maintenancePerformedAt, data.maintenanceUser, data.maintenanceReason].filter(Boolean).join(' · ')">
+                {{ formatQuantity(data.maintenanceQuantity) }} realizadas
+                <small class="block">{{ new Date(data.maintenancePerformedAt).toLocaleDateString('es-ES') }} · {{ data.maintenanceUser }}</small>
+                <small class="block">{{ data.maintenanceReason }}</small>
+              </span>
+              <span v-else>—</span>
+            </template>
+          </Column>
           <Column v-if="isOrder" style="min-width: 74px"
             ><template #header
               ><span class="line-header pending"
@@ -989,6 +999,7 @@ const linePending = (line: SalesQuoteLineDTO) =>
     0,
     Number(line.quantity ?? 0) -
       Number(line.quantityCanceled ?? 0) -
+      Number(line.maintenanceQuantity ?? 0) -
       (line.requireDelivery
         ? Number(line.quantityDelivered ?? 0)
         : Number(line.quantityInvoiced ?? 0)),
@@ -1069,7 +1080,7 @@ const orderProgress = computed(() => {
     const pendingDelivery = requiresDelivery
       ? Math.max(0, quantity - canceled - delivered)
       : 0;
-    const pendingInvoice = Math.max(0, quantity - canceled - invoiced);
+    const pendingInvoice = Math.max(0, quantity - canceled - invoiced - Number(line.maintenanceQuantity ?? 0));
     if (pendingDelivery <= 0.0001 && pendingInvoice <= 0.0001) {
       completedLines++;
       return;
