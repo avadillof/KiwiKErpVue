@@ -4,7 +4,7 @@
     <template #header>
       <div class="heading"><i class="pi pi-check-circle" /><div>
         <strong>Registrar servicio realizado</strong>
-        <small>{{ code }} · Incluido en mantenimiento</small>
+        <small>{{ code }} · Realizado sin cargo</small>
       </div></div>
     </template>
     <div class="body">
@@ -18,7 +18,7 @@
       </DataTable>
       <label for="maintenance-date">Fecha de realización</label>
       <DatePicker v-model="date" inputId="maintenance-date" dateFormat="dd/mm/yy" :maxDate="new Date()" :disabled="busy" showIcon />
-      <label for="maintenance-reason">Mantenimiento o contrato que cubre el servicio</label>
+      <label for="maintenance-reason">Motivo del cierre sin facturación</label>
       <Textarea v-model="reason" id="maintenance-reason" rows="3" maxlength="1000" :disabled="busy" placeholder="Indica el contrato, bolsa de horas o motivo de cobertura." />
       <small>La fecha, el usuario y el motivo quedarán registrados en las líneas del pedido.</small>
     </div>

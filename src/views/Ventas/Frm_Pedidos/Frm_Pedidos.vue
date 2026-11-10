@@ -165,7 +165,7 @@ const orderMenuItems = computed(() => {
             if (!selectedOrder.value?.locked && Number(selectedOrder.value?.cancellablePendingQuantity ?? 0) > 0) items.push({ label: 'Cancelar cantidades pendientes', icon: 'pi pi-ban', command: cancelPendingOrder });
         }
     }
-    if (selectedOrder.value?.canCompleteMaintenance && securityStore.hasPermission(PERM.ORDER_STATE)) items.push({ label: 'Registrar servicio incluido en mantenimiento', icon: 'pi pi-check-circle', command: () => maintenanceDialogRef.value?.open(selectedOrder.value.pkid) });
+    if (selectedOrder.value?.canCompleteMaintenance && securityStore.hasPermission(PERM.ORDER_STATE)) items.push({ label: 'Registrar servicio realizado sin cargo', icon: 'pi pi-check-circle', command: () => maintenanceDialogRef.value?.open(selectedOrder.value.pkid) });
     if (selectedOrder.value?.canInvoiceFromOrder && securityStore.hasPermission(PERM.ORDER_TO_INVOICE)) items.push({label:'Facturar desde pedido',icon:'pi pi-receipt',command:()=>orderInvoiceDialogRef.value?.open(selectedOrder.value.pkid)});
     if (securityStore.hasPermission(PERM.ORDER_TO_DELIVERY)) {
         items.push({

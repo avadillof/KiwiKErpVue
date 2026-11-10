@@ -426,7 +426,7 @@
           >
           <Column
             v-if="isOrder"
-            header="Incluido en mantenimiento"
+            header="Realizado sin cargo"
             style="width: 12rem"
           >
             <template #body="{ data }">
@@ -437,7 +437,7 @@
                 size="small"
                 outlined
                 class="maintenance-details-button"
-                :aria-label="'Ver mantenimiento de ' + data.nameProduct"
+                :aria-label="'Ver cierre sin facturación de ' + data.nameProduct"
                 @click="maintenanceDetail = data"
               />
               <span v-else>—</span>
@@ -660,7 +660,7 @@
   <Dialog
     :visible="!!maintenanceDetail"
     modal
-    header="Servicio incluido en mantenimiento"
+    header="Detalle del servicio realizado sin cargo"
     class="kiwik-dialog"
     :style="{ width: 'min(560px, 95vw)' }"
     @update:visible="maintenanceDetail = null"
@@ -682,7 +682,7 @@
       <dd>
         {{ maintenanceDetail.maintenanceUser || '—' }}
       </dd>
-      <dt>Mantenimiento o contrato que cubre el servicio</dt>
+      <dt>Motivo del cierre sin facturación</dt>
       <dd>
         {{ maintenanceDetail.maintenanceReason || '—' }}
       </dd>
