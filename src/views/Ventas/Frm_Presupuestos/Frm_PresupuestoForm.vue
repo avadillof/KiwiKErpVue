@@ -424,13 +424,22 @@
               }}</span></template
             ></Column
           >
-          <Column v-if="isOrder" header="Incluido en mantenimiento" style="min-width: 140px">
+          <Column
+            v-if="isOrder"
+            header="Incluido en mantenimiento"
+            style="width: 12rem"
+          >
             <template #body="{ data }">
-              <span v-if="data.maintenanceQuantity" :title="[data.maintenancePerformedAt, data.maintenanceUser, data.maintenanceReason].filter(Boolean).join(' · ')">
-                {{ formatQuantity(data.maintenanceQuantity) }} realizadas
-                <small class="block">{{ new Date(data.maintenancePerformedAt).toLocaleDateString('es-ES') }} · {{ data.maintenanceUser }}</small>
-                <small class="block">{{ data.maintenanceReason }}</small>
-              </span>
+              <Button
+                v-if="data.maintenanceQuantity"
+                :label="formatQuantity(data.maintenanceQuantity) + ' realizadas'"
+                icon="pi pi-info-circle"
+                size="small"
+                outlined
+                class="maintenance-details-button"
+                :aria-label="'Ver mantenimiento de ' + data.nameProduct"
+                @click="maintenanceDetail = data"
+              />
               <span v-else>—</span>
             </template>
           </Column>
@@ -648,6 +657,43 @@
         </div></div
     ></template>
   </Dialog>
+  <Dialog
+    :visible="!!maintenanceDetail"
+    modal
+    header="Servicio incluido en mantenimiento"
+    class="kiwik-dialog"
+    :style="{ width: 'min(560px, 95vw)' }"
+    @update:visible="maintenanceDetail = null"
+  >
+    <dl v-if="maintenanceDetail" class="maintenance-details">
+      <dt>Servicio</dt>
+      <dd>
+        {{ maintenanceDetail.nameProduct || maintenanceDetail.productCode || '—' }}
+      </dd>
+      <dt>Cantidad realizada</dt>
+      <dd>
+        {{ formatQuantity(maintenanceDetail.maintenanceQuantity) }} {{ maintenanceDetail.uomDescription }}
+      </dd>
+      <dt>Fecha de realización</dt>
+      <dd>
+        {{ maintenanceDetail.maintenancePerformedAt ? new Date(maintenanceDetail.maintenancePerformedAt).toLocaleDateString('es-ES') : '—' }}
+      </dd>
+      <dt>Registrado por</dt>
+      <dd>
+        {{ maintenanceDetail.maintenanceUser || '—' }}
+      </dd>
+      <dt>Mantenimiento o contrato que cubre el servicio</dt>
+      <dd>
+        {{ maintenanceDetail.maintenanceReason || '—' }}
+      </dd>
+    </dl>
+    <template #footer>
+      <div class="maintenance-details-footer">
+        <div class="kiwik-separator" />
+        <Button label="Cerrar" @click="maintenanceDetail = null" />
+      </div>
+    </template>
+  </Dialog>
   <PriceRecalculationDialog
     :visible="pricing.confirmVisible.value"
     :busy="pricing.batchBusy.value"
@@ -695,6 +741,7 @@ const props = withDefaults(
   defineProps<{ documentType?: "quote" | "order" }>(),
   { documentType: "quote" },
 );
+const maintenanceDetail = ref<SalesQuoteLineDTO | null>(null);
 const isOrder = computed(() => props.documentType === "order");
 const securityStore = useSecurityStore();
 const canEditDoc = computed(() =>
@@ -1799,5 +1846,30 @@ defineExpose({ open });
 }
 .currency-hint i {
   margin-right: 0.25rem;
+}
+.maintenance-details-button {
+  white-space: nowrap;
+}
+.maintenance-details {
+  margin: 0;
+}
+.maintenance-details dt {
+  font-weight: 600;
+  margin-top: 1rem;
+}
+.maintenance-details dt:first-child {
+  margin-top: 0;
+}
+.maintenance-details dd {
+  margin: .35rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.maintenance-details-footer {
+  width: 100%;
+  text-align: right;
+}
+.maintenance-details-footer .kiwik-separator {
+  margin-bottom: 1rem;
 }
 </style>
