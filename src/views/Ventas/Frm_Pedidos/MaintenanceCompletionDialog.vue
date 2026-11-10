@@ -93,7 +93,7 @@ async function save() {
     await axios.post(backendUrl(`/WebCompleteSalesOrderMaintenance/${orderId.value}`), {
       lineIds: selected.value.map(line => line.pkid), performedDate,
       reason: reason.value.trim(), userCode: auth.user?.userDsCode,
-    });
+    }, { ...auth.portalRequestConfig(), timeout: 20000 });
     visible.value = false;
     emit('saved');
   } catch (e: any) {
