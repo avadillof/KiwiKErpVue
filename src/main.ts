@@ -19,6 +19,7 @@ import ConfirmationService from 'primevue/confirmationservice';
 import Tooltip from 'primevue/tooltip';
 import ConfirmPopup from 'primevue/confirmpopup';
 import { recordRecent } from './services/Frm_Main/recentModules';
+import { primeVueLocaleEs } from './config/primeVueLocaleEs';
 
 const app = createApp(App);
 
@@ -34,6 +35,7 @@ app.use(pinia);
 app.use(ConfirmationService);
 
 app.use(PrimeVue, {
+    locale: primeVueLocaleEs,
     theme: {
         preset: KiwiKTheme,
         options: {

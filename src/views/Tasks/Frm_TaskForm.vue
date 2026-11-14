@@ -126,7 +126,7 @@
                                 optionLabel="label" optionValue="value" class="w-full" filter showClear
                                 :disabled="!form.entitiePkid" />
                             <label for="task-contact">
-                                Contacto que la realiza *
+                                Contacto que lo Solicita / Realiza *
                             </label>
                         </FloatLabel>
                         <small class="mail-hint">
