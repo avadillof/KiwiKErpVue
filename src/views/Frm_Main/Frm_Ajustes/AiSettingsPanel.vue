@@ -68,15 +68,16 @@
               :placeholder="activeProvider.defaultModel"
             /><small
               >KiwiKERP propone {{ activeProvider.defaultModel }} por defecto.
-              Cambia este campo sólo si tu administrador indica otro
-              compatible con {{ activeProvider.label }}. Los modelos de Groq
-              contienen `/` (p. ej. openai/gpt-oss-20b): si al guardar ves
-              "Identificador de modelo no válido", el backend aún valida solo
-              modelos OpenAI y hay que actualizarlo.</small
+              Cambia este campo sólo si tu administrador indica otro compatible
+              con {{ activeProvider.label }}. Los modelos de Groq contienen `/`
+              (p. ej. openai/gpt-oss-20b): si al guardar ves "Identificador de
+              modelo no válido", el backend aún valida solo modelos OpenAI y hay
+              que actualizarlo.</small
             >
           </div>
           <div class="key-field">
-            <label for="ai-api-key">Clave API de {{ activeProvider.label }}</label
+            <label for="ai-api-key"
+              >Clave API de {{ activeProvider.label }}</label
             ><InputText
               id="ai-api-key"
               v-model="apiKey"
@@ -165,10 +166,10 @@
       class="kiwik-dialog"
       :style="{ width: 'min(520px,94vw)' }"
       ><p>
-        Se enviará una pregunta técnica fija al modelo guardado
-        ({{ saved?.model || activeProvider.defaultModel }}). Puede generar
-        consumo en tu cuota gratuita. No se enviarán facturas ni datos de
-        clientes.
+        Se enviará una pregunta técnica fija al modelo guardado ({{
+          saved?.model || activeProvider.defaultModel
+        }}). Puede generar consumo en tu cuota gratuita. No se enviarán facturas
+        ni datos de clientes.
       </p>
       <template #footer
         ><Button
@@ -189,8 +190,8 @@
       :style="{ width: 'min(520px,94vw)' }"
       ><p>
         Se eliminará la copia cifrada de KiwiKERP y se desactivará la IA, que
-        dejará de interpretar preguntas. Para recuperar la conexión
-        tendrás que introducir la clave otra vez. Esto no revoca la clave en
+        dejará de interpretar preguntas. Para recuperar la conexión tendrás que
+        introducir la clave otra vez. Esto no revoca la clave en
         {{ activeProvider.label }}.
       </p>
       <template #footer
@@ -206,8 +207,9 @@
   </SettingsPanelCard>
 </template>
 <script setup lang="ts">
-import SettingsPanelCard from './SettingsPanelCard.vue';
-import { backendUrl } from '@/services/backendUrl';
+import { aiSettingsError } from "@/services/Frm_Ajustes/aiSettingsErrors";
+import SettingsPanelCard from "./SettingsPanelCard.vue";
+import { backendUrl } from "@/services/backendUrl";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import axios from "axios";
 import Button from "primevue/button";
@@ -224,7 +226,13 @@ const auth = useAuthStore();
 // existentes. El backend debe implementar el conmutador provider/baseUrl.
 const providers: Record<
   string,
-  { label: string; shortLabel: string; defaultModel: string; keyUrl: string; help: string }
+  {
+    label: string;
+    shortLabel: string;
+    defaultModel: string;
+    keyUrl: string;
+    help: string;
+  }
 > = {
   groq: {
     label: "Groq",
@@ -289,21 +297,19 @@ const secureTransport = (() => {
 })();
 let sequence = 0;
 watch(
-  [() => form.value.enabled, () => form.value.provider, () => form.value.model, apiKey],
+  [
+    () => form.value.enabled,
+    () => form.value.provider,
+    () => form.value.model,
+    apiKey,
+  ],
   () => {
     success.value = "";
     error.value = "";
   },
   { flush: "sync" },
 );
-const safeError = (e: any) =>
-  typeof e.response?.data === "string"
-    ? e.response.data
-    : e.response?.status === 401
-      ? "Vuelve a iniciar sesión."
-      : e.response?.status === 403
-        ? "Sólo los administradores pueden configurar la IA."
-        : "No se pudo completar la operación. Comprueba el backend y la migración V26.";
+const safeError = (e: any) => aiSettingsError(e, activeProvider.value.label);
 function accept(data: any) {
   saved.value = data;
   // Compatibilidad: el backend antiguo no devuelve provider (era solo OpenAI).
@@ -475,6 +481,5 @@ onUnmounted(() => {
   .fields {
     grid-template-columns: 1fr;
   }
-
 }
 </style>

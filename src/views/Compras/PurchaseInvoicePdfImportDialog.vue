@@ -129,9 +129,11 @@ const analyze = async () => {
     const response = await axios.post(backendUrl('/WebAnalyzePurchaseInvoicePdf'), body);
     result.value = response.data;
   } catch (failure: any) {
-    error.value = typeof failure.response?.data === 'string'
-      ? failure.response.data
-      : failure.response?.data?.message || 'No se pudo analizar el PDF. Revisa la configuración de IA e inténtalo de nuevo.';
+    const response = failure.response?.data;
+    error.value = typeof response === 'string'
+      ? response
+      : response?.message || response?.detail || response?.error
+        || 'No se pudo analizar el PDF. Revisa la configuración de IA e inténtalo de nuevo.';
   } finally {
     analyzing.value = false;
   }
