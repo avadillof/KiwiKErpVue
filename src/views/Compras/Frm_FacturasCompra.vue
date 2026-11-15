@@ -11,7 +11,7 @@
     <section class="list-card">
       <Toolbar class="list-toolbar">
         <template #start><div class="workspace-heading"><span>Listado de facturas</span><small>El nº de factura del proveedor se guarda en PURCHASES_INVOICES_DS_CODEPROVE.</small></div></template>
-        <template #end><div class="toolbar-actions"><Message severity="info" variant="simple" icon="pi pi-info-circle">Las facturas se concilian con sus albaranes</Message><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_DUES)" label="Enviar recordatorio de vencimientos" icon="pi pi-send" severity="secondary" outlined size="small" v-tooltip.bottom="'Aviso interno con los pagos próximos. Nunca se envía al proveedor.'" @click="openDueReminder" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_EDIT)" label="Nueva factura manual" icon="pi pi-plus" size="small" @click="manualDialogRef?.open()" /></div></template>
+        <template #end><div class="toolbar-actions"><Message severity="info" variant="simple" icon="pi pi-info-circle">Las facturas se concilian con sus albaranes</Message><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_DUES)" label="Enviar recordatorio de vencimientos" icon="pi pi-send" severity="secondary" outlined size="small" v-tooltip.bottom="'Aviso interno con los pagos próximos. Nunca se envía al proveedor.'" @click="openDueReminder" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_EDIT)" label="Importar PDF con IA" icon="pi pi-sparkles" severity="secondary" outlined size="small" @click="pdfImportDialogRef?.open()" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_EDIT)" label="Nueva factura manual" icon="pi pi-plus" size="small" @click="manualDialogRef?.open()" /></div></template>
       </Toolbar>
       <Message v-if="tableLoadError" severity="error" :closable="false" class="table-error">No se pudo cargar el listado de facturas. Comprueba que el backend esté reiniciado y vuelve a intentarlo.</Message>
       <GenericDataTable ref="tableRef" class="invoice-table" dataKey="pkid" selectionMode="single" v-model:selection="selected" endpoint="WebGetPurchasesInvoices" :params="{ state: selectedState || undefined, paid: selectedPaid ?? undefined }" :showPaginator="true" :filterable="true" :showActions="true" @data-loaded="tableLoadError=false" @load-error="tableLoadError=true">
@@ -124,6 +124,7 @@
     </Dialog>
 
     <ManualPurchaseInvoiceDialog ref="manualDialogRef" @saved="refresh" />
+    <PurchaseInvoicePdfImportDialog ref="pdfImportDialogRef" @review="reviewPdfImport" />
     <SalesTraceabilityDialog ref="traceabilityRef" mode="purchases" />
     <PurchaseInvoiceDuesDialog ref="duesDialogRef" @saved="onDuesSaved" />
     <PurchaseInvoicePaymentsDialog ref="paymentsDialogRef" @saved="onPaymentsSaved" />
@@ -181,6 +182,7 @@ import DialogNotes from "@/components/dialogs/DialogNotes.vue";
 import ProductLookup from "@/components/shared/ProductLookup.vue";
 import PurchaseInvoiceDuesDialog from "./PurchaseInvoiceDuesDialog.vue";
 import PurchaseInvoicePaymentsDialog from "./PurchaseInvoicePaymentsDialog.vue";
+import PurchaseInvoicePdfImportDialog from "./PurchaseInvoicePdfImportDialog.vue";
 import SupplierLookup from "@/components/shared/SupplierLookup.vue";
 import SalesTraceabilityDialog from "../Ventas/SalesTraceabilityDialog.vue";
 import AttachmentsDialog from "@/components/attachments/AttachmentsDialog.vue";
@@ -201,6 +203,8 @@ const menuItemsTable = computed(() => {
 });
 const openMenuTable = (event: Event) => menuTable.value?.toggle(event);
 const manualDialogRef = ref<any>(null);
+const pdfImportDialogRef = ref<any>(null);
+const reviewPdfImport = (result:any, file:File) => manualDialogRef.value?.open(result,file);
 const selected = ref<any>(null);
 const selectedState = ref<string | null>(null);
 const selectedPaid = ref<boolean | null>(null);

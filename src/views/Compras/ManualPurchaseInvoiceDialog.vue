@@ -49,7 +49,7 @@ import ProductLookup from '@/components/shared/ProductLookup.vue';
 
 const emit = defineEmits<{ saved: [invoice: any] }>();
 const toast = useToast(), authStore = useAuthStore();
-const visible = ref(false), saving = ref(false), selectedSupplier = ref<any>(null), manualLinesTable = ref<any>(null);
+const visible = ref(false), saving = ref(false), selectedSupplier = ref<any>(null), manualLinesTable = ref<any>(null), sourcePdf = ref<File|null>(null);
 const newLine = () => ({ productId: null as number|null, productLabel: '', description: '', quantity: 1, priceUnit: 0, tax: 0, uomId: null as number|null });
 const form = reactive({ entityId: null as number|null, salesTarifaId: null as number|null, date: new Date(), supplierCode: '', reference: '', notes: '', lines: [newLine()] });
 const errors = reactive({ supplier: '', lines: '' });
@@ -64,8 +64,22 @@ const totals = computed(() => {
   const tax = form.lines.reduce((sum, line) => sum + (lineNet(line) * Number(line.tax || 0)) / 100, 0);
   return { units, net, tax, total: net + tax };
 });
-const reset = () => { selectedSupplier.value=null; form.entityId=null; form.salesTarifaId=null; form.date=new Date(); form.supplierCode=''; form.reference=''; form.notes=''; form.lines=[newLine()]; clearErrors(); };
-const open = async () => { reset(); visible.value=true; try { const { data } = await axios.get(backendUrl('/WebLoadSalesQuoteCatalog')); form.salesTarifaId = data.defaultTarifaId ?? null; } catch { form.salesTarifaId = null; } };
+const reset = () => { selectedSupplier.value=null; sourcePdf.value=null; form.entityId=null; form.salesTarifaId=null; form.date=new Date(); form.supplierCode=''; form.reference=''; form.notes=''; form.lines=[newLine()]; clearErrors(); };
+const parseInvoiceDate = (value:string) => { const parts=String(value||'').split('-').map(Number); return parts.length===3&&parts.every(Number.isFinite)?new Date(parts[0],parts[1]-1,parts[2]):new Date(); };
+const open = async (initial?:any, pdf?:File) => {
+  reset(); visible.value=true;
+  try { const { data } = await axios.get(backendUrl('/WebLoadSalesQuoteCatalog')); form.salesTarifaId = data.defaultTarifaId ?? null; } catch { form.salesTarifaId = null; }
+  if(!initial)return;
+  sourcePdf.value=pdf||null;
+  selectedSupplier.value=initial.supplierMatch||null;
+  form.entityId=initial.supplierMatch?.pkid??null;
+  form.date=parseInvoiceDate(initial.invoiceDate);
+  form.supplierCode=initial.supplierInvoiceNumber||'';
+  form.reference=initial.reference||'';
+  form.notes=`Importada desde ${initial.sourceFileName||'PDF'} mediante IA. Revisión humana obligatoria.`;
+  form.lines=(initial.lines||[]).map((line:any)=>({productId:line.productMatch?.pkid??null,productLabel:line.productMatch?`${line.productMatch.code} — ${line.productMatch.description}`:'',description:line.description||line.productMatch?.description||'',quantity:Number(line.quantity)||1,priceUnit:Number(line.unitPrice)||0,tax:Number(line.taxPercent)||0,uomId:line.productMatch?.uomId??null}));
+  if(!form.lines.length)form.lines=[newLine()];
+};
 const selectSupplier = (supplier:any) => { selectedSupplier.value=supplier; errors.supplier=''; };
 const addLine = async () => { form.lines.push(newLine()); await nextTick(); requestAnimationFrame(() => { const containers=manualLinesTable.value?.$el?.querySelectorAll('.p-datatable-table-container, .p-datatable-wrapper, .p-datatable-scrollable-body') as NodeListOf<HTMLElement>|undefined; containers?.forEach(container=>{container.scrollTop=container.scrollHeight;}); }); }; const removeLine = (index:number) => form.lines.splice(index,1);
 const selectProduct = (line:any, product:any) => { line.productId=product.pkid; line.productLabel=`${product.code} — ${product.description}`; line.description=product.description || ''; line.priceUnit=Number(product.costPrice ?? 0); line.tax=Number(product.purchaseTaxValue ?? product.taxValue ?? 0); line.uomId=product.uomId ?? null; };
@@ -79,7 +93,10 @@ const save = async () => {
   if (!valid) return;
   if (!form.salesTarifaId) { toast.add({severity:'error',summary:'Sin tarifa por defecto',detail:'Configura una tarifa por defecto en Ventas → Lista de precios.',life:4000}); return; }
   saving.value=true;
-  try { const {data}=await axios.post(backendUrl(`/WebCreateManualPurchasesInvoice`),{userId:authStore.user?.pkid ?? null,entityId:form.entityId,salesTarifaId:form.salesTarifaId,dateCreate:form.date.toISOString(),supplierCode:form.supplierCode.trim(),reference:form.reference,notes:form.notes,lines:form.lines.map(({productId,description,quantity,priceUnit,tax,uomId})=>({productId,description,quantity:Number(quantity),priceUnit:Number(priceUnit),tax:Number(tax),uomId}))}); toast.add({severity:'success',summary:'Factura creada',detail:`${data.code} se ha guardado como borrador.`,life:4000}); visible.value=false; emit('saved',data); }
+  try { const {data}=await axios.post(backendUrl(`/WebCreateManualPurchasesInvoice`),{userId:authStore.user?.pkid ?? null,entityId:form.entityId,salesTarifaId:form.salesTarifaId,dateCreate:form.date.toISOString(),supplierCode:form.supplierCode.trim(),reference:form.reference,notes:form.notes,lines:form.lines.map(({productId,description,quantity,priceUnit,tax,uomId})=>({productId,description,quantity:Number(quantity),priceUnit:Number(priceUnit),tax:Number(tax),uomId}))});
+    let attachmentWarning='';
+    if(sourcePdf.value){try{const documents=new FormData();documents.append('entity','ATTACHEMENTS_PURCHASESINVOICES_JUSTIFICANTES');documents.append('entityId',String(data.pkid));documents.append('files',sourcePdf.value);await axios.post(backendUrl('/api/gestdoc/upload'),documents);}catch{attachmentWarning=' La factura se creó, pero el PDF no pudo adjuntarse; añádelo desde Justificantes.';}}
+    toast.add({severity:attachmentWarning?'warn':'success',summary:'Factura creada',detail:`${data.code} se ha guardado como borrador.${attachmentWarning}`,life:attachmentWarning?7000:4000}); visible.value=false; emit('saved',data); }
   catch(error:any){toast.add({severity:'error',summary:'No se pudo crear la factura',detail:error.response?.data ?? 'Revisa los datos introducidos.',life:5000});}
   finally{saving.value=false;}
 };

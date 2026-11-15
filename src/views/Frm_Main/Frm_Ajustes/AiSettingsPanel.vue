@@ -236,9 +236,9 @@ const providers: Record<
   openai: {
     label: "OpenAI",
     shortLabel: "OpenAI",
-    defaultModel: "gpt-4.1-mini",
+    defaultModel: "gpt-6-luna",
     keyUrl: "platform.openai.com",
-    help: "Proveedor de pago. Conservado para instalaciones que ya lo usan.",
+    help: "Proveedor de pago. KiwiKERP propone GPT-6 Luna por su equilibrio entre coste y capacidad para operaciones estructuradas.",
   },
   ollama: {
     label: "Ollama (local)",
