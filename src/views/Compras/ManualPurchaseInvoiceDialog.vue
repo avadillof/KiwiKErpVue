@@ -27,6 +27,13 @@
     <div class="manual-notes">
       <FloatLabel variant="on"><Textarea id="manual-invoice-notes" v-model="form.notes" rows="3" maxlength="500" :autoResize="false" class="w-full fixed-observations" style="height:82px;min-height:82px;max-height:82px;resize:none;overflow-y:auto" /><label for="manual-invoice-notes">Observaciones</label></FloatLabel>
     </div>
+    <label v-if="sourcePdf" class="source-document-option" for="attach-source-pdf">
+      <Checkbox inputId="attach-source-pdf" v-model="attachSourcePdf" binary />
+      <span>
+        <b>Adjuntar PDF original como justificante</b>
+        <small>{{ sourcePdf.name }} · Se incorporará después de guardar el borrador.</small>
+      </span>
+    </label>
     </div>
 
     <template #footer><div class="dialog-footer"><div class="kiwik-separator dialog-footer-separator"></div><div class="dialog-actions"><Button label="Cancelar" severity="secondary" text :disabled="saving" @click="visible=false" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_INV_EDIT)" label="Guardar borrador" icon="pi pi-save" :loading="saving" @click="save" /></div></div></template>
@@ -41,7 +48,7 @@ const securityStore = useSecurityStore();
 import { computed, nextTick, reactive, ref } from 'vue';
 import axios from 'axios';
 
-import Button from 'primevue/button'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import DatePicker from 'primevue/datepicker'; import Dialog from 'primevue/dialog'; import FloatLabel from 'primevue/floatlabel'; import InlineMessage from 'primevue/inlinemessage'; import InputNumber from 'primevue/inputnumber'; import InputText from 'primevue/inputtext'; import Message from 'primevue/message'; import Textarea from 'primevue/textarea';
+import Button from 'primevue/button'; import Checkbox from 'primevue/checkbox'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import DatePicker from 'primevue/datepicker'; import Dialog from 'primevue/dialog'; import FloatLabel from 'primevue/floatlabel'; import InlineMessage from 'primevue/inlinemessage'; import InputNumber from 'primevue/inputnumber'; import InputText from 'primevue/inputtext'; import Message from 'primevue/message'; import Textarea from 'primevue/textarea';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/stores/authStore';
 import SupplierLookup from '@/components/shared/SupplierLookup.vue';
@@ -49,7 +56,7 @@ import ProductLookup from '@/components/shared/ProductLookup.vue';
 
 const emit = defineEmits<{ saved: [invoice: any] }>();
 const toast = useToast(), authStore = useAuthStore();
-const visible = ref(false), saving = ref(false), selectedSupplier = ref<any>(null), manualLinesTable = ref<any>(null), sourcePdf = ref<File|null>(null);
+const visible = ref(false), saving = ref(false), selectedSupplier = ref<any>(null), manualLinesTable = ref<any>(null), sourcePdf = ref<File|null>(null), attachSourcePdf = ref(false);
 const newLine = () => ({ productId: null as number|null, productLabel: '', description: '', quantity: 1, priceUnit: 0, tax: 0, uomId: null as number|null });
 const form = reactive({ entityId: null as number|null, salesTarifaId: null as number|null, date: new Date(), supplierCode: '', reference: '', notes: '', lines: [newLine()] });
 const errors = reactive({ supplier: '', lines: '' });
@@ -64,13 +71,14 @@ const totals = computed(() => {
   const tax = form.lines.reduce((sum, line) => sum + (lineNet(line) * Number(line.tax || 0)) / 100, 0);
   return { units, net, tax, total: net + tax };
 });
-const reset = () => { selectedSupplier.value=null; sourcePdf.value=null; form.entityId=null; form.salesTarifaId=null; form.date=new Date(); form.supplierCode=''; form.reference=''; form.notes=''; form.lines=[newLine()]; clearErrors(); };
+const reset = () => { selectedSupplier.value=null; sourcePdf.value=null; attachSourcePdf.value=false; form.entityId=null; form.salesTarifaId=null; form.date=new Date(); form.supplierCode=''; form.reference=''; form.notes=''; form.lines=[newLine()]; clearErrors(); };
 const parseInvoiceDate = (value:string) => { const parts=String(value||'').split('-').map(Number); return parts.length===3&&parts.every(Number.isFinite)?new Date(parts[0],parts[1]-1,parts[2]):new Date(); };
 const open = async (initial?:any, pdf?:File) => {
   reset(); visible.value=true;
   try { const { data } = await axios.get(backendUrl('/WebLoadSalesQuoteCatalog')); form.salesTarifaId = data.defaultTarifaId ?? null; } catch { form.salesTarifaId = null; }
   if(!initial)return;
   sourcePdf.value=pdf||null;
+  attachSourcePdf.value=Boolean(sourcePdf.value);
   selectedSupplier.value=initial.supplierMatch||null;
   form.entityId=initial.supplierMatch?.pkid??null;
   form.date=parseInvoiceDate(initial.invoiceDate);
@@ -95,7 +103,7 @@ const save = async () => {
   saving.value=true;
   try { const {data}=await axios.post(backendUrl(`/WebCreateManualPurchasesInvoice`),{userId:authStore.user?.pkid ?? null,entityId:form.entityId,salesTarifaId:form.salesTarifaId,dateCreate:form.date.toISOString(),supplierCode:form.supplierCode.trim(),reference:form.reference,notes:form.notes,lines:form.lines.map(({productId,description,quantity,priceUnit,tax,uomId})=>({productId,description,quantity:Number(quantity),priceUnit:Number(priceUnit),tax:Number(tax),uomId}))});
     let attachmentWarning='';
-    if(sourcePdf.value){try{const documents=new FormData();documents.append('entity','ATTACHEMENTS_PURCHASESINVOICES_JUSTIFICANTES');documents.append('entityId',String(data.pkid));documents.append('files',sourcePdf.value);await axios.post(backendUrl('/api/gestdoc/upload'),documents);}catch{attachmentWarning=' La factura se creó, pero el PDF no pudo adjuntarse; añádelo desde Justificantes.';}}
+    if(sourcePdf.value&&attachSourcePdf.value){try{const documents=new FormData();documents.append('entity','ATTACHEMENTS_PURCHASESINVOICES_JUSTIFICANTES');documents.append('entityId',String(data.pkid));documents.append('files',sourcePdf.value);await axios.post(backendUrl('/api/gestdoc/upload'),documents);}catch{attachmentWarning=' La factura se creó, pero el PDF no pudo adjuntarse; añádelo desde Justificantes.';}}
     toast.add({severity:attachmentWarning?'warn':'success',summary:'Factura creada',detail:`${data.code} se ha guardado como borrador.${attachmentWarning}`,life:attachmentWarning?7000:4000}); visible.value=false; emit('saved',data); }
   catch(error:any){toast.add({severity:'error',summary:'No se pudo crear la factura',detail:error.response?.data ?? 'Revisa los datos introducidos.',life:5000});}
   finally{saving.value=false;}
@@ -105,4 +113,5 @@ defineExpose({open});
 
 <style scoped>
 .manual-form-content{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}.manual-header{flex:0 0 auto;margin-top:.25rem;display:grid;grid-template-columns:5fr 2fr 5fr;gap:.8rem}.manual-header>div{min-width:0}.fh-ref{grid-column:1/-1}.lines-heading{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;margin:1rem 0 .65rem}.lines-heading div{display:flex;flex-direction:column;gap:.2rem}.lines-heading small{color:#7b8492}.manual-lines{flex:1 1 auto;min-height:220px;overflow:hidden;border:1px solid #e5e7eb;border-radius:8px}.manual-notes{flex:0 0 auto;width:100%;margin-top:1.25rem}.fixed-observations{height:82px!important;min-height:82px!important;max-height:82px!important;resize:none!important;overflow-y:auto!important}.empty-lines{text-align:center;color:#8791a0;padding:2rem}.manual-totals{display:flex;justify-content:flex-end;gap:1.4rem;flex-wrap:wrap;padding:.7rem;margin-top:1rem;background:#fdf6ee;border-radius:6px}.manual-totals b{margin-left:.5rem}:deep(th.text-right .p-datatable-column-header-content){justify-content:flex-end}.dialog-footer,.dialog-actions{width:100%}.dialog-footer-separator{width:100%;min-height:1px;margin:0 0 .75rem}.dialog-actions{display:flex;justify-content:flex-end;gap:.5rem}
+.source-document-option{display:flex;align-items:flex-start;gap:.7rem;margin-top:.8rem;padding:.75rem .9rem;border:1px solid #dfe8c6;border-radius:8px;background:#f9fcec;cursor:pointer}.source-document-option span,.source-document-option small{display:block}.source-document-option b{color:#27331b}.source-document-option small{margin-top:.2rem;color:#6f7865;font-size:.78rem}
 </style>
