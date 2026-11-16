@@ -8,7 +8,7 @@
     :closable="!analyzing"
   >
     <Message severity="info" :closable="false">
-      La IA prepara una propuesta, pero no guarda ni registra la factura. El texto del PDF se enviará al proveedor de IA configurado; revisa todos los datos antes de crear el borrador.
+      La IA prepara una propuesta, pero no guarda ni registra la factura. El contenido del PDF —texto o páginas escaneadas— se enviará al proveedor de IA configurado; revisa todos los datos antes de crear el borrador.
     </Message>
     <Message v-if="statusLoading" severity="secondary" :closable="false">Comprobando la configuración de inteligencia artificial…</Message>
     <Message v-else-if="!aiReady" severity="warn" :closable="false">
@@ -33,7 +33,13 @@
 
     <div v-if="result" class="analysis-result">
       <div class="result-heading">
-        <div><b>Propuesta extraída</b><small>Proveedor: {{ result.provider }} · Confianza: {{ confidenceLabel }}</small></div>
+        <div>
+          <b>Propuesta extraída</b>
+          <small>
+            Proveedor: {{ result.provider }} · Confianza: {{ confidenceLabel }}
+            <template v-if="result.visionUsed"> · Lectura visual de PDF escaneado</template>
+          </small>
+        </div>
         <Tag :value="confidenceLabel" :severity="confidenceSeverity" rounded />
       </div>
 
