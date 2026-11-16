@@ -3,7 +3,7 @@
     v-model:visible="visible"
     modal
     :header="dialogTitle"
-    :style="{ width: 'min(1050px, 96vw)' }"
+    :style="{ width: 'min(1380px, 98vw)' }"
     class="kiwik-dialog"
     :closable="!analyzing"
   >
@@ -45,7 +45,19 @@
 
       <div class="invoice-summary">
         <div><small>Proveedor</small><b>{{ result.supplierName || 'No identificado' }}</b><span>{{ result.supplierTaxId || 'Sin NIF' }}</span></div>
-        <div><small>Coincidencia KiwiKERP</small><b>{{ result.supplierMatch?.name || 'Pendiente de seleccionar' }}</b><span>{{ result.supplierMatch?.code || '—' }}</span></div>
+        <div>
+          <small>Coincidencia KiwiKERP</small>
+          <b>{{ result.supplierMatch?.name || 'Pendiente de seleccionar' }}</b>
+          <span>{{ result.supplierMatch?.code || '—' }}</span>
+          <Button
+            v-if="!result.supplierMatch && securityStore.hasPermission(PERM.ENTI_GEN_DOCS)"
+            label="Crear proveedor"
+            icon="pi pi-building"
+            size="small"
+            text
+            @click="createSupplierFromDocument"
+          />
+        </div>
         <div><small>{{ supplierNumberLabel }}</small><b>{{ supplierDocumentNumber || 'No identificado' }}</b></div>
         <div><small>Fecha</small><b>{{ humanDate(documentDate) }}</b></div>
         <div><small>Total extraído</small><b>{{ money(result.grossTotal) }} {{ result.currencyCode || 'EUR' }}</b></div>
@@ -64,7 +76,20 @@
         class="result-lines"
       >
         <Column v-if="!isDelivery" selectionMode="multiple" headerStyle="width:3rem" />
-        <Column header="Producto"><template #body="{ data }"><b>{{ data.productMatch?.code || data.productCode || 'Sin asociar' }}</b><small>{{ data.productMatch?.description || data.description }}</small></template></Column>
+        <Column header="Producto">
+          <template #body="{ data }">
+            <b>{{ data.productMatch?.code || data.productCode || 'Sin asociar' }}</b>
+            <small>{{ data.productMatch?.description || data.description }}</small>
+            <Button
+              v-if="!data.productMatch && securityStore.hasPermission(PERM.PROD_DOCS)"
+              label="Crear producto"
+              icon="pi pi-box"
+              size="small"
+              text
+              @click="createProductFromLine(data)"
+            />
+          </template>
+        </Column>
         <Column field="quantity" header="Cantidad" bodyStyle="text-align:right" headerStyle="text-align:right"><template #body="{ data }">{{ quantity(data.quantity) }}</template></Column>
         <Column field="unitPrice" header="Precio" bodyStyle="text-align:right" headerStyle="text-align:right"><template #body="{ data }">{{ money(data.unitPrice) }}</template></Column>
         <Column field="taxPercent" header="IVA" bodyStyle="text-align:right" headerStyle="text-align:right"><template #body="{ data }">{{ quantity(data.taxPercent) }} %</template></Column>
@@ -127,7 +152,7 @@
     </template>
   </Dialog>
 
-  <Dialog v-model:visible="comparisonVisible" modal header="Alternativas de compra encontradas" :style="{ width: 'min(1180px, 96vw)' }" class="kiwik-dialog">
+  <Dialog v-model:visible="comparisonVisible" modal header="Alternativas de compra encontradas" :style="{ width: 'min(1520px, 98vw)' }" class="kiwik-dialog">
     <ProgressBar v-if="searchingAlternatives" mode="indeterminate" class="analysis-progress" />
     <Message v-if="comparisonError" severity="error" :closable="false">{{ comparisonError }}</Message>
     <template v-if="comparisonResult && !searchingAlternatives">
@@ -140,7 +165,12 @@
           <small v-if="!(comparison.offers || []).length">No se localizaron ofertas suficientemente fiables.</small>
         </div>
         <DataTable v-if="(comparison.offers || []).length" :value="comparison.offers" size="small" stripedRows scrollable>
-          <Column field="supplierName" header="Proveedor" />
+          <Column header="Proveedor" style="min-width:150px">
+            <template #body="{ data }">
+              <b>{{ data.supplierName }}</b>
+              <small>{{ data.supplierTaxId || 'NIF/CIF no verificado' }}</small>
+            </template>
+          </Column>
           <Column header="Precio unidad" bodyStyle="text-align:right" headerStyle="text-align:right">
             <template #body="{ data }">
               <b>{{ money(data.comparableUnitPrice ?? data.unitPrice) }} {{ data.currency || 'EUR' }}</b>
@@ -368,10 +398,34 @@ const findOriginalLine = (lineKey: string) => (result.value?.lines || []).find((
 const createSupplier = (offer: any) => {
   clientFormRef.value?.open(undefined, {
     name: offer.supplierName || '',
-    web: offer.sourceUrl || '',
+    cif: offer.supplierTaxId || '',
+    web: offer.supplierWebsite || offer.sourceUrl || '',
+    email: offer.supplierEmail || '',
+    phone: offer.supplierPhone || '',
     isprove: true,
     isclient: false,
     active: true,
+  });
+};
+const createSupplierFromDocument = () => {
+  clientFormRef.value?.open(undefined, {
+    name: result.value?.supplierName || '',
+    cif: result.value?.supplierTaxId || '',
+    isprove: true,
+    isclient: false,
+    active: true,
+  });
+};
+const createProductFromLine = (line: any) => {
+  const description = line.description || line.productCode || '';
+  productFormRef.value?.open(undefined, {
+    code: line.productCode || '',
+    description,
+    descriptionEn: description,
+    purchase: true,
+    sale: false,
+    purchasePrice: Number(line.unitPrice || 0),
+    purchasesDescription: `Producto propuesto desde la importación IA de ${result.value?.sourceFileName || 'un PDF de compra'}.`,
   });
 };
 const createProduct = (comparison: any, offer: any) => {
