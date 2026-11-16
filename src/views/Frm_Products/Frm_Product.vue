@@ -910,7 +910,7 @@ const validate = async (): Promise<boolean> => {
 };
 
 
-const open = async (pkid?: number) => {
+const open = async (pkid?: number, initial?: Partial<Product>) => {
 
     clearErrors();
 
@@ -924,6 +924,15 @@ const open = async (pkid?: number) => {
     if (pkid) {
 
         await loadProduct(pkid);
+
+    } else if (initial) {
+
+        product.value = {
+            ...product.value,
+            ...initial,
+            pkid: null,
+            dateUp: new Date(),
+        };
 
     }
 

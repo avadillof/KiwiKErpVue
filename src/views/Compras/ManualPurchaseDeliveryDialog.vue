@@ -78,13 +78,20 @@ const open = async (initial?:any, pdf?:File) => {
   selectedSupplier.value=initial.supplierMatch||null; form.entityId=initial.supplierMatch?.pkid??null;
   form.date=parseDeliveryDate(initial.deliveryDate); form.supplierCode=initial.supplierDeliveryNumber||''; form.reference=initial.reference||'';
   form.notes=`Importado desde ${initial.sourceFileName||'PDF'} mediante IA. Revisión humana obligatoria.`;
-  form.lines=(initial.lines||[]).map((line:any)=>({productId:line.productMatch?.pkid??null,productLabel:line.productMatch?`${line.productMatch.code} — ${line.productMatch.description}`:'',description:line.description||line.productMatch?.description||'',quantity:Number(line.quantity)||1,priceUnit:Number(line.unitPrice)||0,tax:Number(line.taxPercent)||0,uomId:line.productMatch?.uomId??null}));
+  form.lines=(initial.lines||[]).map((line:any)=>({productId:line.productMatch?.pkid??null,productLabel:line.productMatch?`${line.productMatch.code} — ${line.productMatch.description}`:'',description:line.description||line.productMatch?.description||'',quantity:Number(line.quantity)||1,priceUnit:Number(line.unitPrice)||0,tax:Number(line.taxPercent)||0,uomId:line.productMatch?.uomId??null,preserveDocumentValues:true}));
   if(!form.lines.length)form.lines=[newLine()];
 };
 const selectSupplier = (supplier:any) => { selectedSupplier.value=supplier; errors.supplier=''; };
 const addLine = async () => { form.lines.push(newLine()); await nextTick(); requestAnimationFrame(() => { const containers=manualLinesTable.value?.$el?.querySelectorAll('.p-datatable-table-container, .p-datatable-wrapper, .p-datatable-scrollable-body') as NodeListOf<HTMLElement>|undefined; containers?.forEach(container=>{container.scrollTop=container.scrollHeight;}); }); }; const removeLine = (index:number) => form.lines.splice(index,1);
-const selectProduct = (line:any, product:any) => { line.productId=product.pkid; line.productLabel=`${product.code} — ${product.description}`; line.description=product.description || ''; line.priceUnit=Number(product.costPrice ?? 0); line.tax=Number(product.purchaseTaxValue ?? product.taxValue ?? 0); line.uomId=product.uomId ?? null; };
-const clearProduct = (line:any) => { Object.assign(line,newLine()); };
+const selectProduct = (line:any, product:any) => {
+  line.productId=product.pkid; line.productLabel=`${product.code} — ${product.description}`; line.description=product.description || ''; line.uomId=product.uomId ?? null;
+  // En líneas leídas del PDF, el precio y el IVA pertenecen al documento y prevalecen sobre el maestro.
+  if(!line.preserveDocumentValues){line.priceUnit=Number(product.costPrice ?? 0); line.tax=Number(product.purchaseTaxValue ?? product.taxValue ?? 0);}
+};
+const clearProduct = (line:any) => {
+  if(line.preserveDocumentValues){line.productId=null; line.productLabel=''; line.uomId=null; return;}
+  Object.assign(line,newLine());
+};
 const save = async () => {
   if(saving.value)return;
   clearErrors();

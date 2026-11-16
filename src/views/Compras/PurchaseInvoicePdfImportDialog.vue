@@ -116,10 +116,6 @@
     <Message severity="warn" :closable="false">
       Se enviarán a OpenAI los datos de {{ selectedComparisonLines.length }} producto(s) y se consultarán fuentes públicas en Internet.
     </Message>
-    <div class="search-confirmation">
-      <b>Coste orientativo: 0,01–0,05 USD por producto</b>
-      <span>El coste real depende del número de búsquedas y tokens. Los precios encontrados pueden no incluir IVA, portes o pedido mínimo.</span>
-    </div>
     <template #footer>
       <div class="dialog-footer">
         <div class="kiwik-separator dialog-footer-separator" />
@@ -146,10 +142,18 @@
         <DataTable v-if="(comparison.offers || []).length" :value="comparison.offers" size="small" stripedRows scrollable>
           <Column field="supplierName" header="Proveedor" />
           <Column header="Precio unidad" bodyStyle="text-align:right" headerStyle="text-align:right">
-            <template #body="{ data }">{{ money(data.unitPrice) }} {{ data.currency || 'EUR' }}</template>
+            <template #body="{ data }">
+              <b>{{ money(data.comparableUnitPrice ?? data.unitPrice) }} {{ data.currency || 'EUR' }}</b>
+              <small v-if="data.vatIncluded && Number(data.comparableUnitPrice) !== Number(data.unitPrice)">
+                {{ money(data.unitPrice) }} con IVA
+              </small>
+              <small v-else>Sin IVA</small>
+            </template>
           </Column>
           <Column header="Ahorro" bodyStyle="text-align:right" headerStyle="text-align:right">
-            <template #body="{ data }"><Tag :value="`${money(data.savingPercent)} %`" :severity="Number(data.savingPercent) > 0 ? 'success' : 'secondary'" rounded /></template>
+            <template #body="{ data }">
+              <Tag :value="savingLabel(data.savingPercent)" :severity="Number(data.savingPercent) > 0 ? 'success' : Number(data.savingPercent) < 0 ? 'danger' : 'secondary'" rounded />
+            </template>
           </Column>
           <Column header="Formato / mínimo"><template #body="{ data }">{{ quantity(data.packageQuantity) }} ud. / {{ quantity(data.minimumOrder) }} ud.</template></Column>
           <Column header="Portes"><template #body="{ data }">{{ money(data.shippingCost) }} {{ data.currency || 'EUR' }}</template></Column>
@@ -157,6 +161,15 @@
           <Column field="availability" header="Disponibilidad" />
           <Column header="Confianza"><template #body="{ data }">{{ Math.round(Number(data.confidence || 0) * 100) }} %</template></Column>
           <Column header="Fuente"><template #body="{ data }"><a v-if="data.sourceUrl" :href="data.sourceUrl" target="_blank" rel="noopener noreferrer">{{ data.sourceTitle || 'Abrir oferta' }}</a><span v-else>Sin enlace verificable</span></template></Column>
+          <Column header="Acciones" style="min-width:260px">
+            <template #body="{ data }">
+              <div class="offer-actions">
+                <Button v-if="securityStore.hasPermission(PERM.ENTI_GEN_DOCS)" label="Proveedor" icon="pi pi-building" size="small" text @click="createSupplier(data)" />
+                <Button v-if="securityStore.hasPermission(PERM.PROD_DOCS)" label="Producto" icon="pi pi-box" size="small" text @click="createProduct(comparison, data)" />
+                <Button label="Vincular" icon="pi pi-link" size="small" outlined @click="openLinkAlternative(comparison, data)" />
+              </div>
+            </template>
+          </Column>
         </DataTable>
       </div>
       <Message v-for="warning in comparisonResult.warnings || []" :key="warning" severity="warn" :closable="false">{{ warning }}</Message>
@@ -169,6 +182,35 @@
       </div>
     </template>
   </Dialog>
+
+  <Dialog v-model:visible="linkVisible" modal header="Vincular proveedor alternativo" :style="{ width: 'min(620px, 94vw)' }" class="kiwik-dialog">
+    <Message severity="info" :closable="false">
+      Se guardará esta oferta en el producto existente. Si ya estaba vinculado al proveedor, se actualizarán el precio y la procedencia.
+    </Message>
+    <div class="link-alternative-form">
+      <div><small>Producto KiwiKERP</small><b>{{ pendingProductLabel }}</b></div>
+      <div><small>Oferta encontrada</small><b>{{ pendingAlternative?.offer?.productName || 'Sin descripción' }}</b></div>
+      <SupplierLookup
+        v-model="linkSupplierId"
+        :label="linkSupplierLabel"
+        :disabled="linkingAlternative"
+        @selected="selectLinkSupplier"
+        @cleared="clearLinkSupplier"
+      />
+    </div>
+    <template #footer>
+      <div class="dialog-footer">
+        <div class="kiwik-separator dialog-footer-separator" />
+        <div class="dialog-actions">
+          <Button label="Cancelar" severity="secondary" text :disabled="linkingAlternative" @click="linkVisible = false" />
+          <Button label="Vincular alternativa" icon="pi pi-link" :loading="linkingAlternative" :disabled="!linkSupplierId" @click="linkAlternative" />
+        </div>
+      </div>
+    </template>
+  </Dialog>
+
+  <Frm_ClientForm ref="clientFormRef" />
+  <Frm_Product ref="productFormRef" />
 </template>
 
 <script setup lang="ts">
@@ -182,6 +224,12 @@ import Message from 'primevue/message';
 import ProgressBar from 'primevue/progressbar';
 import Tag from 'primevue/tag';
 import { backendUrl } from '@/services/backendUrl';
+import { useToast } from 'primevue/usetoast';
+import { useSecurityStore } from '@/stores/securityStore';
+import { PERM } from '@/services/Frm_Main/permissions';
+import SupplierLookup from '@/components/shared/SupplierLookup.vue';
+import Frm_ClientForm from '@/views/Ventas/Frm_Clientes/Frm_ClientForm.vue';
+import Frm_Product from '@/views/Frm_Products/Frm_Product.vue';
 
 const emit = defineEmits<{ review: [result: any, file: File] }>();
 const props = withDefaults(defineProps<{ mode?: 'invoice' | 'delivery' }>(), { mode: 'invoice' });
@@ -199,6 +247,15 @@ const comparisonVisible = ref(false);
 const searchingAlternatives = ref(false);
 const comparisonResult = ref<any>(null);
 const comparisonError = ref('');
+const toast = useToast();
+const securityStore = useSecurityStore();
+const clientFormRef = ref<any>(null);
+const productFormRef = ref<any>(null);
+const linkVisible = ref(false);
+const linkingAlternative = ref(false);
+const linkSupplierId = ref<number | null>(null);
+const linkSupplier = ref<any>(null);
+const pendingAlternative = ref<any>(null);
 const aiReady = computed(() => Boolean(aiStatus.value?.ready));
 const isDelivery = computed(() => props.mode === 'delivery');
 const dialogTitle = computed(() => isDelivery.value ? 'Importar albarán PDF con IA' : 'Importar factura PDF con IA');
@@ -213,6 +270,11 @@ const analyzeEndpoint = computed(() => isDelivery.value ? '/WebAnalyzePurchaseDe
 const confidence = computed(() => Math.round(Math.max(0, Math.min(1, Number(result.value?.confidence || 0))) * 100));
 const confidenceLabel = computed(() => `${confidence.value}% de confianza`);
 const confidenceSeverity = computed(() => confidence.value >= 80 ? 'success' : confidence.value >= 55 ? 'warn' : 'danger');
+const linkSupplierLabel = computed(() => linkSupplier.value ? `${linkSupplier.value.code ? `${linkSupplier.value.code} — ` : ''}${linkSupplier.value.name}` : 'Seleccionar proveedor');
+const pendingProductLabel = computed(() => {
+  const line = findOriginalLine(pendingAlternative.value?.comparison?.lineKey);
+  return line?.productMatch ? `${line.productMatch.code} — ${line.productMatch.description}` : 'Producto no asociado';
+});
 
 const open = async () => {
   file.value = null;
@@ -268,6 +330,11 @@ const resetComparison = () => {
   searchingAlternatives.value = false;
   comparisonResult.value = null;
   comparisonError.value = '';
+  linkVisible.value = false;
+  linkingAlternative.value = false;
+  linkSupplierId.value = null;
+  linkSupplier.value = null;
+  pendingAlternative.value = null;
 };
 const searchAlternatives = async () => {
   if (!selectedComparisonLines.value.length || searchingAlternatives.value) return;
@@ -283,6 +350,7 @@ const searchAlternatives = async () => {
       productCode: line.productMatch?.code || line.productCode || '',
       description: line.productMatch?.description || line.description || '',
       currentUnitPrice: Number(line.unitPrice || 0),
+      currentTaxPercent: Number(line.taxPercent || 0),
       currentSupplier: result.value?.supplierMatch?.name || result.value?.supplierName || '',
     }));
     const { data } = await axios.post(backendUrl('/WebSearchPurchasePriceAlternatives'), { lines });
@@ -296,6 +364,67 @@ const searchAlternatives = async () => {
     searchingAlternatives.value = false;
   }
 };
+const findOriginalLine = (lineKey: string) => (result.value?.lines || []).find((line: any) => line.comparisonKey === lineKey);
+const createSupplier = (offer: any) => {
+  clientFormRef.value?.open(undefined, {
+    name: offer.supplierName || '',
+    web: offer.sourceUrl || '',
+    isprove: true,
+    isclient: false,
+    active: true,
+  });
+};
+const createProduct = (comparison: any, offer: any) => {
+  const description = offer.productName || comparison.description || '';
+  productFormRef.value?.open(undefined, {
+    description,
+    descriptionEn: description,
+    purchase: true,
+    sale: false,
+    purchasePrice: Number(offer.comparableUnitPrice ?? offer.unitPrice ?? 0),
+    purchasesDescription: `Oferta localizada mediante IA. Fuente: ${offer.sourceUrl || 'sin enlace'}`,
+  });
+};
+const openLinkAlternative = (comparison: any, offer: any) => {
+  const original = findOriginalLine(comparison.lineKey);
+  if (!original?.productMatch?.pkid) {
+    toast.add({ severity: 'warn', summary: 'Producto sin asociar', detail: 'Asocia primero la línea a un producto de KiwiKERP o crea uno nuevo.', life: 5000 });
+    return;
+  }
+  pendingAlternative.value = { comparison, offer, productId: original.productMatch.pkid };
+  linkSupplierId.value = null;
+  linkSupplier.value = null;
+  linkVisible.value = true;
+};
+const selectLinkSupplier = (supplier: any) => { linkSupplier.value = supplier; linkSupplierId.value = supplier.pkid; };
+const clearLinkSupplier = () => { linkSupplier.value = null; linkSupplierId.value = null; };
+const linkAlternative = async () => {
+  if (!pendingAlternative.value || !linkSupplierId.value || linkingAlternative.value) return;
+  linkingAlternative.value = true;
+  try {
+    const offer = pendingAlternative.value.offer;
+    await axios.post(backendUrl('/WebLinkPurchaseSupplierAlternative'), {
+      productId: pendingAlternative.value.productId,
+      supplierId: linkSupplierId.value,
+      unitPrice: Number(offer.comparableUnitPrice ?? offer.unitPrice ?? 0),
+      currency: offer.currency || 'EUR',
+      productName: offer.productName || '',
+      packageQuantity: offer.packageQuantity,
+      minimumOrder: offer.minimumOrder,
+      shippingCost: offer.shippingCost,
+      vatIncluded: offer.vatIncluded,
+      confidence: offer.confidence,
+      sourceUrl: offer.sourceUrl || '',
+      sourceTitle: offer.sourceTitle || '',
+    });
+    toast.add({ severity: 'success', summary: 'Alternativa vinculada', detail: 'El proveedor y su oferta quedan asociados al producto.', life: 4000 });
+    linkVisible.value = false;
+  } catch (failure: any) {
+    toast.add({ severity: 'error', summary: 'No se pudo vincular', detail: failure.response?.data || 'Revisa los datos seleccionados.', life: 5000 });
+  } finally {
+    linkingAlternative.value = false;
+  }
+};
 const review = () => {
   if (!result.value || !file.value) return;
   emit('review', result.value, file.value);
@@ -305,6 +434,12 @@ const fileSize = (bytes: number) => bytes < 1024 * 1024 ? `${(bytes / 1024).toFi
 const humanDate = (value: string) => value ? value.split('-').reverse().join('/') : 'No identificada';
 const money = (value: any) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0);
 const quantity = (value: any) => new Intl.NumberFormat('es-ES', { maximumFractionDigits: 3 }).format(Number(value) || 0);
+const savingLabel = (value: any) => {
+  const percent = Number(value || 0);
+  if (percent > 0) return `${money(percent)} % ahorro`;
+  if (percent < 0) return `${money(Math.abs(percent))} % más caro`;
+  return 'Sin diferencia';
+};
 const bestHistoricalOffer = (line: any) => (line?.historicalOffers || []).reduce(
   (best: any, offer: any) => !best || Number(offer.unitPrice) < Number(best.unitPrice) ? offer : best,
   null,
@@ -327,8 +462,7 @@ defineExpose({ open });
 .selected-file > i { font-size: 1.5rem; color: #b42318; }
 .selected-file span,
 .result-heading > div,
-.comparison-panel > div,
-.search-confirmation { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.comparison-panel > div { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
 .selected-file b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .selected-file small,
 .result-heading small,
@@ -348,10 +482,13 @@ defineExpose({ open });
 .result-lines { border: 1px solid #e3e7dc; border-radius: 8px; }
 .history-price { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
 .comparison-panel { padding: .8rem; border: 1px solid #dce6c3; border-radius: 9px; background: #f9fbf3; }
-.search-confirmation { padding: 1rem 0; color: #4d5766; }
 .comparison-group { margin-top: 1rem; border: 1px solid #e3e7dc; border-radius: 9px; overflow: hidden; }
 .comparison-title { padding: .75rem; background: #f8faf4; }
 .comparison-disclaimer { margin-top: 1rem; }
+.offer-actions { display: flex; align-items: center; gap: .25rem; white-space: nowrap; }
+.link-alternative-form { display: grid; gap: .85rem; padding: 1rem 0; }
+.link-alternative-form > div { display: flex; flex-direction: column; gap: .2rem; }
+.link-alternative-form small { color: #768091; }
 .empty-result { text-align: center; color: #7c8491; padding: 1.5rem; }
 .dialog-footer,
 .dialog-actions { width: 100%; }

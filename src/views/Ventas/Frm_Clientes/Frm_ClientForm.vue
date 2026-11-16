@@ -995,7 +995,7 @@ const validate = async (): Promise<boolean> => {
 /* =========================
    OPEN
 ========================= */
-const open = async (pkid?: number) => {
+const open = async (pkid?: number, initial?: Partial<Entity>) => {
     clearErrors();
     entityReady.value = false;
     visible.value = true;
@@ -1003,7 +1003,15 @@ const open = async (pkid?: number) => {
     await loadSalesCatalogs();
 
     if (!pkid) {
-        entity.value = createEntity();
+        const empty = createEntity();
+        entity.value = initial ? {
+            ...empty,
+            ...initial,
+            pkid: null,
+            dateUp: new Date(),
+            salesAttributes: { ...empty.salesAttributes, ...(initial.salesAttributes || {}) },
+            purchasesAttributes: { ...empty.purchasesAttributes, ...(initial.purchasesAttributes || {}) },
+        } : empty;
         entityReady.value = true;
         return;
     }
