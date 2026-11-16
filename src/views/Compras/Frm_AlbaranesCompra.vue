@@ -11,7 +11,7 @@
     <section class="list-card">
       <Toolbar class="list-toolbar">
         <template #start><div class="workspace-heading"><span>Listado de albaranes</span><small>Las cantidades sólo se contabilizan como entradas al confirmar.</small></div></template>
-        <template #end><div class="toolbar-actions"><Message severity="info" variant="simple" icon="pi pi-info-circle">Los borradores aún no mueven almacén</Message><Button v-if="securityStore.hasPermission(PERM.PURCHASE_DELIV_EDIT)" label="Nuevo albarán manual" icon="pi pi-plus" size="small" @click="manualDialogRef?.open()" /></div></template>
+        <template #end><div class="toolbar-actions"><Message severity="info" variant="simple" icon="pi pi-info-circle">Los borradores aún no mueven almacén</Message><Button v-if="aiImportEnabled && securityStore.hasPermission(PERM.PURCHASE_DELIV_EDIT)" label="Importar PDF con IA" icon="pi pi-sparkles" severity="secondary" outlined size="small" @click="pdfImportDialogRef?.open()" /><Button v-if="securityStore.hasPermission(PERM.PURCHASE_DELIV_EDIT)" label="Nuevo albarán manual" icon="pi pi-plus" size="small" @click="manualDialogRef?.open()" /></div></template>
       </Toolbar>
       <Message v-if="tableLoadError" severity="error" :closable="false" class="table-error">No se pudo cargar el listado de albaranes. Comprueba que el backend esté reiniciado y vuelve a intentarlo.</Message>
       <GenericDataTable ref="tableRef" class="delivery-table" dataKey="pkid" selectionMode="single" v-model:selection="selected" endpoint="WebGetPurchasesDeliveries" :params="{ state: selectedState || undefined, invoiceStatus: selectedInvoiceStatus || undefined }" :showPaginator="true" :filterable="true" :showActions="true" @data-loaded="tableLoadError=false" @load-error="tableLoadError=true">
@@ -90,6 +90,7 @@
     </Dialog>
 
     <ManualPurchaseDeliveryDialog ref="manualDialogRef" @saved="refresh" />
+    <PurchaseInvoicePdfImportDialog v-if="aiImportEnabled" ref="pdfImportDialogRef" mode="delivery" @review="reviewPdfImport" />
 
     <Dialog v-model:visible="invoiceDialogVisible" modal maximizable header="Facturar albaranes" :style="{width:'min(1120px,96vw)'}" :contentStyle="{height:'min(68vh,650px)',paddingBottom:'0'}" class="kiwik-dialog grouped-invoice-dialog">
       <div v-if="loadingInvoiceCandidates" class="loading"><i class="pi pi-spin pi-spinner"></i> Buscando albaranes compatibles...</div>
@@ -134,6 +135,7 @@ import ProductLookup from "@/components/shared/ProductLookup.vue";
 import SupplierLookup from "@/components/shared/SupplierLookup.vue";
 import SalesTraceabilityDialog from "../Ventas/SalesTraceabilityDialog.vue";
 import ManualPurchaseDeliveryDialog from "./ManualPurchaseDeliveryDialog.vue";
+import PurchaseInvoicePdfImportDialog from "./PurchaseInvoicePdfImportDialog.vue";
 import { useSecurityStore } from "@/stores/securityStore";
 import { useAuthStore } from "@/stores/authStore";
 import { PERM } from "@/services/Frm_Main/permissions";
@@ -168,6 +170,17 @@ const menuItemsTable = computed(() => {
 });
 const openMenuTable = (event: Event) => menuTable.value?.toggle(event);
 const manualDialogRef = ref<any>(null);
+const pdfImportDialogRef = ref<any>(null);
+const aiImportEnabled = ref(false);
+const loadAiImportStatus = async () => {
+  try {
+    const { data } = await axios.get(backendUrl('/WebPurchaseDeliveryPdfImportStatus'));
+    aiImportEnabled.value = data?.enabled === true;
+  } catch {
+    aiImportEnabled.value = false;
+  }
+};
+const reviewPdfImport = (result:any, file:File) => manualDialogRef.value?.open(result,file);
 const selected = ref<any>(null);
 const selectedState = ref<string | null>(null);
 const selectedInvoiceStatus = ref<string | null>(null);
@@ -241,7 +254,10 @@ const loadStatistics = async () => {
   } finally { loadingStatistics.value = false; }
 };
 watch(selectedStatisticsYear, loadStatistics);
-onMounted(loadStatistics);
+onMounted(() => {
+  loadStatistics();
+  loadAiImportStatus();
+});
 const applyFilters = () => { selected.value = null; tableLoadError.value = false; tableRef.value?.refreshWithQuery('', { state: selectedState.value || undefined, invoiceStatus: selectedInvoiceStatus.value || undefined }); };
 watch([selectedState, selectedInvoiceStatus], applyFilters);
 const openDetail = async (item: any) => {

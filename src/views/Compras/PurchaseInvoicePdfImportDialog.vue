@@ -2,13 +2,13 @@
   <Dialog
     v-model:visible="visible"
     modal
-    header="Importar factura PDF con IA"
+    :header="dialogTitle"
     :style="{ width: 'min(1050px, 96vw)' }"
     class="kiwik-dialog"
     :closable="!analyzing"
   >
     <Message severity="info" :closable="false">
-      La IA prepara una propuesta, pero no guarda ni registra la factura. El contenido del PDF —texto o páginas escaneadas— se enviará al proveedor de IA configurado; revisa todos los datos antes de crear el borrador.
+      La IA prepara una propuesta, pero no guarda ni registra el {{ documentLabel }}. El contenido del PDF —texto o páginas escaneadas— se enviará al proveedor de IA configurado; revisa todos los datos antes de crear el borrador.
     </Message>
     <Message v-if="statusLoading" severity="secondary" :closable="false">Comprobando la configuración de inteligencia artificial…</Message>
     <Message v-else-if="!aiReady" severity="warn" :closable="false">
@@ -46,8 +46,8 @@
       <div class="invoice-summary">
         <div><small>Proveedor</small><b>{{ result.supplierName || 'No identificado' }}</b><span>{{ result.supplierTaxId || 'Sin NIF' }}</span></div>
         <div><small>Coincidencia KiwiKERP</small><b>{{ result.supplierMatch?.name || 'Pendiente de seleccionar' }}</b><span>{{ result.supplierMatch?.code || '—' }}</span></div>
-        <div><small>Nº factura proveedor</small><b>{{ result.supplierInvoiceNumber || 'No identificado' }}</b></div>
-        <div><small>Fecha</small><b>{{ humanDate(result.invoiceDate) }}</b></div>
+        <div><small>{{ supplierNumberLabel }}</small><b>{{ supplierDocumentNumber || 'No identificado' }}</b></div>
+        <div><small>Fecha</small><b>{{ humanDate(documentDate) }}</b></div>
         <div><small>Total extraído</small><b>{{ money(result.grossTotal) }} {{ result.currencyCode || 'EUR' }}</b></div>
       </div>
 
@@ -68,7 +68,7 @@
         <div class="kiwik-separator dialog-footer-separator" />
         <div class="dialog-actions">
           <Button label="Cerrar" severity="secondary" text :disabled="analyzing" @click="visible = false" />
-          <Button v-if="result" label="Revisar y completar borrador" icon="pi pi-arrow-right" @click="review" />
+          <Button v-if="result" :label="reviewLabel" icon="pi pi-arrow-right" @click="review" />
         </div>
       </div>
     </template>
@@ -88,6 +88,7 @@ import Tag from 'primevue/tag';
 import { backendUrl } from '@/services/backendUrl';
 
 const emit = defineEmits<{ review: [result: any, file: File] }>();
+const props = withDefaults(defineProps<{ mode?: 'invoice' | 'delivery' }>(), { mode: 'invoice' });
 const visible = ref(false);
 const analyzing = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -97,6 +98,15 @@ const error = ref('');
 const statusLoading = ref(false);
 const aiStatus = ref<any>({});
 const aiReady = computed(() => Boolean(aiStatus.value?.ready));
+const isDelivery = computed(() => props.mode === 'delivery');
+const dialogTitle = computed(() => isDelivery.value ? 'Importar albarán PDF con IA' : 'Importar factura PDF con IA');
+const documentLabel = computed(() => isDelivery.value ? 'albarán' : 'factura');
+const supplierNumberLabel = computed(() => isDelivery.value ? 'Nº albarán proveedor' : 'Nº factura proveedor');
+const supplierDocumentNumber = computed(() => isDelivery.value ? result.value?.supplierDeliveryNumber : result.value?.supplierInvoiceNumber);
+const documentDate = computed(() => isDelivery.value ? result.value?.deliveryDate : result.value?.invoiceDate);
+const reviewLabel = computed(() => `Revisar y completar ${documentLabel.value}`);
+const statusEndpoint = computed(() => isDelivery.value ? '/WebPurchaseDeliveryPdfImportStatus' : '/WebPurchaseInvoicePdfImportStatus');
+const analyzeEndpoint = computed(() => isDelivery.value ? '/WebAnalyzePurchaseDeliveryPdf' : '/WebAnalyzePurchaseInvoicePdf');
 
 const confidence = computed(() => Math.round(Math.max(0, Math.min(1, Number(result.value?.confidence || 0))) * 100));
 const confidenceLabel = computed(() => `${confidence.value}% de confianza`);
@@ -110,7 +120,7 @@ const open = async () => {
   visible.value = true;
   statusLoading.value = true;
   try {
-    const { data } = await axios.get(backendUrl('/WebPurchaseInvoicePdfImportStatus'));
+    const { data } = await axios.get(backendUrl(statusEndpoint.value));
     aiStatus.value = data || {};
   } catch {
     aiStatus.value = {};
@@ -132,7 +142,7 @@ const analyze = async () => {
   const body = new FormData();
   body.append('file', file.value);
   try {
-    const response = await axios.post(backendUrl('/WebAnalyzePurchaseInvoicePdf'), body);
+    const response = await axios.post(backendUrl(analyzeEndpoint.value), body);
     result.value = response.data;
   } catch (failure: any) {
     const response = failure.response?.data;
