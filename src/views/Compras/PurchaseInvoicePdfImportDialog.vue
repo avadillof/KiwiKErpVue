@@ -82,6 +82,9 @@
           <template #body="{ data }">
             <b>{{ data.productMatch?.code || data.productCode || 'Sin asociar' }}</b>
             <small>{{ data.productMatch?.description || data.description }}</small>
+            <small v-if="data.productMatch?.matchType === 'DESCRIPTION'" class="match-hint">
+              <i class="pi pi-link" /> Asociado por descripción
+            </small>
             <Button
               v-if="!data.productMatch && securityStore.hasPermission(PERM.PROD_DOCS)"
               label="Crear producto"
@@ -551,6 +554,8 @@ defineExpose({ open });
 .invoice-summary small { color: #75806a; }
 .invoice-summary span { font-size: .82rem; color: #778090; }
 .result-lines { border: 1px solid #e3e7dc; border-radius: 8px; }
+.match-hint { color: #678000 !important; font-weight: 600; }
+.match-hint > i { margin-right: .25rem; }
 .history-price { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
 .comparison-panel { padding: .8rem; border: 1px solid #dce6c3; border-radius: 9px; background: #f9fbf3; }
 .comparison-group { margin-top: 1rem; border: 1px solid #e3e7dc; border-radius: 9px; overflow: hidden; }
