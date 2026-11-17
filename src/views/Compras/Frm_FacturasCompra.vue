@@ -503,6 +503,28 @@
             ></Column
           >
           <Column
+            field="discountPercent"
+            header="Descuento %"
+            style="width: 11%; text-align: right"
+            bodyStyle="text-align:right"
+            headerStyle="text-align:right"
+            headerClass="text-right"
+            ><template #body="{ data }"
+              ><InputNumber
+                v-if="canFullEdit"
+                v-model="data.discountPercent"
+                :min="0"
+                :max="100"
+                :maxFractionDigits="2"
+                suffix=" %"
+                fluid
+                inputClass="text-right"
+              /><span v-else
+                >{{ quantity(data.discountPercent) }} %</span
+              ></template
+            ></Column
+          >
+          <Column
             field="tax"
             header="IVA %"
             style="width: 10%; text-align: right"
@@ -557,14 +579,13 @@
         </div>
         <div class="totals">
           <span
-            >Neto <b>{{ currency(detail.totalNeto) }}</b></span
+            >Neto <b>{{ currency(detailDisplayTotals.net) }}</b></span
           ><span
-            >Impuestos <b>{{ currency(detail.totalTax) }}</b></span
+            >Impuestos <b>{{ currency(detailDisplayTotals.tax) }}</b></span
           ><span class="grand-total"
-            >Total <b>{{ currency(detail.totalTotal) }}</b></span
+            >Total <b>{{ currency(detailDisplayTotals.total) }}</b></span
           >
         </div>
-        <p v-if="detail.notes" class="detail-notes">{{ detail.notes }}</p>
       </div>
       <template #footer
         ><div class="dialog-footer">
@@ -1068,6 +1089,39 @@ const quantity = (value?: number | null) =>
   new Intl.NumberFormat("de-DE", { maximumFractionDigits: 3 }).format(
     Number(value) || 0,
   );
+const detailDisplayTotals = computed(() => {
+  if (!canFullEdit.value) {
+    return {
+      net: Number(detail.value?.totalNeto || 0),
+      tax: Number(detail.value?.totalTax || 0),
+      total: Number(detail.value?.totalTotal || 0),
+    };
+  }
+  const totals = (detail.value?.lines || []).reduce(
+    (result: { net: number; tax: number }, line: any) => {
+      const discount = Math.min(
+        100,
+        Math.max(0, Number(line.discountPercent || 0)),
+      );
+      const net =
+        Math.round(
+          (Number(line.quantity || 0) *
+            Number(line.priceUnit || 0) *
+            (1 - discount / 100) +
+            Number.EPSILON) *
+            100,
+        ) / 100;
+      result.net += net;
+      result.tax +=
+        Math.round(
+          ((net * Number(line.tax || 0)) / 100 + Number.EPSILON) * 100,
+        ) / 100;
+      return result;
+    },
+    { net: 0, tax: 0 },
+  );
+  return { ...totals, total: totals.net + totals.tax };
+});
 const pad = (value: number) => String(value).padStart(2, "0");
 const parseServerDate = (value: any): Date | null => {
   if (value == null) return null;
@@ -1299,6 +1353,7 @@ const addDetailLine = () => {
     description: "",
     quantity: 1,
     priceUnit: 0,
+    discountPercent: 0,
     tax: 0,
   });
 };
@@ -1356,6 +1411,7 @@ const saveInvoice = async (showSuccess = true) => {
               description: line.description || "",
               quantity: Number(line.quantity),
               priceUnit: Number(line.priceUnit || 0),
+              discountPercent: Number(line.discountPercent || 0),
               tax: Number(line.tax || 0),
               uomId: line.uomId ?? null,
             }))
@@ -1774,12 +1830,6 @@ const cancelRow = (item: any) => {
   justify-content: flex-end;
   gap: 0.5rem;
   width: 100%;
-}
-.detail-notes {
-  margin: 0;
-  color: #4b5563;
-  white-space: pre-wrap;
-  line-height: 1.5;
 }
 .manual-detail-invoice {
   display: grid;

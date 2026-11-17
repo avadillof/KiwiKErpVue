@@ -16,6 +16,7 @@
       <Column header="Descripción" style="min-width:250px"><template #body="{ data }"><InputText v-model="data.description" class="w-full" /></template></Column>
       <Column header="Cantidad" style="width:130px" bodyStyle="text-align:right" headerStyle="text-align:right" headerClass="text-right"><template #body="{ data }"><InputNumber v-model="data.quantity" :disabled="saving" :min="0.001" :maxFractionDigits="3" locale="de-DE" fluid inputClass="text-right" /></template></Column>
       <Column header="Coste" style="width:135px" bodyStyle="text-align:right" headerStyle="text-align:right" headerClass="text-right"><template #body="{ data }"><InputNumber v-model="data.priceUnit" :disabled="saving" :min="0" :minFractionDigits="2" :maxFractionDigits="4" mode="currency" currency="EUR" locale="de-DE" fluid inputClass="text-right" /></template></Column>
+      <Column header="Descuento %" style="width:125px" bodyStyle="text-align:right" headerStyle="text-align:right" headerClass="text-right"><template #body="{ data }"><InputNumber v-model="data.discountPercent" :disabled="saving" :min="0" :max="100" :minFractionDigits="0" :maxFractionDigits="2" suffix=" %" fluid inputClass="text-right" /></template></Column>
       <Column header="Impuesto %" style="width:120px" bodyStyle="text-align:right" headerStyle="text-align:right" headerClass="text-right"><template #body="{ data }"><InputNumber v-model="data.tax" :min="0" :max="100" :maxFractionDigits="2" suffix=" %" fluid inputClass="text-right" /></template></Column>
       <Column header="Importe" style="width:130px;text-align:right" bodyStyle="text-align:right" headerStyle="text-align:right" headerClass="text-right"><template #body="{ data }"><b>{{ amount(lineNet(data) * (1 + Number(data.tax || 0) / 100)) }}</b></template></Column>
       <Column style="width:54px"><template #body="{ index }"><Button icon="pi pi-trash" severity="danger" text rounded title="Eliminar línea" @click="removeLine(index)" /></template></Column>
@@ -57,18 +58,19 @@ import ProductLookup from '@/components/shared/ProductLookup.vue';
 const emit = defineEmits<{ saved: [invoice: any] }>();
 const toast = useToast(), authStore = useAuthStore();
 const visible = ref(false), saving = ref(false), selectedSupplier = ref<any>(null), manualLinesTable = ref<any>(null), sourcePdf = ref<File|null>(null), attachSourcePdf = ref(false);
-const newLine = () => ({ productId: null as number|null, productLabel: '', description: '', quantity: 1, priceUnit: 0, tax: 0, uomId: null as number|null });
+const newLine = () => ({ productId: null as number|null, productLabel: '', description: '', quantity: 1, priceUnit: 0, discountPercent: 0, tax: 0, uomId: null as number|null });
 const form = reactive({ entityId: null as number|null, salesTarifaId: null as number|null, date: new Date(), supplierCode: '', reference: '', notes: '', lines: [newLine()] });
 const errors = reactive({ supplier: '', lines: '' });
 const clearErrors = () => { errors.supplier=''; errors.lines=''; };
 const supplierLabel = computed(() => selectedSupplier.value ? `${selectedSupplier.value.code ? `${selectedSupplier.value.code} — ` : ''}${selectedSupplier.value.name}` : '');
 const amount = (v: any) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true }).format(Number(v) || 0);
 const quantity = (v: any) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 3, useGrouping: true }).format(Number(v) || 0);
-const lineNet = (line: any) => Number(line.quantity || 0) * Number(line.priceUnit || 0);
+const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+const lineNet = (line: any) => roundMoney(Number(line.quantity || 0) * Number(line.priceUnit || 0) * (1 - Math.min(100, Math.max(0, Number(line.discountPercent || 0))) / 100));
 const totals = computed(() => {
   const units = form.lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
   const net = form.lines.reduce((sum, line) => sum + lineNet(line), 0);
-  const tax = form.lines.reduce((sum, line) => sum + (lineNet(line) * Number(line.tax || 0)) / 100, 0);
+  const tax = form.lines.reduce((sum, line) => sum + roundMoney((lineNet(line) * Number(line.tax || 0)) / 100), 0);
   return { units, net, tax, total: net + tax };
 });
 const reset = () => { selectedSupplier.value=null; sourcePdf.value=null; attachSourcePdf.value=false; form.entityId=null; form.salesTarifaId=null; form.date=new Date(); form.supplierCode=''; form.reference=''; form.notes=''; form.lines=[newLine()]; clearErrors(); };
@@ -85,7 +87,7 @@ const open = async (initial?:any, pdf?:File) => {
   form.supplierCode=initial.supplierInvoiceNumber||'';
   form.reference=initial.reference||'';
   form.notes=`Importada desde ${initial.sourceFileName||'PDF'} mediante IA. Revisión humana obligatoria.`;
-  form.lines=(initial.lines||[]).map((line:any)=>({productId:line.productMatch?.pkid??null,productLabel:line.productMatch?`${line.productMatch.code} — ${line.productMatch.description}`:'',description:line.description||line.productMatch?.description||'',quantity:Number(line.quantity)||1,priceUnit:Number(line.unitPrice)||0,tax:Number(line.taxPercent)||0,uomId:line.productMatch?.uomId??null,preserveDocumentValues:true}));
+  form.lines=(initial.lines||[]).map((line:any)=>({productId:line.productMatch?.pkid??null,productLabel:line.productMatch?`${line.productMatch.code} — ${line.productMatch.description}`:'',description:line.description||line.productMatch?.description||'',quantity:Number(line.quantity)||1,priceUnit:Number(line.unitPrice)||0,discountPercent:Number(line.discountPercent||0),tax:Number(line.taxPercent)||0,uomId:line.productMatch?.uomId??null,preserveDocumentValues:true}));
   if(!form.lines.length)form.lines=[newLine()];
 };
 const selectSupplier = (supplier:any) => { selectedSupplier.value=supplier; errors.supplier=''; };
@@ -108,7 +110,7 @@ const save = async () => {
   if (!valid) return;
   if (!form.salesTarifaId) { toast.add({severity:'error',summary:'Sin tarifa por defecto',detail:'Configura una tarifa por defecto en Ventas → Lista de precios.',life:4000}); return; }
   saving.value=true;
-  try { const {data}=await axios.post(backendUrl(`/WebCreateManualPurchasesInvoice`),{userId:authStore.user?.pkid ?? null,entityId:form.entityId,salesTarifaId:form.salesTarifaId,dateCreate:form.date.toISOString(),supplierCode:form.supplierCode.trim(),reference:form.reference,notes:form.notes,lines:form.lines.map(({productId,description,quantity,priceUnit,tax,uomId})=>({productId,description,quantity:Number(quantity),priceUnit:Number(priceUnit),tax:Number(tax),uomId}))});
+  try { const {data}=await axios.post(backendUrl(`/WebCreateManualPurchasesInvoice`),{userId:authStore.user?.pkid ?? null,entityId:form.entityId,salesTarifaId:form.salesTarifaId,dateCreate:form.date.toISOString(),supplierCode:form.supplierCode.trim(),reference:form.reference,notes:form.notes,lines:form.lines.map(({productId,description,quantity,priceUnit,discountPercent,tax,uomId})=>({productId,description,quantity:Number(quantity),priceUnit:Number(priceUnit),discountPercent:Number(discountPercent||0),tax:Number(tax),uomId}))});
     let attachmentWarning='';
     if(sourcePdf.value&&attachSourcePdf.value){try{const documents=new FormData();documents.append('entity','ATTACHEMENTS_PURCHASESINVOICES_JUSTIFICANTES');documents.append('entityId',String(data.pkid));documents.append('files',sourcePdf.value);await axios.post(backendUrl('/api/gestdoc/upload'),documents);}catch{attachmentWarning=' La factura se creó, pero el PDF no pudo adjuntarse; añádelo desde Justificantes.';}}
     toast.add({severity:attachmentWarning?'warn':'success',summary:'Factura creada',detail:`${data.code} se ha guardado como borrador.${attachmentWarning}`,life:attachmentWarning?7000:4000}); visible.value=false; emit('saved',data); }
