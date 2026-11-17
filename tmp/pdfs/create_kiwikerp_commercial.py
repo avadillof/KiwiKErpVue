@@ -16,13 +16,15 @@ from pypdf import PdfReader
 import os
 
 ROOT = r"C:\Proyectos\KiwiKErpVue"
-OUT = os.path.join(ROOT, "output", "pdf", "KiwiKERP_Dossier_Comercial.pdf")
+OUT = os.path.join(ROOT, "output", "pdf", "KiwiKERP_Dossier_Comercial_2026.pdf")
 BG = os.path.join(ROOT, "public", "logos", "backtransparent.png")
 LOGO = os.path.join(ROOT, "src", "assets", "logos", "corporate.png")
 KIWI = os.path.join(ROOT, "public", "logos", "logo512.png")
 SCREEN_VERIFACTU = os.path.join(ROOT, "tmp", "pdfs", "screenshots", "verifactu-chain.png")
 SCREEN_IMPORT = os.path.join(ROOT, "tmp", "pdfs", "screenshots", "import-assistant.png")
 SCREEN_LOGIN = os.path.join(ROOT, "tmp", "pdfs", "screenshots", "login.png")
+SCREEN_AI_IMPORT = r"C:\Users\comer\AppData\Local\Temp\codex-clipboard-3850918a-b4ed-433c-b851-bb5ba95748e6.png"
+SCREEN_AI_COMPARE = r"C:\Users\comer\AppData\Local\Temp\codex-clipboard-32788726-af58-4fa3-9d11-9ee3bb877836.png"
 
 W, H = A4
 GREEN = HexColor("#9CC10A")
@@ -73,67 +75,86 @@ class Cover(Flowable):
         c.saveState()
         # Platypus translates the canvas to the content frame; return to page origin.
         c.translate(-(18 * mm + 6), -(18 * mm + 6))
-        c.drawImage(BG, -18 * mm, -22 * mm, width=W + 36 * mm, height=H + 22 * mm, mask='auto')
-        c.setFillColor(colors.Color(1, 1, 1, alpha=0.78))
-        c.roundRect(18 * mm, 35 * mm, W - 36 * mm, 222 * mm, 7 * mm, fill=1, stroke=0)
-        # Cabecera clara: el logotipo corporativo contiene texto oscuro y necesita
-        # respirar sobre blanco para conservar su legibilidad.
-        c.setFillColor(colors.Color(1, 1, 1, alpha=0.94))
-        c.setStrokeColor(LINE)
-        c.setLineWidth(0.8)
-        c.roundRect(18 * mm, 230 * mm, W - 36 * mm, 27 * mm, 7 * mm, fill=1, stroke=1)
+        # Portada editorial limpia: una gran marca de agua aporta identidad sin
+        # competir con el mensaje comercial.
+        c.setFillColor(colors.white)
+        c.rect(0, 0, W, H, fill=1, stroke=0)
+        c.setFillColor(colors.Color(0.61, 0.76, 0.04, alpha=0.035))
+        c.circle(185 * mm, 142 * mm, 82 * mm, fill=1, stroke=0)
+        c.setFillColor(colors.Color(0.12, 0.13, 0.13, alpha=0.022))
+        c.circle(185 * mm, 142 * mm, 61 * mm, fill=1, stroke=0)
+        c.setStrokeColor(colors.Color(0.61, 0.76, 0.04, alpha=0.12))
+        c.setLineWidth(5)
+        c.circle(185 * mm, 142 * mm, 71 * mm, fill=0, stroke=1)
+        c.setStrokeColor(colors.Color(0.12, 0.13, 0.13, alpha=0.06))
+        c.setLineWidth(1.3)
+        c.circle(185 * mm, 142 * mm, 78 * mm, fill=0, stroke=1)
+        c.setFillAlpha(0.075)
+        c.drawImage(KIWI, 146 * mm, 103 * mm, width=78 * mm, height=78 * mm,
+                    preserveAspectRatio=True, mask='auto')
+        c.setFillAlpha(1)
+        c.setStrokeAlpha(1)
+
+        # Marca de producto.
+        c.drawImage(KIWI, 24 * mm, 244 * mm, width=25 * mm, height=25 * mm,
+                    preserveAspectRatio=True, mask='auto')
+        c.setFillColor(INK)
+        c.setFont("SegoeBold", 22)
+        c.drawString(53 * mm, 258 * mm, "KiwiKERP")
+        c.setFillColor(MUTED)
+        c.setFont("Segoe", 8.2)
+        c.drawString(53 * mm, 250.5 * mm, "GESTION EMPRESARIAL EN LA NUBE")
+        c.setStrokeColor(GREEN)
+        c.setLineWidth(2.2)
+        c.line(24 * mm, 237 * mm, 61 * mm, 237 * mm)
+
+        # Mensaje principal.
+        c.setFillColor(GREEN_DARK)
+        c.setFont("SegoeBold", 8.8)
+        c.drawString(24 * mm, 211 * mm, "DOSSIER COMERCIAL 2026")
+        c.setFillColor(INK)
+        c.setFont("SegoeBold", 34)
+        c.drawString(24 * mm, 190 * mm, "Tu empresa,")
+        c.drawString(24 * mm, 174 * mm, "mejor conectada.")
+        c.setFillColor(MUTED)
+        c.setFont("Segoe", 11.2)
+        c.drawString(24 * mm, 159 * mm, "Un ERP cercano, visual y preparado para")
+        c.drawString(24 * mm, 151 * mm, "simplificar el trabajo diario de tu negocio.")
+
+        c.setFont("SegoeBold", 10.3)
+        c.setFillColor(INK)
+        c.drawString(24 * mm, 119 * mm, "ORGANIZA")
+        c.drawString(24 * mm, 104 * mm, "SIMPLIFICA")
+        c.drawString(24 * mm, 89 * mm, "HAZ CRECER")
         c.setStrokeColor(GREEN)
         c.setLineWidth(2)
-        c.line(26 * mm, 231.5 * mm, W - 26 * mm, 231.5 * mm)
-        c.drawImage(LOGO, 25 * mm, 232.5 * mm, width=67 * mm, height=23 * mm, preserveAspectRatio=True, mask='auto')
-        c.setFillColor(GREEN)
-        c.roundRect(25 * mm, 207 * mm, 40 * mm, 8 * mm, 4 * mm, fill=1, stroke=0)
-        c.setFillColor(INK)
-        c.setFont("SegoeBold", 8)
-        c.drawString(29 * mm, 209.2 * mm, "DOSSIER COMERCIAL")
-        c.setFont("SegoeBold", 31)
-        c.drawString(25 * mm, 184 * mm, "KiwiKERP")
-        c.setFont("SegoeBold", 20)
-        c.setFillColor(GREEN_DARK)
-        c.drawString(25 * mm, 171 * mm, "Gestiona hoy. Crece mañana.")
-        c.setFillColor(MUTED)
-        c.setFont("Segoe", 12)
-        c.drawString(25 * mm, 157 * mm, "Un ERP cloud cercano, visual y conectado para")
-        c.drawString(25 * mm, 149 * mm, "autónomos y pequeñas empresas.")
-        c.drawImage(KIWI, 131 * mm, 157 * mm, width=48 * mm, height=48 * mm, preserveAspectRatio=True, mask='auto')
-        cards = [
-            ("ORGANIZA", "Ventas, compras, tareas y documentos"),
-            ("SIMPLIFICA", "Procesos claros y trazables"),
-            ("HAZ CRECER", "Decisiones con información real"),
-        ]
-        x = 25 * mm
-        for title, sub in cards:
-            c.setFillColor(SOFT)
-            c.roundRect(x, 104 * mm, 48 * mm, 30 * mm, 4 * mm, fill=1, stroke=0)
-            c.setFillColor(GREEN_DARK)
-            c.setFont("SegoeBold", 8)
-            c.drawString(x + 5 * mm, 124 * mm, title)
-            c.setFillColor(MUTED)
-            c.setFont("Segoe", 7.7)
-            words = sub.split()
-            line1 = " ".join(words[:3])
-            line2 = " ".join(words[3:])
-            c.drawString(x + 5 * mm, 116 * mm, line1)
-            c.drawString(x + 5 * mm, 111 * mm, line2)
-            x += 52 * mm
-        c.setFillColor(GREEN_PALE)
-        c.setStrokeColor(GREEN)
-        c.setLineWidth(1)
-        c.roundRect(25 * mm, 59 * mm, W - 50 * mm, 31 * mm, 4 * mm, fill=1, stroke=1)
-        c.setFillColor(GREEN_DARK)
-        c.setFont("SegoeBold", 13)
-        c.drawCentredString(W / 2, 78 * mm, "Todo el ciclo de tu empresa en un mismo lugar")
-        c.setFont("Segoe", 8.8)
-        c.setFillColor(MUTED)
-        c.drawCentredString(W / 2, 69 * mm, "De la oportunidad comercial al cobro, con fiscalidad, portal y seguimiento.")
+        for y in (116, 101, 86):
+            c.line(24 * mm, y * mm, 38 * mm, y * mm)
         c.setFillColor(MUTED)
         c.setFont("Segoe", 8.5)
-        c.drawCentredString(W / 2, 43 * mm, "www.freelandsite.es")
+        c.drawString(43 * mm, 116.5 * mm, "Ventas, compras, tareas y documentos")
+        c.drawString(43 * mm, 101.5 * mm, "Procesos claros, seguros y trazables")
+        c.drawString(43 * mm, 86.5 * mm, "Decisiones con información real")
+
+        # Lema y firma corporativa.
+        c.setFillColor(INK)
+        c.setFont("SegoeBold", 15)
+        c.drawString(24 * mm, 63 * mm, "Pequeñas empresas.")
+        c.drawString(24 * mm, 54 * mm, "Grandes historias.")
+        c.setStrokeColor(GREEN)
+        c.setLineWidth(2.4)
+        c.line(61 * mm, 51.5 * mm, 108 * mm, 51.5 * mm)
+        c.setStrokeColor(LINE)
+        c.setLineWidth(0.8)
+        c.line(24 * mm, 35 * mm, W - 24 * mm, 35 * mm)
+        c.drawImage(LOGO, 24 * mm, 15 * mm, width=50 * mm, height=17 * mm,
+                    preserveAspectRatio=True, mask='auto')
+        c.setFillColor(MUTED)
+        c.setFont("Segoe", 7.8)
+        c.drawRightString(W - 24 * mm, 23 * mm, "www.freelandsite.es")
+        c.setFillColor(GREEN_DARK)
+        c.setFont("SegoeBold", 8)
+        c.drawRightString(W - 24 * mm, 17 * mm, "Organiza · Simplifica · Haz crecer")
         c.restoreState()
 
 
@@ -362,13 +383,36 @@ example.setStyle(TableStyle([
 ]))
 story.append(example)
 
-# 5. Productos, compras y TPV
+# 5. Compras e inteligencia aplicada
 story.append(PageBreak())
-story += section_title("Una base común", "Productos, compras y punto de venta",
+story += section_title("Menos trabajo administrativo", "Compras asistidas por inteligencia artificial",
+    "KiwiKERP convierte documentos recibidos en propuestas revisables. La inteligencia artificial ayuda a leer, comparar y completar; la decisión y el guardado continúan siempre bajo control del usuario.")
+story.append(two_cards(
+    card("Importación desde PDF", "Lee facturas y albaranes de proveedor, incluso documentos escaneados. Propone proveedor, fecha, referencia, líneas, cantidades, precios e impuestos.", GREEN),
+    card("Comparación de proveedores", "Contrasta precios con el histórico de KiwiKERP y, sólo cuando se solicita, localiza alternativas públicas con fuente y nivel de confianza.", BLUE)
+))
+story.append(Spacer(1, 5 * mm))
+story.append(screenshot_panel(
+    SCREEN_AI_IMPORT,
+    "Propuesta extraída de una factura escaneada: datos, líneas y confianza antes de crear el borrador.",
+    150 * mm,
+    95.3 * mm,
+))
+story.append(Spacer(1, 5 * mm))
+story.append(screenshot_panel(
+    SCREEN_AI_COMPARE,
+    "Comparación transparente: precio sin IVA, ahorro real, disponibilidad, fuente y acciones revisables.",
+    150 * mm,
+    48.6 * mm,
+))
+
+# 6. Productos, compras y TPV
+story.append(PageBreak())
+story += section_title("Una base común", "Productos, operaciones y punto de venta",
     "El catálogo central alimenta los distintos canales y evita mantener precios, impuestos y descripciones en herramientas separadas.")
 story.append(two_cards(
     card("Productos y servicios", "Familias, unidades, impuestos, tarifas, descuentos, códigos de barras y políticas de entrega y facturación.", GREEN),
-    card("Compras", "Albaranes de proveedor, facturas recibidas, relación documental e IVA soportado para la liquidación trimestral.", BLUE)
+    card("Compras conectadas", "Albaranes, facturas recibidas, pagos, adjuntos, proveedores alternativos, precios históricos e IVA soportado.", BLUE)
 ))
 story.append(Spacer(1, 5 * mm))
 story.append(two_cards(
@@ -390,7 +434,7 @@ story.append(screenshot_panel(
     75.7 * mm,
 ))
 
-# 6. Seguridad y continuidad
+# 7. Seguridad y continuidad
 story.append(PageBreak())
 story += section_title("Confianza operativa", "Seguridad, documentos y continuidad",
     "La información de una empresa necesita algo más que formularios: requiere permisos, respaldo, archivo y una infraestructura mantenible.")
@@ -413,7 +457,7 @@ story.append(Table([[P("INFORMACIÓN", "Eyebrow"), P("PROCESOS", "Eyebrow"), P("
                                      ("INNERGRID", (0, 0), (-1, -1), 0.4, LINE), ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                                      ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8)])))
 
-# 7. Cierre
+# 8. Cierre
 story.append(PageBreak())
 story.append(Spacer(1, 10 * mm))
 story.append(Image(KIWI, width=34 * mm, height=34 * mm, hAlign="CENTER"))
@@ -452,7 +496,7 @@ doc.build(story)
 
 # Structural verification: page count, metadata and non-empty extracted text.
 reader = PdfReader(OUT)
-assert len(reader.pages) == 8, f"Expected 8 pages, got {len(reader.pages)}"
+assert len(reader.pages) == 9, f"Expected 9 pages, got {len(reader.pages)}"
 for idx, page in enumerate(reader.pages, start=1):
     text = (page.extract_text() or "").strip()
     assert text, f"Page {idx} has no extractable text"

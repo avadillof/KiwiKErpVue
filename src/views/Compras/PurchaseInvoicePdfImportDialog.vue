@@ -3,10 +3,12 @@
     v-model:visible="visible"
     modal
     :header="dialogTitle"
-    :style="{ width: 'min(1380px, 98vw)' }"
-    class="kiwik-dialog"
+    :style="{ width: 'min(1380px, 98vw)', height: 'min(920px, 96vh)', maxHeight: '96vh' }"
+    :contentStyle="{ overflow: 'hidden', flex: '1 1 auto', minHeight: '0' }"
+    class="kiwik-dialog purchase-ai-dialog"
     :closable="!analyzing"
   >
+    <div class="purchase-ai-scroll">
     <Message severity="info" :closable="false">
       La IA prepara una propuesta, pero no guarda ni registra el {{ documentLabel }}. El contenido del PDF —texto o páginas escaneadas— se enviará al proveedor de IA configurado; revisa todos los datos antes de crear el borrador.
     </Message>
@@ -124,6 +126,7 @@
           @click="confirmSearchVisible = true"
         />
       </div>
+    </div>
     </div>
 
     <template #footer>
@@ -411,10 +414,24 @@ const createSupplierFromDocument = () => {
   clientFormRef.value?.open(undefined, {
     name: result.value?.supplierName || '',
     cif: result.value?.supplierTaxId || '',
+    address: result.value?.supplierAddress || '',
+    address2: result.value?.supplierAddress2 || '',
+    zipcode: result.value?.supplierPostalCode || '',
+    city: result.value?.supplierCity || '',
+    province: result.value?.supplierProvince || '',
+    country: result.value?.supplierCountry || '',
+    phone: result.value?.supplierPhone || '',
+    email: result.value?.supplierEmail || '',
+    web: normalizeWebsite(result.value?.supplierWebsite),
     isprove: true,
     isclient: false,
     active: true,
   });
+};
+const normalizeWebsite = (value: unknown) => {
+  const website = String(value || '').trim();
+  if (!website || /^https?:\/\//i.test(website)) return website;
+  return `https://${website}`;
 };
 const createProductFromLine = (line: any) => {
   const description = line.description || line.productCode || '';
@@ -548,6 +565,16 @@ defineExpose({ open });
 .dialog-actions { width: 100%; }
 .dialog-footer-separator { margin-bottom: .75rem; }
 .dialog-actions { justify-content: flex-end; gap: .5rem; }
+.purchase-ai-scroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: .35rem;
+  padding-bottom: 1rem;
+}
+:deep(.purchase-ai-dialog .p-dialog-content) { min-height: 0; }
+:deep(.purchase-ai-dialog .p-dialog-footer) { flex: 0 0 auto; }
 @media (max-width: 850px) {
   .invoice-summary { grid-template-columns: 1fr 1fr; }
   .comparison-panel { align-items: stretch; flex-direction: column; }
