@@ -440,7 +440,7 @@ const currentUserPkid = computed(() => authStore.user?.pkid ?? null);
 const isAdmin = computed(() => authStore.user?.admin === true);
 const requesterPkid = computed(() => (isAdmin.value ? null : currentUserPkid.value));
 const hasFilters = computed(() =>
-    !!query.value || (filterState.value.length > 0 && !allStatesSelected.value) || filterUser.value != null || filterEntitie.value != null
+    !!query.value || !allStatesSelected.value || filterUser.value != null || filterEntitie.value != null
     || !!filterPriority.value || mineOnly.value || overdueOnly.value || archiveMode.value
 );
 const viewTitle = computed(() => view.value === 'kanban' ? 'Tablero Kanban' : view.value === 'gantt' ? 'Planificación Gantt' : view.value === 'calendar' ? 'Calendario de vencimientos' : 'Listado de tareas');
@@ -483,8 +483,7 @@ function stateOf(state: string) {
 
 function onToggleAllHeader(event: MouseEvent) {
     if ((event.target as HTMLElement).closest('.p-checkbox')) return;
-    if (allStatesSelected.value) return;
-    filterState.value = [...ALL_STATES];
+    filterState.value = allStatesSelected.value ? [] : [...ALL_STATES];
     void load();
 }
 
@@ -535,11 +534,13 @@ async function load(quiet = false) {
             overdue: overdueOnly.value || undefined,
             requesterPkid: requesterPkid.value
         };
-        if (filterState.value.length === 0) filterState.value = [...ALL_STATES];
         const selectedStates = filterState.value;
         const openSelected = TASK_OPEN_STATES.filter((s) => selectedStates.includes(s));
         const terminalSelected = selectedStates.filter((s) => s === 'FINALIZADA' || s === 'DESCARTADA');
-        if (allStatesSelected.value) {
+        if (selectedStates.length === 0) {
+            tasks.value = [];
+            archiveTruncated.value = null;
+        } else if (allStatesSelected.value) {
             const [open, done] = await Promise.all([
                 getTasksPage({ ...common, states: TASK_OPEN_STATES.join(','), size: 2000 }),
                 archiveMode.value
@@ -958,9 +959,10 @@ function prefsSnapshot(): TaskBoardPrefs {
 function applyPrefs(p: TaskBoardPrefs | null) {
     if (!p) return;
     query.value = p.query ?? '';
-    const savedStates = Array.isArray(p.filterState) ? p.filterState : p.filterState ? [p.filterState] : [];
-    const validStates = TASK_STATES.filter((s) => savedStates.includes(s.value)).map((s) => s.value);
-    filterState.value = validStates.length > 0 ? validStates : [...ALL_STATES];
+    const savedStates = Array.isArray(p.filterState) ? p.filterState : p.filterState ? [p.filterState] : null;
+    filterState.value = savedStates == null
+        ? [...ALL_STATES]
+        : TASK_STATES.filter((s) => savedStates.includes(s.value)).map((s) => s.value);
     filterUser.value = p.filterUser ?? null;
     filterEntitie.value = p.filterEntitie ?? null;
     filterEntitieLabel.value = p.filterEntitieLabel ?? '';
