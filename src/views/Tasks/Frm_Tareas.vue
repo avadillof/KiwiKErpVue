@@ -78,8 +78,9 @@
                 <div class="task-filter">
                     <FloatLabel variant="on" class="w-full">
                         <MultiSelect v-model="filterState" :options="stateOptions" optionLabel="label"
-                            optionValue="value" class="w-full" display="chip" placeholder=" "
+                            optionValue="value" class="w-full" display="chip" :placeholder="'\u00A0'"
                             :maxSelectedLabels="2" selectedItemsLabel="{0} estados" showClear
+                            :pt="{ header: { class: 'task-state-all', onClick: onToggleAllHeader } }"
                             @change="() => load()" />
                         <label>Estado</label>
                     </FloatLabel>
@@ -123,7 +124,7 @@
             </div>
 
             <section class="task-kpis" aria-label="Resumen de tareas">
-                <article class="kpi" :class="{ clickable: true, selected: filterState.length === 0 && !overdueOnly }"
+                <article class="kpi" :class="{ clickable: true, selected: allStatesSelected && !overdueOnly }"
                     title="Ver todas" @click="clearFilters">
                     <i class="pi pi-clipboard kpi-icon"></i>
                     <div><strong>{{ kpis.abiertas }}</strong><span>Abiertas</span></div>
@@ -409,7 +410,8 @@ const dropState = ref<TaskState | null>(null);
 const dropIndex = ref<number | null>(null);
 const dropAfter = ref(false);
 const taskFormRef = ref<InstanceType<typeof Frm_TaskForm> | null>(null);
-const filterState = ref<TaskState[]>([]);
+const ALL_STATES: TaskState[] = TASK_STATES.map((s) => s.value);
+const filterState = ref<TaskState[]>([...ALL_STATES]);
 const filterUser = ref<number | null>(null);
 const filterEntitie = ref<number | null>(null);
 const filterEntitieLabel = ref('');
@@ -432,12 +434,13 @@ const columns = computed(() => TASK_STATES.filter((column) =>
     && !(hideDiscardedColumn.value && column.value === 'DESCARTADA')
 ));
 const stateOptions = computed(() => TASK_STATES.map((s) => ({ label: s.label, value: s.value })));
+const allStatesSelected = computed(() => filterState.value.length === ALL_STATES.length);
 const priorityOptions = computed(() => TASK_PRIORITIES.map((p) => ({ label: p.label, value: p.value })));
 const currentUserPkid = computed(() => authStore.user?.pkid ?? null);
 const isAdmin = computed(() => authStore.user?.admin === true);
 const requesterPkid = computed(() => (isAdmin.value ? null : currentUserPkid.value));
 const hasFilters = computed(() =>
-    !!query.value || filterState.value.length > 0 || filterUser.value != null || filterEntitie.value != null
+    !!query.value || (filterState.value.length > 0 && !allStatesSelected.value) || filterUser.value != null || filterEntitie.value != null
     || !!filterPriority.value || mineOnly.value || overdueOnly.value || archiveMode.value
 );
 const viewTitle = computed(() => view.value === 'kanban' ? 'Tablero Kanban' : view.value === 'gantt' ? 'Planificación Gantt' : view.value === 'calendar' ? 'Calendario de vencimientos' : 'Listado de tareas');
@@ -476,6 +479,13 @@ function columnHours(state: TaskState): number {
 
 function stateOf(state: string) {
     return TASK_STATES.find((item) => item.value === state) ?? { label: state || 'Sin estado', severity: 'secondary' };
+}
+
+function onToggleAllHeader(event: MouseEvent) {
+    if ((event.target as HTMLElement).closest('.p-checkbox')) return;
+    if (allStatesSelected.value) return;
+    filterState.value = [...ALL_STATES];
+    void load();
 }
 
 function numberHours(value: unknown): string {
@@ -525,10 +535,11 @@ async function load(quiet = false) {
             overdue: overdueOnly.value || undefined,
             requesterPkid: requesterPkid.value
         };
+        if (filterState.value.length === 0) filterState.value = [...ALL_STATES];
         const selectedStates = filterState.value;
         const openSelected = TASK_OPEN_STATES.filter((s) => selectedStates.includes(s));
         const terminalSelected = selectedStates.filter((s) => s === 'FINALIZADA' || s === 'DESCARTADA');
-        if (selectedStates.length === 0) {
+        if (allStatesSelected.value) {
             const [open, done] = await Promise.all([
                 getTasksPage({ ...common, states: TASK_OPEN_STATES.join(','), size: 2000 }),
                 archiveMode.value
@@ -834,7 +845,7 @@ const initials = (name?: string) =>
 
 function clearFilters() {
     query.value = '';
-    filterState.value = [];
+    filterState.value = [...ALL_STATES];
     filterUser.value = null;
     filterEntitie.value = null;
     filterEntitieLabel.value = '';
@@ -948,7 +959,8 @@ function applyPrefs(p: TaskBoardPrefs | null) {
     if (!p) return;
     query.value = p.query ?? '';
     const savedStates = Array.isArray(p.filterState) ? p.filterState : p.filterState ? [p.filterState] : [];
-    filterState.value = TASK_STATES.filter((s) => savedStates.includes(s.value)).map((s) => s.value);
+    const validStates = TASK_STATES.filter((s) => savedStates.includes(s.value)).map((s) => s.value);
+    filterState.value = validStates.length > 0 ? validStates : [...ALL_STATES];
     filterUser.value = p.filterUser ?? null;
     filterEntitie.value = p.filterEntitie ?? null;
     filterEntitieLabel.value = p.filterEntitieLabel ?? '';
@@ -1531,5 +1543,18 @@ watch(
     .task-kpis {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
+</style>
+
+<style>
+/* El overlay se monta en body, fuera del scope del componente */
+.p-multiselect-header.task-state-all {
+    cursor: pointer;
+    user-select: none;
+}
+.p-multiselect-header.task-state-all::after {
+    content: 'Todos';
+    font-weight: 700;
+    color: #2b2b2b;
 }
 </style>
