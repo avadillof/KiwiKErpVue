@@ -22,7 +22,6 @@ export const useAuthStore = defineStore('auth', {
     sessionExpired: false,
     portalSession: '',
     loginAccess: 'erp' as 'erp' | 'tpv',
-    tpvOpenedFromErp: false,
     photoTimestamp: Date.now()
   }),
   actions: {
@@ -32,7 +31,6 @@ export const useAuthStore = defineStore('auth', {
       this.user = userData;
       this.portalSession = portalSession;
       this.loginAccess = loginAccess;
-      this.tpvOpenedFromErp = false;
       this.isAuthenticated = true;      
     },
     portalRequestConfig() {
@@ -51,7 +49,6 @@ export const useAuthStore = defineStore('auth', {
       this.user = null;
       this.isAuthenticated = false;
       this.loginAccess = 'erp';
-      this.tpvOpenedFromErp = false;
       // Los recientes son por navegador: limpiarlos evita que el siguiente
       // usuario vea (y reabra) módulos del anterior.
       try { window.localStorage.removeItem('kiwik.menuRecents'); } catch { /* sin almacenamiento */ }

@@ -13,7 +13,7 @@ function load(file, dependencies) {
 }
 function routing(admin, loginAccess) {
   let guard;
-  const auth = { user: { admin, pkid: 7 }, loginAccess, isAuthenticated: true, tpvOpenedFromErp: false };
+  const auth = { user: { admin, pkid: 7 }, loginAccess, isAuthenticated: true };
   load('../src/router.ts', {
     'vue-router': { createWebHistory: () => ({}), createRouter: () => ({ beforeEach: fn => { guard = fn; } }) },
     './stores/authStore': { useAuthStore: () => auth },
@@ -29,23 +29,25 @@ test('Un usuario ERP normal no puede abrir TPV, ni con permisos de ventas', asyn
   assert.equal((await r.enter(erp)).name, 'Dashboard');
   assert.equal((await r.enter(external)).name, 'Dashboard');
 });
-test('Un administrador que abre desde ERP conserva el retorno al ERP', async () => {
+test('Un administrador tampoco puede abrir el TPV desde el ERP', async () => {
   const r = routing(true, 'erp');
-  assert.equal(await r.enter(erp), true);
-  assert.equal(r.auth.tpvOpenedFromErp, true);
+  assert.equal((await r.enter(erp)).name, 'Dashboard');
 });
 for (const admin of [true, false]) {
-  test(`Acceso externo ${admin ? 'administrador' : 'cajero'} muestra salida por cierre de sesión`, async () => {
+  test(`Acceso externo ${admin ? 'administrador' : 'cajero'} entra con sesión del portal`, async () => {
     const r = routing(admin, 'tpv');
     assert.equal(await r.enter(external), true);
-    assert.equal(r.auth.tpvOpenedFromErp, false);
   });
 }
-test('Una sesión TPV no permite al no administrador entrar desde una pantalla del ERP', async () => {
+test('Una sesión TPV administradora no permite entrar desde una pantalla del ERP', async () => {
+  const r = routing(true, 'tpv');
+  assert.equal((await r.enter(erp)).name, 'Dashboard');
+});
+test('Una sesión TPV de cajero no permite entrar desde una pantalla del ERP', async () => {
   const r = routing(false, 'tpv');
   assert.equal((await r.enter(erp)).name, 'Dashboard');
 });
-test('SYS_ACCESS no hace visible el TPV a un usuario no administrador', () => {
+test('El TPV no se ofrece como módulo del ERP', () => {
   const modules = load('../src/services/Frm_Main/modules.ts', {
     '../../stores/authStore': { useAuthStore: () => ({ user: { admin: false } }) },
     '../../stores/securityStore': { useSecurityStore: () => ({ hasModule: () => true, hasPermission: () => true }) },

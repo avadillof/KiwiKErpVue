@@ -277,14 +277,14 @@ router.beforeEach(async (to, from) => {
   const securityStore = useSecurityStore();
   if (to.name === 'TPV' && authStore.isAuthenticated && from.name !== 'TPV') {
     const fromErp = from.matched.some(record => record.name === 'MainPanel');
-    // Al TPV entran: el admin que viene del ERP, o un operario del grupo TPVs
-    // (acceso siempre por PIN). Nadie más, ni cambiando la URL.
-    const adminFromErp = authStore.user?.admin === true && fromErp;
+    // El TPV solo se abre desde el acceso del portal: PIN de operario o
+    // credenciales de administrador. Desde el ERP no entra nadie.
+    const tpvSession = authStore.loginAccess === 'tpv';
     const tpvOperator = authStore.user?.groupKyId === TPV_GROUP_ID;
-    if (!adminFromErp && !tpvOperator) {
+    const tpvAdmin = authStore.user?.admin === true;
+    if (fromErp || !tpvSession || (!tpvOperator && !tpvAdmin)) {
       return { name: 'Dashboard' };
     }
-    authStore.tpvOpenedFromErp = fromErp && authStore.user?.admin === true;
   }
   if (to.name === 'TPV' && authStore.isAuthenticated && !securityStore.loaded && authStore.user) {
     try { await securityStore.loadSecurity(authStore.user.pkid); }

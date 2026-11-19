@@ -1,5 +1,5 @@
 <template>
-  <Frm_TpvAccess v-if="$route.query.access === 'tpv'" />
+  <Frm_TpvAccess v-if="$route.query.access === 'tpv' && $route.query.mode !== 'admin'" />
   <main v-else class="login-page">
     <section class="login-shell">
       <img src="../../assets/logos/corporate.png" alt="FreeLandSite" class="corporate-divider-logo" />
@@ -67,6 +67,10 @@
             <Button type="submit" label="Acceder a KiwiKERP" icon="pi pi-arrow-right" iconPos="right"
               :loading="isLoading" class="login-submit" />
           </form>
+
+          <p v-if="$route.query.access === 'tpv' && $route.query.mode === 'admin'" class="access-help">
+            <router-link :to="{ name: 'Login', query: { access: 'tpv' } }">Volver al acceso TPV</router-link>
+          </p>
 
           <p class="access-help"><i class="pi pi-lock"></i> Tus credenciales se envían mediante una conexión segura.</p>
         </div>

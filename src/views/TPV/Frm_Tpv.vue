@@ -42,16 +42,6 @@
         </div>
       </div>
       <Button
-        v-if="auth.user?.admin && auth.tpvOpenedFromErp"
-        label="Volver al ERP"
-        icon="pi pi-arrow-left"
-        severity="secondary"
-        outlined
-        :disabled="busy || endingSession"
-        @click="router.push({ name: 'Dashboard' })"
-      />
-      <Button
-        v-else
         label="Cerrar sesión"
         icon="pi pi-sign-out"
         severity="secondary"
@@ -2903,14 +2893,9 @@ async function finishSession() {
   endingSession.value = true;
   sessionDialog.value = false;
   lines.value = [];
-  // El operario de TPV vuelve al acceso por PIN; el admin, al login del ERP.
-  const backToTpvPin = auth.user?.admin !== true;
+  // Operarios y administradores vuelven siempre al acceso del portal.
   auth.logout();
-  await router.replace(
-    backToTpvPin
-      ? { name: "Login", query: { access: "tpv" } }
-      : { name: "Login" },
-  );
+  await router.replace({ name: "Login", query: { access: "tpv" } });
 }
 function edit(line: Line) {
   selectedLine.value = line;

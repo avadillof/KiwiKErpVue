@@ -105,7 +105,7 @@ test('Un cobro pendiente y un fallo al guardar la mesa conservan usuario y venta
   assert.equal(table.saves(), 1); assert.equal(table.logouts(), 0); assert.equal(table.lines.value.length, 1);
 });
 
-test('El cierre TPV guarda la mesa y conserva el retorno ERP del administrador', async () => {
+test('El cierre TPV guarda la mesa y vuelve al acceso del portal también para el administrador', async () => {
   const s = tpvSession({ table: true, admin: true }); await s.requestSessionExit('logout');
-  assert.equal(s.saves(), 1); assert.equal(s.logouts(), 1); assert.equal(s.routes[0].name, 'Login'); assert.equal(s.routes[0].query, undefined);
+  assert.equal(s.saves(), 1); assert.equal(s.logouts(), 1); assert.equal(s.routes[0].name, 'Login'); assert.equal(s.routes[0].query.access, 'tpv');
 });

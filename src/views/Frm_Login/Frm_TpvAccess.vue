@@ -169,9 +169,17 @@
           }}</Message>
 
           <p class="access-help">
-            <i class="pi pi-lock"></i> Acceso con PIN de operario. El login con
-            usuario y clave sigue en el ERP.
+            <i class="pi pi-lock"></i> Acceso con PIN de operario. Los
+            administradores entran con usuario y clave.
           </p>
+          <Button
+            label="Acceso administrador"
+            icon="pi pi-user"
+            text
+            severity="secondary"
+            :disabled="busy"
+            @click="goAdminLogin"
+          />
         </div>
 
         <footer class="access-footer">
@@ -300,6 +308,11 @@ async function submit() {
   } finally {
     busy.value = false;
   }
+}
+
+async function goAdminLogin() {
+  if (busy.value) return;
+  await router.replace({ name: "Login", query: { access: "tpv", mode: "admin" } });
 }
 
 onMounted(async () => {
