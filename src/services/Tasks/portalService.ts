@@ -3,6 +3,7 @@ import { backendUrl } from "@/services/backendUrl";
 import type { TaskCommentDTO, TaskDTO, TaskType } from "./taskService";
 
 const TOKEN_KEY = "kiwik.portal.token";
+const ADMIN_TOKEN_KEY = "kiwik.portal.adminToken";
 
 export function portalToken(): string | null {
   try {
@@ -16,6 +17,23 @@ export function setPortalToken(token: string | null) {
   try {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+
+export function portalAdminToken(): string | null {
+  try {
+    return sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setPortalAdminToken(token: string | null) {
+  try {
+    if (token) sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+    else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
   } catch {
     /* sin almacenamiento */
   }
@@ -92,6 +110,48 @@ export async function portalSession(token: string): Promise<PortalSession> {
     params: { token },
   });
   return data as PortalSession;
+}
+
+export interface PortalAdminContact {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface PortalAdminClient {
+  entitieId: number;
+  entitieName: string;
+  contacts: PortalAdminContact[];
+}
+
+export interface PortalAdminSession {
+  adminName: string;
+  userPkid: number;
+  clients: PortalAdminClient[];
+}
+
+export async function portalAdminSession(
+  token: string,
+  query = "",
+): Promise<PortalAdminSession> {
+  const { data } = await axios.get(backendUrl("/WebPortalAdminSession"), {
+    params: { token, query },
+  });
+  return data as PortalAdminSession;
+}
+
+/** Abre el portal del contacto elegido y devuelve el token de esa sesión. */
+export async function portalImpersonate(
+  token: string,
+  contactPkid: number,
+): Promise<string> {
+  const { data } = await axios.post(backendUrl("/WebPortalImpersonate"), {
+    token,
+    contactPkid,
+  });
+  const sessionToken = String(data?.token ?? "");
+  if (!sessionToken) throw new Error("El servidor no devolvió el acceso al cliente.");
+  return sessionToken;
 }
 
 export async function portalLogout(token: string): Promise<void> {

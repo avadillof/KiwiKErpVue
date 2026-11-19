@@ -71,7 +71,93 @@
 
         <section class="access-panel">
 
-            <div class="access-content">
+            <div v-if="adminSession" class="access-content">
+
+                <div class="access-intro">
+
+                    <h3>
+                        Acceso de administrador
+                    </h3>
+
+                    <p>
+                        Hola {{ adminSession.adminName }}. Elige un cliente
+                        para abrir su Portal CRM.
+                    </p>
+
+                </div>
+
+                <IconField>
+
+                    <InputIcon class="pi pi-search" />
+
+                    <InputText
+                        v-model="adminQuery"
+                        placeholder="Buscar cliente, contacto o correo"
+                        autofocus
+                        fluid
+                    />
+
+                </IconField>
+
+                <p v-if="adminLoading" role="status">
+                    <i class="pi pi-spin pi-spinner" /> Cargando clientes…
+                </p>
+
+                <p v-else-if="!adminFilteredClients.length" class="access-help">
+                    Sin clientes que mostrar.
+                </p>
+
+                <div v-else class="admin-clients">
+
+                    <div
+                        v-for="client in adminFilteredClients"
+                        :key="client.entitieId"
+                        class="admin-client"
+                    >
+
+                        <strong>{{ client.entitieName }}</strong>
+
+                        <div class="admin-client__contacts">
+
+                            <Button
+                                v-for="contact in client.contacts"
+                                :key="contact.id"
+                                :label="contact.name || contact.email"
+                                icon="pi pi-user"
+                                severity="secondary"
+                                outlined
+                                size="small"
+                                :loading="impersonating === contact.id"
+                                :disabled="impersonating !== null"
+                                @click="openClientPortal(contact)"
+                            />
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <Message
+                    v-if="adminError"
+                    severity="error"
+                    :closable="false"
+                    style="margin-top:1rem"
+                >
+                    {{ adminError }}
+                </Message>
+
+                <p class="access-help">
+
+                    <i class="pi pi-shield"></i>
+
+                    Abrirás el portal como el contacto seleccionado.
+
+                </p>
+
+            </div>
+
+            <div v-else class="access-content">
 
                 <header class="company-header">
 
@@ -204,7 +290,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
@@ -214,10 +300,16 @@ import Message from 'primevue/message';
 import Frm_Main from './Frm_Main.vue';
 import { backendUrl } from '@/services/backendUrl';
 import {
+    portalAdminSession,
+    portalAdminToken,
+    portalImpersonate,
     portalSession,
     portalToken,
     requestPortalLink,
+    setPortalAdminToken,
     setPortalToken,
+    type PortalAdminContact,
+    type PortalAdminSession,
     type PortalSession
 } from '@/services/Tasks/portalService';
 
@@ -233,6 +325,70 @@ const loginMsg = ref('');
 const loginOk = ref(false);
 const retryToken = ref<string | null>(null);
 const checkingSession = ref(false);
+
+const adminSession = ref<PortalAdminSession | null>(null);
+const adminQuery = ref('');
+const adminLoading = ref(false);
+const adminError = ref('');
+const impersonating = ref<number | null>(null);
+const adminToken = ref<string | null>(portalAdminToken());
+
+const adminFilteredClients = computed(() => {
+    const clients = adminSession.value?.clients ?? [];
+    const q = adminQuery.value.trim().toLocaleLowerCase('es');
+    if (!q) return clients;
+    return clients
+        .map((client) => {
+            const entityMatch = client.entitieName.toLocaleLowerCase('es').includes(q);
+            const contacts = entityMatch
+                ? client.contacts
+                : client.contacts.filter((contact) =>
+                    `${contact.name} ${contact.email}`.toLocaleLowerCase('es').includes(q),
+                );
+            return { ...client, contacts };
+        })
+        .filter((client) => client.contacts.length > 0);
+});
+
+async function loadAdmin(token: string) {
+    adminLoading.value = true;
+    adminError.value = '';
+    try {
+        adminSession.value = await portalAdminSession(token);
+        adminToken.value = token;
+        setPortalAdminToken(token);
+    } catch (e: any) {
+        adminSession.value = null;
+        adminToken.value = null;
+        setPortalAdminToken(null);
+        if (e?.response?.status === 410) {
+            loginOk.value = false;
+            loginMsg.value = 'Enlace de administrador no válido o caducado. Solicita uno nuevo.';
+        } else {
+            adminError.value = 'No se pudo cargar el acceso de administrador.';
+        }
+    } finally {
+        adminLoading.value = false;
+    }
+}
+
+async function openClientPortal(contact: PortalAdminContact) {
+    if (!adminToken.value || impersonating.value !== null) return;
+    impersonating.value = contact.id;
+    adminError.value = '';
+    try {
+        const token = await portalImpersonate(adminToken.value, contact.id);
+        setPortalToken(token);
+        await init(token);
+        if (session.value) {
+            await router.replace({ name: 'Portal', query: { token } });
+        }
+    } catch {
+        adminError.value = 'No se pudo abrir el portal del cliente.';
+    } finally {
+        impersonating.value = null;
+    }
+}
 
 async function sendLink() {
     sending.value = true;
@@ -282,6 +438,14 @@ async function logout(reason?: string) {
     session.value = null;
     retryToken.value = null;
     setPortalToken(null);
+    if (adminToken.value) {
+        // El administrador vuelve al selector de clientes, no al login.
+        if (!adminSession.value) void loadAdmin(adminToken.value);
+        loginMsg.value = '';
+        loginOk.value = false;
+        await router.replace({ name: 'Portal' });
+        return;
+    }
     if (reason === 'expired') {
         loginOk.value = false;
         loginMsg.value = 'Tu sesión ha caducado. Solicita un nuevo enlace.';
@@ -291,9 +455,18 @@ async function logout(reason?: string) {
 
 onMounted(() => {
     void loadCompany();
+    const adminQueryToken = route.query.adminToken;
+    if (typeof adminQueryToken === 'string' && adminQueryToken) {
+        void loadAdmin(adminQueryToken);
+        return;
+    }
     const q = route.query.token;
     const token = typeof q === 'string' && q ? q : portalToken();
-    if (token) void init(token);
+    if (token) {
+        void init(token);
+        return;
+    }
+    if (adminToken.value) void loadAdmin(adminToken.value);
 });
 
 async function loadCompany() {
@@ -316,3 +489,28 @@ async function loadCompany() {
 }
 </script>
 
+
+<style scoped>
+.admin-clients {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    max-height: 46vh;
+    overflow-y: auto;
+}
+.admin-client {
+    border: 1px solid #e2e7d1;
+    border-radius: 8px;
+    padding: .75rem .9rem;
+}
+.admin-client strong {
+    display: block;
+    margin-bottom: .5rem;
+}
+.admin-client__contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+</style>
