@@ -13,7 +13,7 @@ const LOCAL_KEY = 'kiwik.tasks.filters.v1';
 
 export interface TaskBoardPrefs {
   query?: string;
-  filterState?: string | null;
+  filterState?: string[] | string | null;
   filterUser?: number | null;
   filterEntitie?: number | null;
   filterEntitieLabel?: string;

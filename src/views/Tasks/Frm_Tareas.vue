@@ -77,8 +77,10 @@
             <div class="task-filters">
                 <div class="task-filter">
                     <FloatLabel variant="on" class="w-full">
-                        <Select v-model="filterState" :options="stateOptions" optionLabel="label"
-                            optionValue="value" class="w-full" showClear @change="() => load()" />
+                        <MultiSelect v-model="filterState" :options="stateOptions" optionLabel="label"
+                            optionValue="value" class="w-full" display="chip" placeholder=" "
+                            :maxSelectedLabels="2" selectedItemsLabel="{0} estados" showClear
+                            @change="() => load()" />
                         <label>Estado</label>
                     </FloatLabel>
                 </div>
@@ -121,13 +123,13 @@
             </div>
 
             <section class="task-kpis" aria-label="Resumen de tareas">
-                <article class="kpi" :class="{ clickable: true, selected: filterState === null && !overdueOnly }"
+                <article class="kpi" :class="{ clickable: true, selected: filterState.length === 0 && !overdueOnly }"
                     title="Ver todas" @click="clearFilters">
                     <i class="pi pi-clipboard kpi-icon"></i>
                     <div><strong>{{ kpis.abiertas }}</strong><span>Abiertas</span></div>
                 </article>
-                <article class="kpi doing" :class="{ clickable: true, selected: filterState === 'EN_CURSO' }"
-                    title="Ver las que se están realizando" @click="filterState = 'EN_CURSO'; load()">
+                <article class="kpi doing" :class="{ clickable: true, selected: filterState.length === 1 && filterState[0] === 'EN_CURSO' }"
+                    title="Ver las que se están realizando" @click="filterState = ['EN_CURSO']; load()">
                     <i class="pi pi-hourglass kpi-icon"></i>
                     <div><strong>{{ kpis.enCurso }}</strong><span>En curso</span></div>
                 </article>
@@ -349,6 +351,7 @@ import FloatLabel from 'primevue/floatlabel';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import MultiSelect from 'primevue/multiselect';
 import ProgressBar from 'primevue/progressbar';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
@@ -406,7 +409,7 @@ const dropState = ref<TaskState | null>(null);
 const dropIndex = ref<number | null>(null);
 const dropAfter = ref(false);
 const taskFormRef = ref<InstanceType<typeof Frm_TaskForm> | null>(null);
-const filterState = ref<string | null>(null);
+const filterState = ref<TaskState[]>([]);
 const filterUser = ref<number | null>(null);
 const filterEntitie = ref<number | null>(null);
 const filterEntitieLabel = ref('');
@@ -434,7 +437,7 @@ const currentUserPkid = computed(() => authStore.user?.pkid ?? null);
 const isAdmin = computed(() => authStore.user?.admin === true);
 const requesterPkid = computed(() => (isAdmin.value ? null : currentUserPkid.value));
 const hasFilters = computed(() =>
-    !!query.value || !!filterState.value || filterUser.value != null || filterEntitie.value != null
+    !!query.value || filterState.value.length > 0 || filterUser.value != null || filterEntitie.value != null
     || !!filterPriority.value || mineOnly.value || overdueOnly.value || archiveMode.value
 );
 const viewTitle = computed(() => view.value === 'kanban' ? 'Tablero Kanban' : view.value === 'gantt' ? 'Planificación Gantt' : view.value === 'calendar' ? 'Calendario de vencimientos' : 'Listado de tareas');
@@ -522,18 +525,10 @@ async function load(quiet = false) {
             overdue: overdueOnly.value || undefined,
             requesterPkid: requesterPkid.value
         };
-        if (filterState.value) {
-            const terminal = filterState.value === 'FINALIZADA' || filterState.value === 'DESCARTADA';
-            const res = await getTasksPage({
-                ...common,
-                state: filterState.value,
-                updatedSince: terminal && !archiveMode.value ? recentSince() : undefined,
-                size: 2000
-            });
-            if (generation !== loadGeneration) return;
-            tasks.value = res.items;
-            archiveTruncated.value = terminal && res.total > res.items.length ? res.total : null;
-        } else {
+        const selectedStates = filterState.value;
+        const openSelected = TASK_OPEN_STATES.filter((s) => selectedStates.includes(s));
+        const terminalSelected = selectedStates.filter((s) => s === 'FINALIZADA' || s === 'DESCARTADA');
+        if (selectedStates.length === 0) {
             const [open, done] = await Promise.all([
                 getTasksPage({ ...common, states: TASK_OPEN_STATES.join(','), size: 2000 }),
                 archiveMode.value
@@ -543,6 +538,34 @@ async function load(quiet = false) {
             if (generation !== loadGeneration) return;
             tasks.value = [...open.items, ...done.items];
             archiveTruncated.value = done.total > done.items.length ? done.total : null;
+        } else if (openSelected.length > 0 && terminalSelected.length > 0) {
+            const [open, done] = await Promise.all([
+                getTasksPage({ ...common, states: openSelected.join(','), size: 2000 }),
+                getTasksPage({
+                    ...common,
+                    states: terminalSelected.join(','),
+                    updatedSince: archiveMode.value ? undefined : recentSince(),
+                    size: archiveMode.value ? 2000 : 500
+                })
+            ]);
+            if (generation !== loadGeneration) return;
+            tasks.value = [...open.items, ...done.items];
+            archiveTruncated.value = done.total > done.items.length ? done.total : null;
+        } else if (terminalSelected.length > 0) {
+            const res = await getTasksPage({
+                ...common,
+                states: terminalSelected.join(','),
+                updatedSince: archiveMode.value ? undefined : recentSince(),
+                size: 2000
+            });
+            if (generation !== loadGeneration) return;
+            tasks.value = res.items;
+            archiveTruncated.value = res.total > res.items.length ? res.total : null;
+        } else {
+            const res = await getTasksPage({ ...common, states: openSelected.join(','), size: 2000 });
+            if (generation !== loadGeneration) return;
+            tasks.value = res.items;
+            archiveTruncated.value = null;
         }
     } catch (e: any) {
         if (!quiet) {
@@ -811,7 +834,7 @@ const initials = (name?: string) =>
 
 function clearFilters() {
     query.value = '';
-    filterState.value = null;
+    filterState.value = [];
     filterUser.value = null;
     filterEntitie.value = null;
     filterEntitieLabel.value = '';
@@ -924,7 +947,8 @@ function prefsSnapshot(): TaskBoardPrefs {
 function applyPrefs(p: TaskBoardPrefs | null) {
     if (!p) return;
     query.value = p.query ?? '';
-    filterState.value = p.filterState ?? null;
+    const savedStates = Array.isArray(p.filterState) ? p.filterState : p.filterState ? [p.filterState] : [];
+    filterState.value = TASK_STATES.filter((s) => savedStates.includes(s.value)).map((s) => s.value);
     filterUser.value = p.filterUser ?? null;
     filterEntitie.value = p.filterEntitie ?? null;
     filterEntitieLabel.value = p.filterEntitieLabel ?? '';
