@@ -388,16 +388,6 @@
             />
             Trazabilidad de materiales</label
           >
-          <FloatLabel variant="on" class="manufacturing-lead-time">
-            <InputNumber
-              id="manufacturingLeadDays"
-              v-model="product.manufacturingLeadDays"
-              :min="0"
-              :maxFractionDigits="0"
-              fluid
-            />
-            <label for="manufacturingLeadDays">Plazo estimado (días)</label>
-          </FloatLabel>
         </div>
         <small class="manufacturing-hint"
           ><i class="pi pi-info-circle"></i> Los procesos, fases y órdenes de
@@ -934,7 +924,6 @@ type Product = {
   manufacturingCertificateRequired: boolean;
   manufacturingQualityControl: boolean;
   manufacturingMaterialTraceability: boolean;
-  manufacturingLeadDays: number | null;
 };
 
 type PurchaseSupplier = {
@@ -1006,7 +995,6 @@ const createProduct = (): Product => ({
   manufacturingCertificateRequired: false,
   manufacturingQualityControl: false,
   manufacturingMaterialTraceability: false,
-  manufacturingLeadDays: null,
 });
 
 const product = ref<Product>(createProduct());
@@ -1700,9 +1688,6 @@ const handleImageSelected = (event: Event) => {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-}
-.manufacturing-lead-time {
-  max-width: 240px;
 }
 .manufacturing-hint {
   display: block;
