@@ -320,7 +320,89 @@
               <label for="purchase"> ¿ Para comprar ? </label>
             </div>
           </div>
+          <div class="col-12 md:col-3">
+            <div class="flex align-items-center gap-2">
+              <Checkbox
+                id="manufacturable"
+                v-model="product.manufacturable"
+                binary
+              />
+              <label for="manufacturable"> ¿ Fabricable ? </label>
+            </div>
+          </div>
+          <div class="col-12 md:col-3">
+            <FloatLabel variant="on">
+              <Select
+                id="supplyStrategy"
+                v-model="product.supplyStrategy"
+                :options="supplyStrategies"
+                optionLabel="label"
+                optionValue="value"
+                class="w-full"
+              />
+              <label for="supplyStrategy">Estrategia de suministro</label>
+            </FloatLabel>
+          </div>
         </div>
+      </Panel>
+
+      <Panel v-if="product.manufacturable" class="manufacturing-panel">
+        <template #header>
+          <div class="manufacturing-panel__header">
+            <div class="manufacturing-panel__icon">
+              <i class="pi pi-cog"></i>
+            </div>
+            <div>
+              <b>Parámetros de fabricación</b
+              ><small
+                >Características generales aplicables a cualquier producto
+                fabricado.</small
+              >
+            </div>
+          </div>
+        </template>
+        <div class="manufacturing-options">
+          <label
+            ><Checkbox v-model="product.manufacturingSerialNumber" binary />
+            Generar número de serie</label
+          >
+          <label
+            ><Checkbox v-model="product.manufacturingLotTracking" binary />
+            Control por lotes</label
+          >
+          <label
+            ><Checkbox
+              v-model="product.manufacturingCertificateRequired"
+              binary
+            />
+            Necesita certificado</label
+          >
+          <label
+            ><Checkbox v-model="product.manufacturingQualityControl" binary />
+            Control de calidad</label
+          >
+          <label
+            ><Checkbox
+              v-model="product.manufacturingMaterialTraceability"
+              binary
+            />
+            Trazabilidad de materiales</label
+          >
+          <FloatLabel variant="on" class="manufacturing-lead-time">
+            <InputNumber
+              id="manufacturingLeadDays"
+              v-model="product.manufacturingLeadDays"
+              :min="0"
+              :maxFractionDigits="0"
+              fluid
+            />
+            <label for="manufacturingLeadDays">Plazo estimado (días)</label>
+          </FloatLabel>
+        </div>
+        <small class="manufacturing-hint"
+          ><i class="pi pi-info-circle"></i> Los procesos, fases y órdenes de
+          fabricación se configurarán más adelante.</small
+        >
       </Panel>
 
       <!-- ========================================= -->
@@ -682,10 +764,13 @@
                     placeholder="Descripción utilizada por el proveedor"
                     maxlength="255"
                   />
-                  <InputText
-                    v-model="supplier.notes"
-                    placeholder="Observaciones internas"
-                    maxlength="1000"
+                  <Button
+                    :label="supplier.notes ? 'Notas' : 'Añadir nota'"
+                    :icon="supplier.notes ? 'pi pi-comment' : 'pi pi-plus'"
+                    severity="secondary"
+                    outlined
+                    size="small"
+                    @click="openSupplierNotes(supplier)"
                   />
                 </div>
               </div>
@@ -709,6 +794,35 @@
 
   <Frm_FamiliaProductos ref="familiaProductosRef" @saved="handleFamilySaved" />
   <Frm_SalexTaxForm ref="salesTaxFormRef" @saved="handleSalesTaxSaved" />
+  <Dialog
+    v-model:visible="supplierNotesVisible"
+    modal
+    header="Notas del proveedor"
+    :style="{ width: 'min(620px, 94vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="supplier-notes-dialog">
+      <span>{{ supplierNotesRow?.supplierName || "Proveedor" }}</span>
+      <Textarea
+        v-if="supplierNotesRow"
+        v-model="supplierNotesRow.notes"
+        rows="7"
+        maxlength="1000"
+        autoResize
+        fluid
+        placeholder="Observaciones internas sobre este proveedor y producto"
+      />
+      <small>{{ supplierNotesRow?.notes?.length || 0 }} / 1000</small>
+    </div>
+    <template #footer>
+      <div class="kiwik-separator"></div>
+      <Button
+        label="Cerrar"
+        icon="pi pi-check"
+        @click="supplierNotesVisible = false"
+      />
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -729,6 +843,7 @@ import FloatLabel from "primevue/floatlabel";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import InputNumber from "primevue/inputnumber";
+import Textarea from "primevue/textarea";
 import SupplierLookup from "@/components/shared/SupplierLookup.vue";
 
 import Tabs from "primevue/tabs";
@@ -812,6 +927,14 @@ type Product = {
   invoicingPolicyOverride: string | null;
 
   purchaseSuppliers: PurchaseSupplier[];
+  manufacturable: boolean;
+  supplyStrategy: "STANDARD" | "BUY" | "MAKE" | "SUBCONTRACT" | "MAKE_OR_BUY";
+  manufacturingSerialNumber: boolean;
+  manufacturingLotTracking: boolean;
+  manufacturingCertificateRequired: boolean;
+  manufacturingQualityControl: boolean;
+  manufacturingMaterialTraceability: boolean;
+  manufacturingLeadDays: number | null;
 };
 
 type PurchaseSupplier = {
@@ -876,13 +999,30 @@ const createProduct = (): Product => ({
   invoicingPolicyOverride: null,
 
   purchaseSuppliers: [],
+  manufacturable: false,
+  supplyStrategy: "STANDARD",
+  manufacturingSerialNumber: false,
+  manufacturingLotTracking: false,
+  manufacturingCertificateRequired: false,
+  manufacturingQualityControl: false,
+  manufacturingMaterialTraceability: false,
+  manufacturingLeadDays: null,
 });
 
 const product = ref<Product>(createProduct());
+const supplierNotesVisible = ref(false);
+const supplierNotesRow = ref<PurchaseSupplier | null>(null);
 const supplierStatuses = [
   { label: "Homologado", value: "APPROVED" },
   { label: "Provisional", value: "PROVISIONAL" },
   { label: "Bloqueado", value: "BLOCKED" },
+];
+const supplyStrategies = [
+  { label: "Producto estándar", value: "STANDARD" },
+  { label: "Compra directa", value: "BUY" },
+  { label: "Fabricación interna", value: "MAKE" },
+  { label: "Fabricación externa", value: "SUBCONTRACT" },
+  { label: "Fabricación o compra", value: "MAKE_OR_BUY" },
 ];
 const newPurchaseSupplier = (): PurchaseSupplier => ({
   rowKey: crypto.randomUUID(),
@@ -913,10 +1053,12 @@ const addPurchaseSupplier = () =>
   product.value.purchaseSuppliers.push(newPurchaseSupplier());
 const removePurchaseSupplier = (index: number) =>
   product.value.purchaseSuppliers.splice(index, 1);
+const openSupplierNotes = (supplier: PurchaseSupplier) => {
+  supplierNotesRow.value = supplier;
+  supplierNotesVisible.value = true;
+};
 const supplierLabel = (supplier: PurchaseSupplier) =>
-  supplier.supplierId
-    ? `${supplier.supplierCode ? `${supplier.supplierCode} — ` : ""}${supplier.supplierName}`
-    : "";
+  supplier.supplierId ? supplier.supplierName : "";
 const selectPurchaseSupplier = (row: PurchaseSupplier, supplier: any) => {
   const duplicate = product.value.purchaseSuppliers.some(
     (item) => item !== row && item.supplierId === supplier.pkid,
@@ -1215,6 +1357,40 @@ watch(
   },
 );
 
+watch(
+  () => product.value.supplyStrategy,
+  (strategy) => {
+    if (["MAKE", "SUBCONTRACT", "MAKE_OR_BUY"].includes(strategy))
+      product.value.manufacturable = true;
+    if (["SUBCONTRACT", "MAKE_OR_BUY"].includes(strategy))
+      product.value.purchase = true;
+  },
+);
+watch(
+  () => product.value.manufacturable,
+  (enabled) => {
+    if (
+      !enabled &&
+      ["MAKE", "SUBCONTRACT", "MAKE_OR_BUY"].includes(
+        product.value.supplyStrategy,
+      )
+    )
+      product.value.supplyStrategy = "STANDARD";
+  },
+);
+watch(
+  () => product.value.manufacturingSerialNumber,
+  (enabled) => {
+    if (enabled) product.value.manufacturingLotTracking = false;
+  },
+);
+watch(
+  () => product.value.manufacturingLotTracking,
+  (enabled) => {
+    if (enabled) product.value.manufacturingSerialNumber = false;
+  },
+);
+
 const emit = defineEmits<{
   saved: [];
 }>();
@@ -1462,10 +1638,7 @@ const handleImageSelected = (event: Event) => {
 }
 .supplier-notes {
   display: grid;
-  grid-template-columns: minmax(150px, 0.7fr) minmax(260px, 1.3fr) minmax(
-      260px,
-      1.3fr
-    );
+  grid-template-columns: minmax(150px, 0.45fr) minmax(360px, 1.55fr) auto;
   gap: 0.65rem;
   align-items: center;
   padding: 0.55rem 1rem;
@@ -1477,12 +1650,78 @@ const handleImageSelected = (event: Event) => {
   font-weight: 600;
   color: var(--text-color-secondary);
 }
+.supplier-notes-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.supplier-notes-dialog > span {
+  font-weight: 700;
+  color: var(--text-color);
+}
+.supplier-notes-dialog > small {
+  align-self: flex-end;
+  color: var(--text-color-secondary);
+}
+.manufacturing-panel {
+  margin: 0 0 20px;
+  border-left: 4px solid var(--primary-color);
+}
+.manufacturing-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.manufacturing-panel__header b,
+.manufacturing-panel__header small {
+  display: block;
+}
+.manufacturing-panel__header small {
+  margin-top: 0.15rem;
+  color: var(--text-color-secondary);
+  font-weight: 400;
+}
+.manufacturing-panel__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--primary-color);
+  background: var(--primary-100);
+}
+.manufacturing-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 1.1rem 1.5rem;
+  align-items: center;
+}
+.manufacturing-options > label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.manufacturing-lead-time {
+  max-width: 240px;
+}
+.manufacturing-hint {
+  display: block;
+  margin-top: 1rem;
+  color: var(--text-color-secondary);
+}
+.manufacturing-hint i {
+  margin-right: 0.35rem;
+  color: var(--primary-color);
+}
 @media (max-width: 900px) {
   .supplier-section__header {
     align-items: flex-start;
     flex-direction: column;
   }
   .supplier-notes {
+    grid-template-columns: 1fr;
+  }
+  .manufacturing-options {
     grid-template-columns: 1fr;
   }
 }
