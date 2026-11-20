@@ -320,17 +320,7 @@
               <label for="purchase"> ¿ Para comprar ? </label>
             </div>
           </div>
-          <div class="col-12 md:col-3">
-            <div class="flex align-items-center gap-2">
-              <Checkbox
-                id="manufacturable"
-                v-model="product.manufacturable"
-                binary
-              />
-              <label for="manufacturable"> ¿ Fabricable ? </label>
-            </div>
-          </div>
-          <div class="col-12 md:col-3">
+          <div class="col-12 md:col-4">
             <FloatLabel variant="on">
               <Select
                 id="supplyStrategy"
@@ -346,7 +336,7 @@
         </div>
       </Panel>
 
-      <Panel v-if="product.manufacturable" class="manufacturing-panel">
+      <Panel v-if="isManufacturingStrategy" class="manufacturing-panel">
         <template #header>
           <div class="manufacturing-panel__header">
             <div class="manufacturing-panel__icon">
@@ -917,7 +907,6 @@ type Product = {
   invoicingPolicyOverride: string | null;
 
   purchaseSuppliers: PurchaseSupplier[];
-  manufacturable: boolean;
   supplyStrategy: "STANDARD" | "BUY" | "MAKE" | "SUBCONTRACT" | "MAKE_OR_BUY";
   manufacturingSerialNumber: boolean;
   manufacturingLotTracking: boolean;
@@ -988,7 +977,6 @@ const createProduct = (): Product => ({
   invoicingPolicyOverride: null,
 
   purchaseSuppliers: [],
-  manufacturable: false,
   supplyStrategy: "STANDARD",
   manufacturingSerialNumber: false,
   manufacturingLotTracking: false,
@@ -1012,6 +1000,9 @@ const supplyStrategies = [
   { label: "Fabricación externa", value: "SUBCONTRACT" },
   { label: "Fabricación o compra", value: "MAKE_OR_BUY" },
 ];
+const isManufacturingStrategy = computed(() =>
+  ["MAKE", "SUBCONTRACT", "MAKE_OR_BUY"].includes(product.value.supplyStrategy),
+);
 const newPurchaseSupplier = (): PurchaseSupplier => ({
   rowKey: crypto.randomUUID(),
   id: null,
@@ -1348,22 +1339,8 @@ watch(
 watch(
   () => product.value.supplyStrategy,
   (strategy) => {
-    if (["MAKE", "SUBCONTRACT", "MAKE_OR_BUY"].includes(strategy))
-      product.value.manufacturable = true;
     if (["SUBCONTRACT", "MAKE_OR_BUY"].includes(strategy))
       product.value.purchase = true;
-  },
-);
-watch(
-  () => product.value.manufacturable,
-  (enabled) => {
-    if (
-      !enabled &&
-      ["MAKE", "SUBCONTRACT", "MAKE_OR_BUY"].includes(
-        product.value.supplyStrategy,
-      )
-    )
-      product.value.supplyStrategy = "STANDARD";
   },
 );
 watch(
