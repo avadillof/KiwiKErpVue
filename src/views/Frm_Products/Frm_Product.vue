@@ -350,7 +350,7 @@
               <Select
                 id="supplyStrategy"
                 v-model="product.supplyStrategy"
-                :options="supplyStrategies"
+                :options="availableSupplyStrategies"
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
@@ -1469,8 +1469,9 @@ const supplyStrategies = [
   { label: "Fabricación externa", value: "SUBCONTRACT" },
   { label: "Fabricación o compra", value: "MAKE_OR_BUY" },
 ];
+const manufacturingStrategyValues = ["MAKE", "SUBCONTRACT", "MAKE_OR_BUY"];
 const isManufacturingStrategy = computed(() =>
-  ["MAKE", "SUBCONTRACT", "MAKE_OR_BUY"].includes(product.value.supplyStrategy),
+  manufacturingStrategyValues.includes(product.value.supplyStrategy),
 );
 const newPurchaseSupplier = (): PurchaseSupplier => ({
   rowKey: crypto.randomUUID(),
@@ -1874,6 +1875,48 @@ const selectedTechnicalClass = computed(
     productTechnicalClasses.value.find(
       (item) => item.pkid === product.value.technicalClassId,
     ) ?? null,
+);
+
+const hasSpecializedTechnicalClass = computed(
+  () =>
+    !!selectedTechnicalClass.value &&
+    selectedTechnicalClass.value.code !== "PRODUCT",
+);
+
+const availableSupplyStrategies = computed(() =>
+  hasSpecializedTechnicalClass.value
+    ? supplyStrategies
+    : supplyStrategies.filter((item) =>
+        ["STANDARD", "BUY"].includes(item.value),
+      ),
+);
+
+const resetManufacturingConfiguration = () => {
+  product.value.manufacturingSerialNumber = false;
+  product.value.manufacturingLotTracking = false;
+  product.value.manufacturingCertificateRequired = false;
+  product.value.manufacturingQualityControl = false;
+  product.value.manufacturingMaterialTraceability = false;
+};
+
+watch(
+  () => product.value.technicalClassId,
+  () => {
+    if (
+      !hasSpecializedTechnicalClass.value &&
+      manufacturingStrategyValues.includes(product.value.supplyStrategy)
+    ) {
+      product.value.supplyStrategy = "STANDARD";
+      resetManufacturingConfiguration();
+      toast.add({
+        severity: "info",
+        summary: "Estrategia ajustada",
+        detail:
+          "Selecciona una clase técnica especializada para fabricar el producto.",
+        life: companyStore.companyInfo.toastDuration ?? 3000,
+      });
+    }
+  },
 );
 
 const technicalClassAncestorIds = computed(() => {
