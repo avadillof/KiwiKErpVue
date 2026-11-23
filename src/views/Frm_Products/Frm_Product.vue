@@ -254,9 +254,9 @@
               </div>
 
               <!-- CLASE TÉCNICA -->
-              <div class="col-12 md:col-3">
-                <InputGroup>
-                  <FloatLabel variant="on" class="w-full">
+              <div class="col-12 md:col-4">
+                <InputGroup class="technical-class-input-group">
+                  <FloatLabel variant="on" class="technical-class-select">
                     <Select
                       id="technicalClass"
                       v-model="product.technicalClassId"
@@ -272,21 +272,25 @@
                     v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
                     icon="pi pi-cog"
                     severity="secondary"
+                    class="technical-class-action"
                     title="Mantener clases de producto"
+                    aria-label="Mantener clases de producto"
                     @click="openTechnicalClassMaintenance"
                   />
                   <Button
                     v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
                     icon="pi pi-plus"
                     severity="secondary"
+                    class="technical-class-action"
                     title="Crear clase de producto"
+                    aria-label="Crear clase de producto"
                     @click="openNewTechnicalClass"
                   />
                 </InputGroup>
               </div>
 
               <!-- FAMILIA -->
-              <div class="col-12 md:col-3">
+              <div class="col-12 md:col-2">
                 <InputGroup>
                   <FloatLabel variant="on" class="w-full">
                     <Select
@@ -434,24 +438,29 @@
                 <small>{{ selectedTechnicalClass?.path || "Producto" }}</small>
               </div>
             </div>
-            <Button
-              label="Copiar características"
-              icon="pi pi-copy"
-              severity="secondary"
-              outlined
-              size="small"
-              :disabled="!applicableTechnicalAttributes.length"
-              @click="openTechnicalCopyDialog"
-            />
-            <Button
-              v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
-              label="Configurar atributos"
-              icon="pi pi-cog"
-              severity="secondary"
-              outlined
-              size="small"
-              @click="openTechnicalAttributesDialog"
-            />
+            <div class="technical-attributes-actions">
+              <Button
+                label="Copiar"
+                icon="pi pi-copy"
+                severity="secondary"
+                text
+                size="small"
+                :disabled="!applicableTechnicalAttributes.length"
+                title="Copiar características desde otro producto"
+                @click="openTechnicalCopyDialog"
+              />
+              <span class="technical-attributes-actions__divider"></span>
+              <Button
+                v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
+                label="Configurar"
+                icon="pi pi-cog"
+                severity="secondary"
+                text
+                size="small"
+                title="Configurar los atributos de esta clase"
+                @click="openTechnicalAttributesDialog"
+              />
+            </div>
           </div>
         </template>
 
@@ -2777,6 +2786,29 @@ const handleImageSelected = (event: Event) => {
   gap: 1.1rem;
   padding-top: 0.35rem;
 }
+.technical-class-input-group {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+.technical-class-select {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+.technical-class-select :deep(.p-select),
+.technical-class-select :deep(.p-select-label) {
+  min-width: 0;
+}
+.technical-class-select :deep(.p-select-label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.technical-class-action {
+  flex: 0 0 42px;
+  width: 42px;
+}
 .technical-class-maintenance-header {
   display: flex;
   align-items: center;
@@ -2876,6 +2908,7 @@ const handleImageSelected = (event: Event) => {
 .technical-attributes-panel {
   margin: 0 0 20px;
   border-left: 4px solid #2e69d1;
+  background: linear-gradient(90deg, #f8fbff 0, var(--surface-0) 22%);
 }
 .technical-attributes-header,
 .technical-attributes-editor-intro {
@@ -2887,6 +2920,22 @@ const handleImageSelected = (event: Event) => {
 }
 .technical-attributes-editor-intro {
   margin-bottom: 1rem;
+}
+.technical-attributes-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.2rem 0.3rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 9px;
+  background: var(--surface-0);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+}
+.technical-attributes-actions__divider {
+  width: 1px;
+  height: 22px;
+  background: var(--surface-border);
 }
 .technical-attributes-editor-intro b,
 .technical-attributes-editor-intro small {
@@ -2982,6 +3031,10 @@ const handleImageSelected = (event: Event) => {
   .technical-attributes-editor-intro {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .technical-attributes-actions {
+    align-self: stretch;
+    justify-content: flex-end;
   }
 }
 </style>
