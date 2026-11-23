@@ -410,6 +410,118 @@
         >
       </Panel>
 
+      <Panel v-if="product.technicalClassId" class="technical-attributes-panel">
+        <template #header>
+          <div class="technical-attributes-header">
+            <div class="manufacturing-panel__header">
+              <div class="manufacturing-panel__icon">
+                <i class="pi pi-sliders-h"></i>
+              </div>
+              <div>
+                <b>Características técnicas</b>
+                <small>{{ selectedTechnicalClass?.path || "Producto" }}</small>
+              </div>
+            </div>
+            <Button
+              v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
+              label="Configurar atributos"
+              icon="pi pi-cog"
+              severity="secondary"
+              outlined
+              size="small"
+              @click="openTechnicalAttributesDialog"
+            />
+          </div>
+        </template>
+
+        <div
+          v-if="applicableTechnicalAttributes.length"
+          class="technical-attributes-grid"
+        >
+          <div
+            v-for="attribute in applicableTechnicalAttributes"
+            :key="attribute.pkid"
+            class="technical-attribute-field"
+          >
+            <FloatLabel v-if="attribute.dataType === 'TEXT'" variant="on">
+              <InputText
+                :id="`technical-${attribute.pkid}`"
+                :modelValue="technicalValue(attribute.pkid)"
+                class="w-full"
+                @update:modelValue="setTechnicalValue(attribute.pkid, $event)"
+              />
+              <label :for="`technical-${attribute.pkid}`">{{
+                technicalAttributeLabel(attribute)
+              }}</label>
+            </FloatLabel>
+            <FloatLabel
+              v-else-if="attribute.dataType === 'NUMBER'"
+              variant="on"
+            >
+              <InputNumber
+                :inputId="`technical-${attribute.pkid}`"
+                :modelValue="technicalNumberValue(attribute.pkid)"
+                class="w-full"
+                :suffix="attribute.unit ? ` ${attribute.unit}` : undefined"
+                :maxFractionDigits="6"
+                @update:modelValue="setTechnicalValue(attribute.pkid, $event)"
+              />
+              <label :for="`technical-${attribute.pkid}`">{{
+                technicalAttributeLabel(attribute, false)
+              }}</label>
+            </FloatLabel>
+            <FloatLabel v-else-if="attribute.dataType === 'DATE'" variant="on">
+              <DatePicker
+                :inputId="`technical-${attribute.pkid}`"
+                :modelValue="technicalDateValue(attribute.pkid)"
+                dateFormat="dd/mm/yy"
+                showIcon
+                class="w-full"
+                @update:modelValue="
+                  setTechnicalDateValue(attribute.pkid, $event)
+                "
+              />
+              <label :for="`technical-${attribute.pkid}`">{{
+                technicalAttributeLabel(attribute)
+              }}</label>
+            </FloatLabel>
+            <FloatLabel v-else-if="attribute.dataType === 'LIST'" variant="on">
+              <Select
+                :id="`technical-${attribute.pkid}`"
+                :modelValue="technicalValue(attribute.pkid) || null"
+                :options="technicalAttributeOptions(attribute)"
+                class="w-full"
+                filter
+                showClear
+                @update:modelValue="setTechnicalValue(attribute.pkid, $event)"
+              />
+              <label :for="`technical-${attribute.pkid}`">{{
+                technicalAttributeLabel(attribute)
+              }}</label>
+            </FloatLabel>
+            <FloatLabel v-else variant="on">
+              <Select
+                :id="`technical-${attribute.pkid}`"
+                :modelValue="technicalValue(attribute.pkid) || null"
+                :options="technicalBooleanOptions"
+                optionLabel="label"
+                optionValue="value"
+                showClear
+                class="w-full"
+                @update:modelValue="setTechnicalValue(attribute.pkid, $event)"
+              />
+              <label :for="`technical-${attribute.pkid}`">{{
+                technicalAttributeLabel(attribute)
+              }}</label>
+            </FloatLabel>
+          </div>
+        </div>
+        <div v-else class="technical-attributes-empty">
+          <i class="pi pi-info-circle"></i>
+          Esta clase todavía no tiene características técnicas configuradas.
+        </div>
+      </Panel>
+
       <!-- ========================================= -->
       <!-- TABS                                      -->
       <!-- ========================================= -->
@@ -860,14 +972,154 @@
         <label for="technicalClassParent"> Clase superior *</label>
       </FloatLabel>
       <small>
-        Ejemplo: al crear “Válvula” bajo “Producto”, se mostrará como
-        “Producto / Válvula”.
+        Ejemplo: al crear “Válvula” bajo “Producto”, se mostrará como “Producto
+        / Válvula”.
       </small>
     </div>
     <template #footer>
       <div class="kiwik-separator"></div>
-      <Button label="Cancelar" text @click="technicalClassDialogVisible = false" />
-      <Button label="Crear y seleccionar" icon="pi pi-check" @click="saveTechnicalClass" />
+      <Button
+        label="Cancelar"
+        text
+        @click="technicalClassDialogVisible = false"
+      />
+      <Button
+        label="Crear y seleccionar"
+        icon="pi pi-check"
+        @click="saveTechnicalClass"
+      />
+    </template>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="technicalAttributesDialogVisible"
+    modal
+    :header="`Atributos de ${selectedTechnicalClass?.path || 'la clase'}`"
+    :style="{ width: 'min(1400px, 97vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="technical-attributes-editor-intro">
+      <div>
+        <b>Atributos definidos directamente en esta clase</b>
+        <small
+          >Los atributos heredados se administran desde su clase de
+          origen.</small
+        >
+      </div>
+      <Button
+        label="Añadir atributo"
+        icon="pi pi-plus"
+        size="small"
+        @click="addTechnicalAttribute"
+      />
+    </div>
+    <InlineMessage
+      v-if="inheritedTechnicalAttributes.length"
+      severity="info"
+      class="w-full mb-3"
+    >
+      Esta clase recibe {{ inheritedTechnicalAttributes.length }} atributo(s)
+      heredado(s):
+      {{ inheritedTechnicalAttributes.map((item) => item.name).join(", ") }}.
+    </InlineMessage>
+    <DataTable
+      :value="technicalAttributeDrafts"
+      dataKey="rowKey"
+      stripedRows
+      scrollable
+      scrollHeight="52vh"
+      class="technical-attributes-editor"
+    >
+      <Column header="Código" style="min-width: 135px">
+        <template #body="{ data }"
+          ><InputText
+            v-model="data.code"
+            maxlength="50"
+            class="w-full"
+            placeholder="Automático"
+        /></template>
+      </Column>
+      <Column header="Nombre *" style="min-width: 190px">
+        <template #body="{ data }"
+          ><InputText v-model="data.name" maxlength="145" class="w-full"
+        /></template>
+      </Column>
+      <Column header="Tipo *" style="min-width: 145px">
+        <template #body="{ data }"
+          ><Select
+            v-model="data.dataType"
+            :options="technicalAttributeTypes"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+        /></template>
+      </Column>
+      <Column header="Unidad" style="min-width: 105px">
+        <template #body="{ data }"
+          ><InputText
+            v-model="data.unit"
+            maxlength="30"
+            class="w-full"
+            placeholder="mm, bar..."
+        /></template>
+      </Column>
+      <Column header="Valores permitidos" style="min-width: 230px">
+        <template #body="{ data }"
+          ><InputText
+            v-model="data.options"
+            :disabled="data.dataType !== 'LIST'"
+            class="w-full"
+            placeholder="Valor 1 | Valor 2"
+        /></template>
+      </Column>
+      <Column header="Orden" style="width: 95px">
+        <template #body="{ data }"
+          ><InputNumber
+            v-model="data.sortOrder"
+            :min="0"
+            :max="9999"
+            :useGrouping="false"
+            class="w-full"
+        /></template>
+      </Column>
+      <Column header="Obligatorio" style="width: 105px" bodyClass="text-center">
+        <template #body="{ data }"
+          ><Checkbox v-model="data.required" binary
+        /></template>
+      </Column>
+      <Column header="Heredable" style="width: 100px" bodyClass="text-center">
+        <template #body="{ data }"
+          ><Checkbox v-model="data.inheritable" binary
+        /></template>
+      </Column>
+      <Column style="width: 55px">
+        <template #body="{ index }"
+          ><Button
+            icon="pi pi-trash"
+            severity="danger"
+            text
+            rounded
+            @click="removeTechnicalAttribute(index)"
+        /></template>
+      </Column>
+      <template #empty
+        ><div class="p-4 text-center text-color-secondary">
+          Añade el primer atributo técnico de esta clase.
+        </div></template
+      >
+    </DataTable>
+    <template #footer>
+      <div class="kiwik-separator"></div>
+      <Button
+        label="Cancelar"
+        text
+        @click="technicalAttributesDialogVisible = false"
+      />
+      <Button
+        label="Guardar atributos"
+        icon="pi pi-check"
+        @click="saveTechnicalAttributes"
+      />
     </template>
   </Dialog>
 </template>
@@ -925,12 +1177,38 @@ const units = ref<any[]>([]);
 const productCategories = ref<any[]>([]);
 const productCategoryTypes = ref<any[]>([]);
 const productTechnicalClasses = ref<any[]>([]);
+const productTechnicalAttributes = ref<TechnicalAttribute[]>([]);
 const salesTaxFormMode = ref<"sale" | "purchase" | null>(null);
 const technicalClassDialogVisible = ref(false);
 const newTechnicalClass = ref<{ name: string; parentId: number | null }>({
   name: "",
   parentId: null,
 });
+const technicalAttributesDialogVisible = ref(false);
+const technicalAttributeDrafts = ref<TechnicalAttributeDraft[]>([]);
+
+type TechnicalAttribute = {
+  pkid: number;
+  classId: number;
+  code: string;
+  name: string;
+  dataType: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "LIST";
+  unit: string | null;
+  required: boolean;
+  inheritable: boolean;
+  options: string | null;
+  sortOrder: number;
+};
+
+type TechnicalAttributeDraft = Omit<TechnicalAttribute, "pkid"> & {
+  pkid: number | null;
+  rowKey: string;
+};
+
+type TechnicalAttributeValue = {
+  attributeId: number;
+  value: string;
+};
 
 type Product = {
   pkid: number | null;
@@ -976,6 +1254,8 @@ type Product = {
   productCategoryId: number | null;
 
   technicalClassId: number | null;
+
+  technicalAttributeValues: TechnicalAttributeValue[];
 
   requireDeliveryOverride: boolean | null;
 
@@ -1048,6 +1328,8 @@ const createProduct = (): Product => ({
   productCategoryId: null,
 
   technicalClassId: null,
+
+  technicalAttributeValues: [],
 
   requireDeliveryOverride: null,
 
@@ -1334,6 +1616,7 @@ const loadCatalogs = async () => {
     productCategories.value = data.productCategories || [];
     productCategoryTypes.value = data.productCategoryTypes || [];
     productTechnicalClasses.value = data.productTechnicalClasses || [];
+    productTechnicalAttributes.value = data.productTechnicalAttributes || [];
     if (!product.value.technicalClassId) {
       product.value.technicalClassId =
         productTechnicalClasses.value.find((item) => item.code === "PRODUCT")
@@ -1354,6 +1637,19 @@ const loadCatalogs = async () => {
 const save = async () => {
   if (!(await validate())) return;
 
+  const missingTechnical = applicableTechnicalAttributes.value.find(
+    (attribute) => attribute.required && !technicalValue(attribute.pkid).trim(),
+  );
+  if (missingTechnical) {
+    toast.add({
+      severity: "warn",
+      summary: "Característica obligatoria",
+      detail: `Indica un valor para ${missingTechnical.name}.`,
+      life: 4000,
+    });
+    return;
+  }
+
   if (product.value.purchaseSuppliers.some((item) => !item.supplierId)) {
     toast.add({
       severity: "warn",
@@ -1365,7 +1661,15 @@ const save = async () => {
   }
 
   try {
-    await axios.post(backendUrl(`/WebSaveProduct`), product.value);
+    const applicableIds = new Set(
+      applicableTechnicalAttributes.value.map((item) => item.pkid),
+    );
+    await axios.post(backendUrl(`/WebSaveProduct`), {
+      ...product.value,
+      technicalAttributeValues: product.value.technicalAttributeValues.filter(
+        (item) => applicableIds.has(item.attributeId),
+      ),
+    });
 
     toast.add({
       severity: "success",
@@ -1452,6 +1756,111 @@ const filteredProductCategoryTypes = computed(() => {
     (type) => type.categoryId === product.value.productCategoryId,
   );
 });
+
+const selectedTechnicalClass = computed(
+  () =>
+    productTechnicalClasses.value.find(
+      (item) => item.pkid === product.value.technicalClassId,
+    ) ?? null,
+);
+
+const technicalClassAncestorIds = computed(() => {
+  const ids: number[] = [];
+  let current = selectedTechnicalClass.value;
+  while (current && ids.length < 20) {
+    ids.push(current.pkid);
+    current = productTechnicalClasses.value.find(
+      (item) => item.pkid === current.parentId,
+    );
+  }
+  return ids;
+});
+
+const applicableTechnicalAttributes = computed(() => {
+  const selectedId = product.value.technicalClassId;
+  const ancestorIds = technicalClassAncestorIds.value;
+  return productTechnicalAttributes.value
+    .filter(
+      (attribute) =>
+        attribute.classId === selectedId ||
+        (ancestorIds.includes(attribute.classId) && attribute.inheritable),
+    )
+    .sort(
+      (a, b) =>
+        (a.sortOrder || 0) - (b.sortOrder || 0) ||
+        a.name.localeCompare(b.name, "es"),
+    );
+});
+
+const inheritedTechnicalAttributes = computed(() =>
+  applicableTechnicalAttributes.value.filter(
+    (attribute) => attribute.classId !== product.value.technicalClassId,
+  ),
+);
+
+const technicalAttributeTypes = [
+  { label: "Texto", value: "TEXT" },
+  { label: "Número", value: "NUMBER" },
+  { label: "Sí / No", value: "BOOLEAN" },
+  { label: "Fecha", value: "DATE" },
+  { label: "Lista", value: "LIST" },
+];
+const technicalBooleanOptions = [
+  { label: "Sí", value: "true" },
+  { label: "No", value: "false" },
+];
+
+const technicalValue = (attributeId: number) =>
+  product.value.technicalAttributeValues.find(
+    (item) => item.attributeId === attributeId,
+  )?.value ?? "";
+
+const setTechnicalValue = (attributeId: number, value: unknown) => {
+  const normalized = value === null || value === undefined ? "" : String(value);
+  const existing = product.value.technicalAttributeValues.find(
+    (item) => item.attributeId === attributeId,
+  );
+  if (existing) existing.value = normalized;
+  else
+    product.value.technicalAttributeValues.push({
+      attributeId,
+      value: normalized,
+    });
+};
+
+const technicalNumberValue = (attributeId: number) => {
+  const value = technicalValue(attributeId);
+  return value === "" ? null : Number(value);
+};
+
+const technicalDateValue = (attributeId: number) => {
+  const value = technicalValue(attributeId);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const setTechnicalDateValue = (attributeId: number, value: unknown) => {
+  if (!(value instanceof Date)) return setTechnicalValue(attributeId, "");
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  setTechnicalValue(attributeId, `${year}-${month}-${day}`);
+};
+
+const technicalAttributeOptions = (attribute: TechnicalAttribute) =>
+  (attribute.options || "")
+    .split(/[\n|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const technicalAttributeLabel = (
+  attribute: TechnicalAttribute,
+  includeUnit = true,
+) =>
+  `${attribute.name}${includeUnit && attribute.unit ? ` (${attribute.unit})` : ""}${
+    attribute.required ? " *" : ""
+  }`;
 
 const invoicingPolicies = [
   { label: "Por cantidades pedidas", value: "ORDERED" },
@@ -1553,7 +1962,10 @@ const openNewTechnicalClass = () => {
 };
 
 const saveTechnicalClass = async () => {
-  if (!newTechnicalClass.value.name.trim() || !newTechnicalClass.value.parentId) {
+  if (
+    !newTechnicalClass.value.name.trim() ||
+    !newTechnicalClass.value.parentId
+  ) {
     toast.add({
       severity: "warn",
       summary: "Datos incompletos",
@@ -1578,6 +1990,91 @@ const saveTechnicalClass = async () => {
       severity: "error",
       summary: "No se pudo crear la clase",
       detail: error?.response?.data || "Revisa los datos e inténtalo de nuevo.",
+      life: 4500,
+    });
+  }
+};
+
+const openTechnicalAttributesDialog = () => {
+  technicalAttributeDrafts.value = productTechnicalAttributes.value
+    .filter((item) => item.classId === product.value.technicalClassId)
+    .map((item) => ({
+      ...item,
+      rowKey: `attribute-${item.pkid}`,
+      unit: item.unit || "",
+      options: item.options || "",
+    }));
+  technicalAttributesDialogVisible.value = true;
+};
+
+const addTechnicalAttribute = () => {
+  technicalAttributeDrafts.value.push({
+    rowKey: crypto.randomUUID(),
+    pkid: null,
+    classId: product.value.technicalClassId!,
+    code: "",
+    name: "",
+    dataType: "TEXT",
+    unit: "",
+    required: false,
+    inheritable: true,
+    options: "",
+    sortOrder: (technicalAttributeDrafts.value.length + 1) * 10,
+  });
+};
+
+const removeTechnicalAttribute = (index: number) =>
+  technicalAttributeDrafts.value.splice(index, 1);
+
+const saveTechnicalAttributes = async () => {
+  const invalid = technicalAttributeDrafts.value.find(
+    (item) =>
+      !item.name.trim() ||
+      !item.dataType ||
+      (item.dataType === "LIST" && !item.options?.trim()),
+  );
+  if (invalid) {
+    toast.add({
+      severity: "warn",
+      summary: "Atributo incompleto",
+      detail:
+        invalid.dataType === "LIST" && !invalid.options?.trim()
+          ? `Define los valores permitidos de ${invalid.name || "la lista"}.`
+          : "Todos los atributos necesitan nombre y tipo.",
+      life: 4000,
+    });
+    return;
+  }
+  try {
+    const classId = product.value.technicalClassId!;
+    const { data } = await axios.post(
+      backendUrl(`/WebSaveProductTechnicalAttributes/${classId}`),
+      technicalAttributeDrafts.value,
+    );
+    productTechnicalAttributes.value = [
+      ...productTechnicalAttributes.value.filter(
+        (item) => item.classId !== classId,
+      ),
+      ...data,
+    ];
+    const applicableIds = new Set(
+      applicableTechnicalAttributes.value.map((item) => item.pkid),
+    );
+    product.value.technicalAttributeValues =
+      product.value.technicalAttributeValues.filter((item) =>
+        applicableIds.has(item.attributeId),
+      );
+    technicalAttributesDialogVisible.value = false;
+    toast.add({
+      severity: "success",
+      summary: "Atributos actualizados",
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.add({
+      severity: "error",
+      summary: "No se pudieron guardar los atributos",
+      detail: error?.response?.data || "Revisa la configuración.",
       life: 4500,
     });
   }
@@ -1763,6 +2260,50 @@ const handleImageSelected = (event: Event) => {
   color: var(--text-color-secondary);
   line-height: 1.45;
 }
+.technical-attributes-panel {
+  margin: 0 0 20px;
+  border-left: 4px solid #2e69d1;
+}
+.technical-attributes-header,
+.technical-attributes-editor-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+.technical-attributes-editor-intro {
+  margin-bottom: 1rem;
+}
+.technical-attributes-editor-intro b,
+.technical-attributes-editor-intro small {
+  display: block;
+}
+.technical-attributes-editor-intro small {
+  margin-top: 0.2rem;
+  color: var(--text-color-secondary);
+}
+.technical-attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 1.15rem;
+  padding-top: 0.25rem;
+}
+.technical-attribute-field {
+  min-width: 0;
+}
+.technical-attributes-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text-color-secondary);
+}
+.technical-attributes-empty i {
+  color: #2e69d1;
+}
+.technical-attributes-editor {
+  font-size: 0.86rem;
+}
 .manufacturing-panel {
   margin: 0 0 20px;
   border-left: 4px solid var(--primary-color);
@@ -1820,6 +2361,14 @@ const handleImageSelected = (event: Event) => {
   }
   .manufacturing-options {
     grid-template-columns: 1fr;
+  }
+  .technical-attributes-grid {
+    grid-template-columns: 1fr;
+  }
+  .technical-attributes-header,
+  .technical-attributes-editor-intro {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>
