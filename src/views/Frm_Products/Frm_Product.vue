@@ -270,6 +270,13 @@
                   </FloatLabel>
                   <Button
                     v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
+                    icon="pi pi-cog"
+                    severity="secondary"
+                    title="Mantener clases de producto"
+                    @click="openTechnicalClassMaintenance"
+                  />
+                  <Button
+                    v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
                     icon="pi pi-plus"
                     severity="secondary"
                     title="Crear clase de producto"
@@ -1036,9 +1043,107 @@
   </Dialog>
 
   <Dialog
+    v-model:visible="technicalClassMaintenanceVisible"
+    modal
+    header="Clases de producto"
+    :style="{ width: 'min(1100px, 96vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="technical-class-maintenance-header">
+      <div>
+        <b>Estructura de clases técnicas</b>
+        <small
+          >Las clases utilizadas se conservan para proteger el histórico.</small
+        >
+      </div>
+      <Button
+        label="Nueva clase"
+        icon="pi pi-plus"
+        size="small"
+        @click="openNewTechnicalClass"
+      />
+    </div>
+    <DataTable
+      :value="technicalClassMaintenance"
+      dataKey="pkid"
+      stripedRows
+      scrollable
+      scrollHeight="55vh"
+    >
+      <Column field="path" header="Clase" style="min-width: 280px" />
+      <Column
+        field="productCount"
+        header="Productos"
+        style="width: 105px"
+        bodyClass="text-right"
+      />
+      <Column
+        field="attributeCount"
+        header="Atributos"
+        style="width: 105px"
+        bodyClass="text-right"
+      />
+      <Column
+        field="childCount"
+        header="Hijas"
+        style="width: 85px"
+        bodyClass="text-right"
+      />
+      <Column header="Estado" style="width: 110px">
+        <template #body="{ data }">
+          <span
+            :class="[
+              'technical-class-status',
+              data.active ? 'is-active' : 'is-inactive',
+            ]"
+          >
+            {{ data.active ? "Activa" : "Inactiva" }}
+          </span>
+        </template>
+      </Column>
+      <Column header="Acciones" style="width: 150px">
+        <template #body="{ data }">
+          <div class="flex gap-1">
+            <Button
+              icon="pi pi-pencil"
+              text
+              rounded
+              severity="secondary"
+              :disabled="data.code === 'PRODUCT'"
+              title="Editar"
+              @click="openEditTechnicalClass(data)"
+            />
+            <Button
+              :icon="data.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
+              text
+              rounded
+              :severity="data.active ? 'danger' : 'success'"
+              :disabled="data.code === 'PRODUCT'"
+              :title="data.active ? 'Desactivar' : 'Activar'"
+              @click="toggleTechnicalClass(data)"
+            />
+          </div>
+        </template>
+      </Column>
+    </DataTable>
+    <template #footer>
+      <div class="kiwik-separator"></div>
+      <Button
+        label="Cerrar"
+        icon="pi pi-times"
+        @click="technicalClassMaintenanceVisible = false"
+      />
+    </template>
+  </Dialog>
+
+  <Dialog
     v-model:visible="technicalClassDialogVisible"
     modal
-    header="Nueva clase de producto"
+    :header="
+      newTechnicalClass.pkid
+        ? 'Editar clase de producto'
+        : 'Nueva clase de producto'
+    "
     :style="{ width: 'min(560px, 94vw)' }"
     class="kiwik-dialog"
   >
@@ -1078,7 +1183,9 @@
         @click="technicalClassDialogVisible = false"
       />
       <Button
-        label="Crear y seleccionar"
+        :label="
+          newTechnicalClass.pkid ? 'Guardar cambios' : 'Crear y seleccionar'
+        "
         icon="pi pi-check"
         @click="saveTechnicalClass"
       />
@@ -1275,7 +1382,14 @@ const productTechnicalClasses = ref<any[]>([]);
 const productTechnicalAttributes = ref<TechnicalAttribute[]>([]);
 const salesTaxFormMode = ref<"sale" | "purchase" | null>(null);
 const technicalClassDialogVisible = ref(false);
-const newTechnicalClass = ref<{ name: string; parentId: number | null }>({
+const technicalClassMaintenanceVisible = ref(false);
+const technicalClassMaintenance = ref<any[]>([]);
+const newTechnicalClass = ref<{
+  pkid: number | null;
+  name: string;
+  parentId: number | null;
+}>({
+  pkid: null,
   name: "",
   parentId: null,
 });
@@ -2212,6 +2326,7 @@ const handleFamilySaved = (family: {
 
 const openNewTechnicalClass = () => {
   newTechnicalClass.value = {
+    pkid: null,
     name: "",
     parentId:
       product.value.technicalClassId ??
@@ -2220,6 +2335,66 @@ const openNewTechnicalClass = () => {
       null,
   };
   technicalClassDialogVisible.value = true;
+};
+
+const loadTechnicalClassMaintenance = async () => {
+  const { data } = await axios.get(
+    backendUrl("/WebGetProductTechnicalClassMaintenance"),
+  );
+  technicalClassMaintenance.value = data || [];
+};
+
+const openTechnicalClassMaintenance = async () => {
+  try {
+    await loadTechnicalClassMaintenance();
+    technicalClassMaintenanceVisible.value = true;
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudieron cargar las clases de producto.",
+      life: 3500,
+    });
+  }
+};
+
+const openEditTechnicalClass = (technicalClass: any) => {
+  newTechnicalClass.value = {
+    pkid: technicalClass.pkid,
+    name: technicalClass.name,
+    parentId: technicalClass.parentId,
+  };
+  technicalClassDialogVisible.value = true;
+};
+
+const toggleTechnicalClass = async (technicalClass: any) => {
+  try {
+    await axios.post(
+      backendUrl(`/WebToggleProductTechnicalClass/${technicalClass.pkid}`),
+    );
+    if (
+      technicalClass.active &&
+      product.value.technicalClassId === technicalClass.pkid
+    ) {
+      product.value.technicalClassId =
+        productTechnicalClasses.value.find((item) => item.code === "PRODUCT")
+          ?.pkid ?? null;
+    }
+    await loadCatalogs();
+    await loadTechnicalClassMaintenance();
+    toast.add({
+      severity: "success",
+      summary: technicalClass.active ? "Clase desactivada" : "Clase activada",
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.add({
+      severity: "warn",
+      summary: "No se pudo cambiar el estado",
+      detail: error.response?.data || "La clase tiene dependencias.",
+      life: 4500,
+    });
+  }
 };
 
 const saveTechnicalClass = async () => {
@@ -2240,11 +2415,11 @@ const saveTechnicalClass = async () => {
       backendUrl("/WebSaveProductTechnicalClass"),
       newTechnicalClass.value,
     );
-    productTechnicalClasses.value.push(data);
-    productTechnicalClasses.value.sort((a, b) =>
-      a.path.localeCompare(b.path, "es"),
-    );
-    product.value.technicalClassId = data.pkid;
+    await loadCatalogs();
+    if (!newTechnicalClass.value.pkid)
+      product.value.technicalClassId = data.pkid;
+    if (technicalClassMaintenanceVisible.value)
+      await loadTechnicalClassMaintenance();
     technicalClassDialogVisible.value = false;
   } catch (error: any) {
     toast.add({
@@ -2516,6 +2691,36 @@ const handleImageSelected = (event: Event) => {
   display: grid;
   gap: 1.1rem;
   padding-top: 0.35rem;
+}
+.technical-class-maintenance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.technical-class-maintenance-header b,
+.technical-class-maintenance-header small {
+  display: block;
+}
+.technical-class-maintenance-header small {
+  margin-top: 0.2rem;
+  color: var(--text-color-secondary);
+}
+.technical-class-status {
+  display: inline-flex;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.technical-class-status.is-active {
+  color: #166534;
+  background: #dcfce7;
+}
+.technical-class-status.is-inactive {
+  color: #991b1b;
+  background: #fee2e2;
 }
 .technical-class-form small {
   color: var(--text-color-secondary);
