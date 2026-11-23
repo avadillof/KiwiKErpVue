@@ -1192,7 +1192,7 @@
         ? 'Editar clase de producto'
         : 'Nueva clase de producto'
     "
-    :style="{ width: 'min(560px, 94vw)' }"
+    :style="{ width: 'min(620px, 94vw)' }"
     class="kiwik-dialog"
   >
     <div class="technical-class-form">
@@ -1224,19 +1224,24 @@
       </small>
     </div>
     <template #footer>
-      <div class="kiwik-separator"></div>
-      <Button
-        label="Cancelar"
-        text
-        @click="technicalClassDialogVisible = false"
-      />
-      <Button
-        :label="
-          newTechnicalClass.pkid ? 'Guardar cambios' : 'Crear y seleccionar'
-        "
-        icon="pi pi-check"
-        @click="saveTechnicalClass"
-      />
+      <div class="technical-class-dialog-footer">
+        <div class="kiwik-separator"></div>
+        <div class="technical-class-dialog-actions">
+          <Button
+            label="Cancelar"
+            text
+            @click="technicalClassDialogVisible = false"
+          />
+          <Button
+            :label="
+              newTechnicalClass.pkid ? 'Guardar cambios' : 'Crear y seleccionar'
+            "
+            icon="pi pi-check"
+            class="technical-class-dialog-save"
+            @click="saveTechnicalClass"
+          />
+        </div>
+      </div>
     </template>
   </Dialog>
 
@@ -2880,6 +2885,19 @@ const handleImageSelected = (event: Event) => {
 .technical-class-form small {
   color: var(--text-color-secondary);
   line-height: 1.45;
+}
+.technical-class-dialog-footer {
+  width: 100%;
+}
+.technical-class-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+}
+.technical-class-dialog-save {
+  white-space: nowrap;
 }
 .technical-copy-dialog {
   display: grid;
