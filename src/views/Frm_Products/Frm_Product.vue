@@ -410,7 +410,12 @@
         >
       </Panel>
 
-      <Panel v-if="product.technicalClassId" class="technical-attributes-panel">
+      <Panel
+        v-if="
+          selectedTechnicalClass && selectedTechnicalClass.code !== 'PRODUCT'
+        "
+        class="technical-attributes-panel"
+      >
         <template #header>
           <div class="technical-attributes-header">
             <div class="manufacturing-panel__header">
