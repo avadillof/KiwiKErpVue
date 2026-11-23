@@ -253,8 +253,33 @@
                 </InlineMessage>
               </div>
 
+              <!-- CLASE TÉCNICA -->
+              <div class="col-12 md:col-3">
+                <InputGroup>
+                  <FloatLabel variant="on" class="w-full">
+                    <Select
+                      id="technicalClass"
+                      v-model="product.technicalClassId"
+                      :options="productTechnicalClasses"
+                      optionLabel="path"
+                      optionValue="pkid"
+                      class="w-full"
+                      filter
+                    />
+                    <label for="technicalClass"> Clase de producto </label>
+                  </FloatLabel>
+                  <Button
+                    v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
+                    icon="pi pi-plus"
+                    severity="secondary"
+                    title="Crear clase de producto"
+                    @click="openNewTechnicalClass"
+                  />
+                </InputGroup>
+              </div>
+
               <!-- FAMILIA -->
-              <div class="col-12 md:col-4">
+              <div class="col-12 md:col-3">
                 <InputGroup>
                   <FloatLabel variant="on" class="w-full">
                     <Select
@@ -803,6 +828,48 @@
       />
     </template>
   </Dialog>
+
+  <Dialog
+    v-model:visible="technicalClassDialogVisible"
+    modal
+    header="Nueva clase de producto"
+    :style="{ width: 'min(560px, 94vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="technical-class-form">
+      <FloatLabel variant="on">
+        <InputText
+          id="technicalClassName"
+          v-model="newTechnicalClass.name"
+          maxlength="145"
+          class="w-full"
+          autofocus
+        />
+        <label for="technicalClassName"> Nombre *</label>
+      </FloatLabel>
+      <FloatLabel variant="on">
+        <Select
+          id="technicalClassParent"
+          v-model="newTechnicalClass.parentId"
+          :options="productTechnicalClasses"
+          optionLabel="path"
+          optionValue="pkid"
+          class="w-full"
+          filter
+        />
+        <label for="technicalClassParent"> Clase superior *</label>
+      </FloatLabel>
+      <small>
+        Ejemplo: al crear “Válvula” bajo “Producto”, se mostrará como
+        “Producto / Válvula”.
+      </small>
+    </div>
+    <template #footer>
+      <div class="kiwik-separator"></div>
+      <Button label="Cancelar" text @click="technicalClassDialogVisible = false" />
+      <Button label="Crear y seleccionar" icon="pi pi-check" @click="saveTechnicalClass" />
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -857,7 +924,13 @@ const families = ref<any[]>([]);
 const units = ref<any[]>([]);
 const productCategories = ref<any[]>([]);
 const productCategoryTypes = ref<any[]>([]);
+const productTechnicalClasses = ref<any[]>([]);
 const salesTaxFormMode = ref<"sale" | "purchase" | null>(null);
+const technicalClassDialogVisible = ref(false);
+const newTechnicalClass = ref<{ name: string; parentId: number | null }>({
+  name: "",
+  parentId: null,
+});
 
 type Product = {
   pkid: number | null;
@@ -901,6 +974,8 @@ type Product = {
   purchaseTaxId: number | null;
 
   productCategoryId: number | null;
+
+  technicalClassId: number | null;
 
   requireDeliveryOverride: boolean | null;
 
@@ -971,6 +1046,8 @@ const createProduct = (): Product => ({
   purchaseTaxId: null,
 
   productCategoryId: null,
+
+  technicalClassId: null,
 
   requireDeliveryOverride: null,
 
@@ -1256,6 +1333,12 @@ const loadCatalogs = async () => {
     salesTaxes.value = data.salesTaxes || [];
     productCategories.value = data.productCategories || [];
     productCategoryTypes.value = data.productCategoryTypes || [];
+    productTechnicalClasses.value = data.productTechnicalClasses || [];
+    if (!product.value.technicalClassId) {
+      product.value.technicalClassId =
+        productTechnicalClasses.value.find((item) => item.code === "PRODUCT")
+          ?.pkid ?? null;
+    }
   } catch (error) {
     console.error(error);
 
@@ -1457,6 +1540,49 @@ const handleFamilySaved = (family: { pkid: number; description: string }) => {
   product.value.familyId = family.pkid;
 };
 
+const openNewTechnicalClass = () => {
+  newTechnicalClass.value = {
+    name: "",
+    parentId:
+      product.value.technicalClassId ??
+      productTechnicalClasses.value.find((item) => item.code === "PRODUCT")
+        ?.pkid ??
+      null,
+  };
+  technicalClassDialogVisible.value = true;
+};
+
+const saveTechnicalClass = async () => {
+  if (!newTechnicalClass.value.name.trim() || !newTechnicalClass.value.parentId) {
+    toast.add({
+      severity: "warn",
+      summary: "Datos incompletos",
+      detail: "Indica el nombre y la clase superior.",
+      life: 3500,
+    });
+    return;
+  }
+  try {
+    const { data } = await axios.post(
+      backendUrl("/WebSaveProductTechnicalClass"),
+      newTechnicalClass.value,
+    );
+    productTechnicalClasses.value.push(data);
+    productTechnicalClasses.value.sort((a, b) =>
+      a.path.localeCompare(b.path, "es"),
+    );
+    product.value.technicalClassId = data.pkid;
+    technicalClassDialogVisible.value = false;
+  } catch (error: any) {
+    toast.add({
+      severity: "error",
+      summary: "No se pudo crear la clase",
+      detail: error?.response?.data || "Revisa los datos e inténtalo de nuevo.",
+      life: 4500,
+    });
+  }
+};
+
 const openNewSalesTax = () => {
   salesTaxFormMode.value = "sale";
 
@@ -1627,6 +1753,15 @@ const handleImageSelected = (event: Event) => {
 .supplier-notes-dialog > small {
   align-self: flex-end;
   color: var(--text-color-secondary);
+}
+.technical-class-form {
+  display: grid;
+  gap: 1.1rem;
+  padding-top: 0.35rem;
+}
+.technical-class-form small {
+  color: var(--text-color-secondary);
+  line-height: 1.45;
 }
 .manufacturing-panel {
   margin: 0 0 20px;
