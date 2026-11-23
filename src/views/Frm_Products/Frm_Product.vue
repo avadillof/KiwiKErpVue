@@ -1447,17 +1447,22 @@
       >
     </DataTable>
     <template #footer>
-      <div class="kiwik-separator"></div>
-      <Button
-        label="Cancelar"
-        text
-        @click="technicalAttributesDialogVisible = false"
-      />
-      <Button
-        label="Guardar atributos"
-        icon="pi pi-check"
-        @click="saveTechnicalAttributes"
-      />
+      <div class="technical-attributes-dialog-footer">
+        <div class="kiwik-separator"></div>
+        <div class="technical-attributes-dialog-actions">
+          <Button
+            label="Cancelar"
+            text
+            @click="technicalAttributesDialogVisible = false"
+          />
+          <Button
+            label="Guardar atributos"
+            icon="pi pi-check"
+            class="technical-attributes-dialog-save"
+            @click="saveTechnicalAttributes"
+          />
+        </div>
+      </div>
     </template>
   </Dialog>
 </template>
@@ -3190,6 +3195,19 @@ const handleImageSelected = (event: Event) => {
   display: grid;
   gap: 1.25rem;
   padding-top: 0.35rem;
+}
+.technical-attributes-dialog-footer {
+  width: 100%;
+}
+.technical-attributes-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+}
+.technical-attributes-dialog-save {
+  white-space: nowrap;
 }
 .technical-copy-dialog {
   display: grid;
