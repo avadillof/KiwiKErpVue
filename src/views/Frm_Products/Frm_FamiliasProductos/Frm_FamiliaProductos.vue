@@ -1,236 +1,255 @@
 <template>
-
-    <Dialog v-model:visible="visible" modal
-        :header="productFamily.pkid ? 'Editar Familia de Producto' : 'Nueva Familia de Producto'"
-        :style="{ width: '50%', height: 'auto' }" class="kiwik-dialog" :dismissableMask="true" :pt="{
-            content: {
-                class: 'overflow-y-auto'
-            }
-        }">
-
-        <div style="max-height: 80vh; overflow-y: auto">
-
-            <!-- ========================================= -->
-            <!-- DATOS GENERALES                          -->
-            <!-- ========================================= -->
-
-            <Panel>
-
-                <template #header>
-
-                    <div class="flex align-items-center gap-2">
-
-                        <div class="flex align-items-center justify-content-center bg-primary-100 border-circle"
-                            style="width: 32px; height: 32px;">
-                            <i class="pi pi-box text-primary"></i>
-                        </div>
-
-                        <span class="font-bold">
-                            Datos Generales.
-                        </span>
-
-                    </div>
-
-                </template>
-
-
-                <div class="grid p-fluid mb-12">
-
-                    <!-- ===================================== -->
-                    <!-- ALIAS / CÓDIGO                       -->
-                    <!-- ===================================== -->
-
-                    <div class="col-12 md:col-4">
-
-                        <InputGroup>
-
-                            <FloatLabel variant="on" class="w-full">
-
-                                <InputText :ref="(el) => setRef('code', el)" id="code" v-model="productFamily.code"
-                                    maxlength="45" class="w-full" />
-
-                                <label for="code">
-                                    Alias / Código
-                                </label>
-
-                            </FloatLabel>
-
-
-                            <Button  icon="pi pi-id-card" @click="generateCode" :disabled="!!productFamily.pkid"
-                                severity="secondary" />
-
-
-                                
-
-                        </InputGroup>
-
-                   
-
-
-                        <InlineMessage v-if="errors.code" severity="error">
-                            {{ errors.code }}
-                        </InlineMessage>
-
-                    </div>
-                    <!-- ===================================== -->
-                    <!-- ACTIVO                                -->
-                    <!-- ===================================== -->
-
-                    <div class="col-12 md:col-2">
-
-                        <div class="flex align-items-center gap-2 mt-2">
-
-                            <Checkbox id="active" v-model="productFamily.active" binary />
-
-                            <label for="active">
-                                ¿ Activo ?
-                            </label>
-
-                        </div>
-
-                    </div>
-
-                    <!-- ===================================== -->
-                    <!-- DESCRIPCIÓN                          -->
-                    <!-- ===================================== -->
-
-                    <div class="col-12 md:col-12">
-
-                        <FloatLabel variant="on" class="w-full">
-
-                            <InputText :ref="(el) => setRef('description', el)" id="description"
-                                v-model="productFamily.description" maxlength="145" class="w-full" />
-
-                            <label for="description">
-                                Descripción
-                            </label>
-
-                        </FloatLabel>
-
-
-                        <InlineMessage v-if="errors.description" severity="error">
-                            {{ errors.description }}
-                        </InlineMessage>
-
-                    </div>
-
-
-                    
-
-                    <!-- ===================================== -->
-                    <!-- DESCRIPCIÓN OTRO IDIOMA              -->
-                    <!-- ===================================== -->
-
-                    <div class="col-12 md:col-12 mt-2">
-
-                        <FloatLabel variant="on" class="w-full">
-
-                            <InputText :ref="(el) => setRef('descriptionEn', el)" id="descriptionEn"
-                                v-model="productFamily.descriptionEn" maxlength="145" class="w-full" />
-
-                            <label for="descriptionEn">
-                                Descripción (Otro Idioma)
-                            </label>
-
-                        </FloatLabel>
-
-
-                        <InlineMessage v-if="errors.descriptionEn" severity="error">
-                            {{ errors.descriptionEn }}
-                        </InlineMessage>
-
-                    </div>
-
-                </div>
-
-            </Panel>
-
-            <Panel style="margin-top: 20px;">
-
-                <template #header>
-
-                    <div class="flex align-items-center gap-2">
-
-                        <div class="flex align-items-center justify-content-center bg-primary-100 border-circle"
-                            style="width: 32px; height: 32px;">
-                            <i class="pi pi-image text-primary"></i>
-                        </div>
-
-                        <span class="font-bold">
-                            Fotografía
-                        </span>
-
-                    </div>
-
-                </template>
-
-                <div class="flex flex-column align-items-center">
-
-                    <div class="border-1 surface-border border-round-lg flex align-items-center justify-content-center"
-                        style="width: 150px; height: 150px; background: var(--surface-ground); overflow: hidden;">
-
-                        <i v-if="!productFamily.image" class="pi pi-image text-400" style="font-size: 3rem;"></i>
-
-                        <img v-else :src="productFamily.image" alt="Imagen de la familia"
-                            style="width: 100%; height: 100%; object-fit: contain;" />
-
-                    </div>
-
-                    <div class="flex gap-2 mt-2">
-                        <Button label="Seleccionar imagen" icon="pi pi-upload" severity="secondary" size="small"
-                            @click="selectImage" />
-                        <Button v-if="productFamily.image" label="Quitar" icon="pi pi-trash" severity="danger" text
-                            size="small" @click="productFamily.image = null" />
-                    </div>
-
-                    <input ref="imageInput" type="file" accept="image/*" style="display: none"
-                        @change="handleImageSelected" />
-
-                </div>
-
-            </Panel>
-
-        </div>
-
-
-        <!-- ========================================= -->
-        <!-- FOOTER                                    -->
-        <!-- ========================================= -->
-
-        <template #footer>
-
-            <Button v-if="securityStore.hasPermission(PERM.FAM_EDIT)" label="Guardar" icon="pi pi-check"
-                @click="save" />
-
+  <Dialog
+    v-model:visible="visible"
+    modal
+    :header="
+      productFamily.pkid
+        ? 'Editar Familia de Producto'
+        : 'Nueva Familia de Producto'
+    "
+    :style="{ width: '50%', height: 'auto' }"
+    class="kiwik-dialog"
+    :dismissableMask="true"
+    :pt="{
+      content: {
+        class: 'overflow-y-auto',
+      },
+    }"
+  >
+    <div style="max-height: 80vh; overflow-y: auto">
+      <!-- ========================================= -->
+      <!-- DATOS GENERALES                          -->
+      <!-- ========================================= -->
+
+      <Panel>
+        <template #header>
+          <div class="flex align-items-center gap-2">
+            <div
+              class="flex align-items-center justify-content-center bg-primary-100 border-circle"
+              style="width: 32px; height: 32px"
+            >
+              <i class="pi pi-box text-primary"></i>
+            </div>
+
+            <span class="font-bold"> Datos Generales. </span>
+          </div>
         </template>
 
+        <div class="grid p-fluid mb-12">
+          <!-- ===================================== -->
+          <!-- ALIAS / CÓDIGO                       -->
+          <!-- ===================================== -->
 
-        <div class="kiwik-separator" style="margin-top: 10px;"></div>
+          <div class="col-12 md:col-4">
+            <InputGroup>
+              <FloatLabel variant="on" class="w-full">
+                <InputText
+                  :ref="(el) => setRef('code', el)"
+                  id="code"
+                  v-model="productFamily.code"
+                  maxlength="45"
+                  class="w-full"
+                />
 
-    </Dialog>
+                <label for="code"> Alias / Código </label>
+              </FloatLabel>
 
+              <Button
+                icon="pi pi-id-card"
+                @click="generateCode"
+                :disabled="!!productFamily.pkid"
+                severity="secondary"
+              />
+            </InputGroup>
+
+            <InlineMessage v-if="errors.code" severity="error">
+              {{ errors.code }}
+            </InlineMessage>
+          </div>
+          <!-- ===================================== -->
+          <!-- ACTIVO                                -->
+          <!-- ===================================== -->
+
+          <div class="col-12 md:col-2">
+            <div class="flex align-items-center gap-2 mt-2">
+              <Checkbox id="active" v-model="productFamily.active" binary />
+
+              <label for="active"> ¿ Activo ? </label>
+            </div>
+          </div>
+
+          <!-- ===================================== -->
+          <!-- DESCRIPCIÓN                          -->
+          <!-- ===================================== -->
+
+          <div class="col-12 md:col-12">
+            <FloatLabel variant="on" class="w-full">
+              <InputText
+                :ref="(el) => setRef('description', el)"
+                id="description"
+                v-model="productFamily.description"
+                maxlength="145"
+                class="w-full"
+              />
+
+              <label for="description"> Descripción </label>
+            </FloatLabel>
+
+            <InlineMessage v-if="errors.description" severity="error">
+              {{ errors.description }}
+            </InlineMessage>
+          </div>
+
+          <!-- ===================================== -->
+          <!-- DESCRIPCIÓN OTRO IDIOMA              -->
+          <!-- ===================================== -->
+
+          <div class="col-12 md:col-12 mt-2">
+            <FloatLabel variant="on" class="w-full">
+              <InputText
+                :ref="(el) => setRef('descriptionEn', el)"
+                id="descriptionEn"
+                v-model="productFamily.descriptionEn"
+                maxlength="145"
+                class="w-full"
+              />
+
+              <label for="descriptionEn"> Descripción (Otro Idioma) </label>
+            </FloatLabel>
+
+            <InlineMessage v-if="errors.descriptionEn" severity="error">
+              {{ errors.descriptionEn }}
+            </InlineMessage>
+          </div>
+
+          <div class="col-12 mt-2">
+            <FloatLabel variant="on" class="w-full">
+              <Select
+                id="defaultTechnicalClass"
+                v-model="productFamily.defaultTechnicalClassId"
+                :options="technicalClasses"
+                optionLabel="path"
+                optionValue="pkid"
+                showClear
+                filter
+                class="w-full"
+              />
+              <label for="defaultTechnicalClass"
+                >Clase técnica predeterminada</label
+              >
+            </FloatLabel>
+            <small class="text-color-secondary">
+              Se propondrá al seleccionar esta familia; nunca sustituye una
+              clase elegida expresamente.
+            </small>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel style="margin-top: 20px">
+        <template #header>
+          <div class="flex align-items-center gap-2">
+            <div
+              class="flex align-items-center justify-content-center bg-primary-100 border-circle"
+              style="width: 32px; height: 32px"
+            >
+              <i class="pi pi-image text-primary"></i>
+            </div>
+
+            <span class="font-bold"> Fotografía </span>
+          </div>
+        </template>
+
+        <div class="flex flex-column align-items-center">
+          <div
+            class="border-1 surface-border border-round-lg flex align-items-center justify-content-center"
+            style="
+              width: 150px;
+              height: 150px;
+              background: var(--surface-ground);
+              overflow: hidden;
+            "
+          >
+            <i
+              v-if="!productFamily.image"
+              class="pi pi-image text-400"
+              style="font-size: 3rem"
+            ></i>
+
+            <img
+              v-else
+              :src="productFamily.image"
+              alt="Imagen de la familia"
+              style="width: 100%; height: 100%; object-fit: contain"
+            />
+          </div>
+
+          <div class="flex gap-2 mt-2">
+            <Button
+              label="Seleccionar imagen"
+              icon="pi pi-upload"
+              severity="secondary"
+              size="small"
+              @click="selectImage"
+            />
+            <Button
+              v-if="productFamily.image"
+              label="Quitar"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              size="small"
+              @click="productFamily.image = null"
+            />
+          </div>
+
+          <input
+            ref="imageInput"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="handleImageSelected"
+          />
+        </div>
+      </Panel>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- FOOTER                                    -->
+    <!-- ========================================= -->
+
+    <template #footer>
+      <Button
+        v-if="securityStore.hasPermission(PERM.FAM_EDIT)"
+        label="Guardar"
+        icon="pi pi-check"
+        @click="save"
+      />
+    </template>
+
+    <div class="kiwik-separator" style="margin-top: 10px"></div>
+  </Dialog>
 </template>
 
-
 <script setup lang="ts">
-import { backendUrl } from '@/services/backendUrl';
-import { ref } from 'vue';
+import { backendUrl } from "@/services/backendUrl";
+import { ref } from "vue";
 
-import axios from 'axios';
+import axios from "axios";
 
-import Dialog from 'primevue/dialog';
-import Panel from 'primevue/panel';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Checkbox from 'primevue/checkbox';
-import FloatLabel from 'primevue/floatlabel';
-import InputGroup from 'primevue/inputgroup';
-import { useToast } from 'primevue/usetoast';
-import { useFormValidator } from '../../../libs/HelperView';
-import { useCompanyStore } from '../../../stores/companyStore';
-import { useSecurityStore } from '../../../stores/securityStore';
-import { PERM } from '@/services/Frm_Main/permissions';
-
+import Dialog from "primevue/dialog";
+import Panel from "primevue/panel";
+import Button from "primevue/button";
+import InputText from "primevue/inputtext";
+import Checkbox from "primevue/checkbox";
+import FloatLabel from "primevue/floatlabel";
+import InputGroup from "primevue/inputgroup";
+import Select from "primevue/select";
+import { useToast } from "primevue/usetoast";
+import { useFormValidator } from "../../../libs/HelperView";
+import { useCompanyStore } from "../../../stores/companyStore";
+import { useSecurityStore } from "../../../stores/securityStore";
+import { PERM } from "@/services/Frm_Main/permissions";
 
 /* =========================================================
    HELPERS
@@ -242,16 +261,18 @@ const companyStore = useCompanyStore();
 
 const securityStore = useSecurityStore();
 
-const {
-    setRef,
-    scrollToError
-} = useFormValidator();
+const { setRef, scrollToError } = useFormValidator();
 
 const emit = defineEmits<{
-    (e: 'saved', family: {
-        pkid: number;
-        description: string;
-    }): void;
+  (
+    e: "saved",
+    family: {
+      pkid: number;
+      description: string;
+      defaultTechnicalClassId: number | null;
+      defaultTechnicalClassPath: string | null;
+    },
+  ): void;
 }>();
 
 /* =========================================================
@@ -259,255 +280,210 @@ const emit = defineEmits<{
 ========================================================= */
 
 const visible = ref(false);
-
+const technicalClasses = ref<any[]>([]);
 
 /* =========================================================
    MODELO DE DATOS
 ========================================================= */
 
 type ProductFamily = {
+  pkid: number | null;
 
-    pkid: number | null;
+  code: string;
 
-    code: string;
+  description: string;
 
-    description: string;
+  descriptionEn: string;
 
-    descriptionEn: string;
+  active: boolean;
 
-    active: boolean;
-    
-    inventariable: boolean;
+  inventariable: boolean;
 
-    image: string | null;
+  image: string | null;
+
+  defaultTechnicalClassId: number | null;
 };
-
 
 /* =========================================================
    INIT PRODUCT FAMILY
 ========================================================= */
 
 const createProductFamily = (): ProductFamily => ({
-
-   pkid: null,
-    code: '',
-    description: '',
-    descriptionEn: '',
-    active: true,
-    inventariable: false,
-    image: null
-
+  pkid: null,
+  code: "",
+  description: "",
+  descriptionEn: "",
+  active: true,
+  inventariable: false,
+  image: null,
+  defaultTechnicalClassId: null,
 });
 
-
-const productFamily = ref<ProductFamily>(
-    createProductFamily()
-);
-
+const productFamily = ref<ProductFamily>(createProductFamily());
 
 /* =========================================================
    ERRORS
 ========================================================= */
 
-type ErrorKey =
-
-    | 'code'
-    | 'description'
-    | 'descriptionEn';
-
+type ErrorKey = "code" | "description" | "descriptionEn";
 
 type FormErrors = Record<ErrorKey, string>;
 
-
 const errors = ref<FormErrors>({
+  code: "",
 
-    code: '',
+  description: "",
 
-    description: '',
-
-    descriptionEn: ''
-
+  descriptionEn: "",
 });
 
-
 const clearErrors = () => {
+  errors.value = {
+    code: "",
 
-    errors.value = {
+    description: "",
 
-        code: '',
-
-        description: '',
-
-        descriptionEn: ''
-
-    };
-
+    descriptionEn: "",
+  };
 };
-
 
 /* =========================================================
    VALIDATION
 ========================================================= */
 
 const validate = async (): Promise<boolean> => {
+  clearErrors();
 
-    clearErrors();
+  let valid = true;
 
-    let valid = true;
+  let firstError: ErrorKey | "" = "";
 
-    let firstError: ErrorKey | '' = '';
+  const setError = (field: ErrorKey, message: string) => {
+    errors.value[field] = message;
 
+    if (!firstError) {
+      firstError = field;
+    }
 
-    const setError = (
-        field: ErrorKey,
-        message: string
-    ) => {
+    valid = false;
+  };
 
-        errors.value[field] = message;
-
-        if (!firstError) {
-
-            firstError = field;
-
-        }
-
-        valid = false;
-
-    };
-
-
-    /* =========================================
+  /* =========================================
        CÓDIGO
     ========================================= */
 
-    if (!productFamily.value.code?.trim()) {
+  if (!productFamily.value.code?.trim()) {
+    setError("code", "Obligatorio");
+  }
 
-        setError(
-            'code',
-            'Obligatorio'
-        );
-
-    }
-
-
-    /* =========================================
+  /* =========================================
        DESCRIPCIÓN
     ========================================= */
 
-    if (!productFamily.value.description?.trim()) {
+  if (!productFamily.value.description?.trim()) {
+    setError("description", "Obligatorio");
+  }
 
-        setError(
-            'description',
-            'Obligatorio'
-        );
+  await scrollToError(firstError);
 
-    }
-
-
-    await scrollToError(firstError);
-
-    return valid;
-
+  return valid;
 };
-
 
 /* =========================================================
    OPEN
 ========================================================= */
 
 const open = async (pkid: number | null) => {
+  productFamily.value = createProductFamily();
 
-    productFamily.value = createProductFamily();
+  clearErrors();
 
-    clearErrors();
+  visible.value = true;
 
-    visible.value = true;
+  try {
+    const { data } = await axios.get(backendUrl("/WebLoadProductCatalog"));
+    technicalClasses.value = data?.productTechnicalClasses ?? [];
+  } catch (error) {
+    technicalClasses.value = [];
+    toast.add({
+      severity: "warn",
+      summary: "Clases técnicas no disponibles",
+      detail: "La familia podrá guardarse sin una clase predeterminada.",
+      life: companyStore.companyInfo.toastDuration ?? 3000,
+    });
+  }
 
-    // Nuevo registro
-    if (pkid === null) {
-        return;
-    }
+  // Nuevo registro
+  if (pkid === null) {
+    return;
+  }
 
-    // Editar registro existente
-    try {
+  // Editar registro existente
+  try {
+    const response = await axios.get(backendUrl(`/WebGetProductFamily`), {
+      params: {
+        pkid: pkid,
+      },
+    });
 
-        const response = await axios.get(
-            backendUrl(`/WebGetProductFamily`),
-            {
-                params: {
-                    pkid: pkid
-                }
-            }
-        );
+    productFamily.value = {
+      ...createProductFamily(),
+      ...response.data,
+    };
+  } catch (error: any) {
+    console.error(error);
 
-        productFamily.value = {
-            ...createProductFamily(),
-            ...response.data
-        };
+    visible.value = false;
 
-    } catch (error: any) {
-
-        console.error(error);
-
-        visible.value = false;
-
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.data ?? 'No se pudo cargar la Familia de Producto.',
-            life: companyStore.companyInfo.toastDuration ?? 3000
-        });
-    }
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail:
+        error.response?.data ?? "No se pudo cargar la Familia de Producto.",
+      life: companyStore.companyInfo.toastDuration ?? 3000,
+    });
+  }
 };
-
-
-
 
 /* =========================================================
    SAVE
 ========================================================= */
 
 const save = async () => {
+  if (!(await validate())) {
+    return;
+  }
 
-    if (!(await validate())) {
-        return;
-    }
+  const payload = {
+    ...productFamily.value,
+  };
 
-    const payload = {
-        ...productFamily.value
-    };
+  try {
+    const response = await axios.post(
+      backendUrl(`/WebSaveProductFamily`),
+      payload,
+    );
 
-    try {
+    const family = response.data;
 
-        const response = await axios.post(
-            backendUrl(`/WebSaveProductFamily`),
-            payload
-        );
+    toast.add({
+      severity: "success",
+      summary: "Guardado correctamente",
+      life: companyStore.companyInfo.toastDuration ?? 3000,
+    });
 
-        const family = response.data;
+    visible.value = false;
 
-        toast.add({
-            severity: 'success',
-            summary: 'Guardado correctamente',
-            life: companyStore.companyInfo.toastDuration ?? 3000
-        });
-
-        visible.value = false;
-
-        emit('saved', family);
-
-    } catch (error: any) {
-
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.data ?? 'Error inesperado',
-            life: companyStore.companyInfo.toastDuration ?? 3000
-        });
-
-    }
+    emit("saved", family);
+  } catch (error: any) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: error.response?.data ?? "Error inesperado",
+      life: companyStore.companyInfo.toastDuration ?? 3000,
+    });
+  }
 };
-
 
 /* =========================================================
    IMAGEN
@@ -516,81 +492,62 @@ const save = async () => {
 const imageInput = ref<HTMLInputElement | null>(null);
 
 const selectImage = () => {
-
-    imageInput.value?.click();
-
+  imageInput.value?.click();
 };
 
 const handleImageSelected = (event: Event) => {
+  const input = event.target as HTMLInputElement;
 
-    const input = event.target as HTMLInputElement;
+  if (!input.files || input.files.length === 0) {
+    return;
+  }
 
-    if (!input.files || input.files.length === 0) {
-        return;
-    }
+  const file = input.files[0];
 
-    const file = input.files[0];
+  if (!file.type.startsWith("image/")) {
+    toast.add({
+      severity: "error",
+      summary: "Imagen no válida",
+      detail: "El archivo seleccionado no es una imagen.",
+      life: companyStore.companyInfo.toastDuration ?? 3000,
+    });
 
-    if (!file.type.startsWith('image/')) {
+    return;
+  }
 
-        toast.add({
-            severity: 'error',
-            summary: 'Imagen no válida',
-            detail: 'El archivo seleccionado no es una imagen.',
-            life: companyStore.companyInfo.toastDuration ?? 3000
-        });
+  const reader = new FileReader();
 
-        return;
-    }
+  reader.onload = () => {
+    productFamily.value.image = reader.result as string;
+  };
 
-    const reader = new FileReader();
+  reader.onerror = () => {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo cargar la imagen.",
+      life: companyStore.companyInfo.toastDuration ?? 3000,
+    });
+  };
 
-    reader.onload = () => {
-
-        productFamily.value.image = reader.result as string;
-
-    };
-
-    reader.onerror = () => {
-
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'No se pudo cargar la imagen.',
-            life: companyStore.companyInfo.toastDuration ?? 3000
-        });
-
-    };
-
-    reader.readAsDataURL(file);
-
+  reader.readAsDataURL(file);
 };
-
 
 /* =========================================================
    GENERATE CODE
 ========================================================= */
 
 const generateCode = async () => {
+  const res = await axios.get(backendUrl(`/WebGenerateProductFamilyCode`));
 
-
-    const res = await axios.get(
-        backendUrl(`/WebGenerateProductFamilyCode`)
-    );
-
-    productFamily.value.code = res.data;
-
+  productFamily.value.code = res.data;
 };
-
 
 /* =========================================================
    EXPOSE
 ========================================================= */
 
 defineExpose({
-
-    open
-
+  open,
 });
-
 </script>

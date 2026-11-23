@@ -423,6 +423,15 @@
               </div>
             </div>
             <Button
+              label="Copiar características"
+              icon="pi pi-copy"
+              severity="secondary"
+              outlined
+              size="small"
+              :disabled="!applicableTechnicalAttributes.length"
+              @click="openTechnicalCopyDialog"
+            />
+            <Button
               v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
               label="Configurar atributos"
               icon="pi pi-cog"
@@ -912,6 +921,86 @@
   <Frm_FamiliaProductos ref="familiaProductosRef" @saved="handleFamilySaved" />
   <Frm_SalexTaxForm ref="salesTaxFormRef" @saved="handleSalesTaxSaved" />
   <Dialog
+    v-model:visible="technicalCopyDialogVisible"
+    modal
+    header="Copiar características técnicas"
+    :style="{ width: 'min(1050px, 96vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="technical-copy-dialog">
+      <div>
+        <label class="technical-copy-label">Producto de origen</label>
+        <ProductLookup
+          v-model="technicalCopySourceId"
+          :label="technicalCopySourceLabel"
+          placeholder="Seleccionar producto de origen..."
+          @selected="loadTechnicalCopySource"
+          @cleared="clearTechnicalCopySource"
+        />
+      </div>
+      <div v-if="technicalCopySourceClass" class="technical-copy-summary">
+        <span><b>Clase:</b> {{ technicalCopySourceClass }}</span>
+        <span
+          >{{ technicalCopyRows.length }} característica(s) compatible(s)</span
+        >
+        <span v-if="technicalCopyIncompatibleCount">
+          {{ technicalCopyIncompatibleCount }} no aplicable(s) a la clase actual
+        </span>
+      </div>
+      <label v-if="technicalCopyRows.length" class="technical-copy-overwrite">
+        <Checkbox
+          v-model="technicalCopyOverwrite"
+          binary
+          @change="refreshTechnicalCopySelection"
+        />
+        Sobrescribir valores existentes
+      </label>
+      <DataTable
+        v-if="technicalCopyRows.length"
+        :value="technicalCopyRows"
+        dataKey="attributeId"
+        scrollable
+        scrollHeight="45vh"
+      >
+        <Column style="width: 55px">
+          <template #body="{ data }"
+            ><Checkbox
+              v-model="data.selected"
+              binary
+              :disabled="
+                !data.sourceValue ||
+                (!!data.currentValue && !technicalCopyOverwrite)
+              "
+          /></template>
+        </Column>
+        <Column field="name" header="Característica" />
+        <Column field="sourceValue" header="Valor de origen" />
+        <Column field="currentValue" header="Valor actual" />
+      </DataTable>
+      <InlineMessage
+        v-else-if="technicalCopySourceId"
+        severity="info"
+        class="w-full"
+      >
+        El producto seleccionado no tiene valores compatibles para copiar.
+      </InlineMessage>
+    </div>
+    <template #footer>
+      <div class="kiwik-separator"></div>
+      <Button
+        label="Cancelar"
+        text
+        @click="technicalCopyDialogVisible = false"
+      />
+      <Button
+        label="Copiar seleccionadas"
+        icon="pi pi-copy"
+        :disabled="!technicalCopyRows.some((row) => row.selected)"
+        @click="applyTechnicalCopy"
+      />
+    </template>
+  </Dialog>
+  <Dialog
     v-model:visible="supplierNotesVisible"
     modal
     header="Notas del proveedor"
@@ -1144,6 +1233,7 @@ import Column from "primevue/column";
 import InputNumber from "primevue/inputnumber";
 import Textarea from "primevue/textarea";
 import SupplierLookup from "@/components/shared/SupplierLookup.vue";
+import ProductLookup from "@/components/shared/ProductLookup.vue";
 
 import Tabs from "primevue/tabs";
 import TabList from "primevue/tablist";
@@ -1185,6 +1275,21 @@ const newTechnicalClass = ref<{ name: string; parentId: number | null }>({
   parentId: null,
 });
 const technicalAttributesDialogVisible = ref(false);
+const technicalCopyDialogVisible = ref(false);
+const technicalCopySourceId = ref<number | null>(null);
+const technicalCopySourceLabel = ref("");
+const technicalCopySourceClass = ref("");
+const technicalCopyOverwrite = ref(false);
+const technicalCopyIncompatibleCount = ref(0);
+const technicalCopyRows = ref<
+  Array<{
+    attributeId: number;
+    name: string;
+    sourceValue: string;
+    currentValue: string;
+    selected: boolean;
+  }>
+>([]);
 const technicalAttributeDrafts = ref<TechnicalAttributeDraft[]>([]);
 
 type TechnicalAttribute = {
@@ -1609,6 +1714,8 @@ const loadCatalogs = async () => {
       .map((category) => ({
         pkid: category.pkid,
         description: category.description,
+        defaultTechnicalClassId: category.defaultTechnicalClassId ?? null,
+        defaultTechnicalClassPath: category.defaultTechnicalClassPath ?? null,
       }));
 
     units.value = data.units || [];
@@ -1828,6 +1935,91 @@ const setTechnicalValue = (attributeId: number, value: unknown) => {
     });
 };
 
+const openTechnicalCopyDialog = () => {
+  clearTechnicalCopySource();
+  technicalCopyOverwrite.value = false;
+  technicalCopyDialogVisible.value = true;
+};
+
+const clearTechnicalCopySource = () => {
+  technicalCopySourceId.value = null;
+  technicalCopySourceLabel.value = "";
+  technicalCopySourceClass.value = "";
+  technicalCopyRows.value = [];
+  technicalCopyIncompatibleCount.value = 0;
+};
+
+const refreshTechnicalCopySelection = () => {
+  technicalCopyRows.value.forEach((row) => {
+    row.selected =
+      !!row.sourceValue && (!row.currentValue || technicalCopyOverwrite.value);
+  });
+};
+
+const loadTechnicalCopySource = async (source: any) => {
+  technicalCopySourceId.value = source.pkid;
+  technicalCopySourceLabel.value =
+    source.description || source.code || "Producto seleccionado";
+  try {
+    const { data } = await axios.get(
+      backendUrl(`/WebGetProduct/${source.pkid}`),
+    );
+    technicalCopySourceClass.value = data.technicalClassPath || "Producto";
+    const currentAttributes = new Map(
+      applicableTechnicalAttributes.value.map((attribute) => [
+        attribute.pkid,
+        attribute,
+      ]),
+    );
+    const sourceValues = (data.technicalAttributeValues || []).filter(
+      (item: TechnicalAttributeValue) => item.value !== "",
+    );
+    technicalCopyIncompatibleCount.value = sourceValues.filter(
+      (item: TechnicalAttributeValue) =>
+        !currentAttributes.has(item.attributeId),
+    ).length;
+    technicalCopyRows.value = sourceValues
+      .filter((item: TechnicalAttributeValue) =>
+        currentAttributes.has(item.attributeId),
+      )
+      .map((item: TechnicalAttributeValue) => {
+        const attribute = currentAttributes.get(item.attributeId)!;
+        const currentValue = technicalValue(item.attributeId);
+        return {
+          attributeId: item.attributeId,
+          name: technicalAttributeLabel(attribute, false),
+          sourceValue: item.value,
+          currentValue,
+          selected: !currentValue,
+        };
+      });
+  } catch (error) {
+    console.error(error);
+    technicalCopyRows.value = [];
+    toast.add({
+      severity: "error",
+      summary: "No se pudieron cargar las características",
+      detail: "Revisa el producto de origen e inténtalo de nuevo.",
+      life: companyStore.companyInfo.toastDuration ?? 3000,
+    });
+  }
+};
+
+const applyTechnicalCopy = () => {
+  technicalCopyRows.value
+    .filter((row) => row.selected)
+    .forEach((row) => {
+      setTechnicalValue(row.attributeId, row.sourceValue);
+    });
+  technicalCopyDialogVisible.value = false;
+  toast.add({
+    severity: "success",
+    summary: "Características copiadas",
+    detail: "Los valores quedan pendientes de guardar con el producto.",
+    life: companyStore.companyInfo.toastDuration ?? 3000,
+  });
+};
+
 const technicalNumberValue = (attributeId: number) => {
   const value = technicalValue(attributeId);
   return value === "" ? null : Number(value);
@@ -1925,6 +2117,20 @@ watch(
 );
 
 watch(
+  () => product.value.familyId,
+  (familyId) => {
+    const family = families.value.find((item) => item.pkid === familyId);
+    if (!family?.defaultTechnicalClassId) return;
+    const currentClass = productTechnicalClasses.value.find(
+      (item) => item.pkid === product.value.technicalClassId,
+    );
+    if (!currentClass || currentClass.code === "PRODUCT") {
+      product.value.technicalClassId = family.defaultTechnicalClassId;
+    }
+  },
+);
+
+watch(
   () => product.value.requireDeliveryOverride,
   (requiresDelivery) => {
     if (requiresDelivery === false)
@@ -1940,10 +2146,17 @@ const openNewFamily = () => {
   familiaProductosRef.value?.open(null);
 };
 
-const handleFamilySaved = (family: { pkid: number; description: string }) => {
+const handleFamilySaved = (family: {
+  pkid: number;
+  description: string;
+  defaultTechnicalClassId: number | null;
+  defaultTechnicalClassPath: string | null;
+}) => {
   families.value.push({
     pkid: family.pkid,
     description: family.description,
+    defaultTechnicalClassId: family.defaultTechnicalClassId,
+    defaultTechnicalClassPath: family.defaultTechnicalClassPath,
   });
 
   product.value.familyId = family.pkid;
@@ -2259,6 +2472,30 @@ const handleImageSelected = (event: Event) => {
 .technical-class-form small {
   color: var(--text-color-secondary);
   line-height: 1.45;
+}
+.technical-copy-dialog {
+  display: grid;
+  gap: 1rem;
+}
+.technical-copy-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+.technical-copy-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1.5rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  background: var(--surface-50);
+  color: var(--text-color-secondary);
+}
+.technical-copy-overwrite {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
 }
 .technical-attributes-panel {
   margin: 0 0 20px;
