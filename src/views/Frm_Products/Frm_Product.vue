@@ -1155,7 +1155,7 @@
           </span>
         </template>
       </Column>
-      <Column header="Acciones" style="width: 225px">
+      <Column header="Acciones" style="width: 265px">
         <template #body="{ node }">
           <div class="flex gap-1">
             <Button
@@ -1201,6 +1201,15 @@
               :disabled="node.data.code === 'PRODUCT'"
               :title="node.data.active ? 'Desactivar' : 'Activar'"
               @click="toggleTechnicalClass(node.data)"
+            />
+            <Button
+              icon="pi pi-trash"
+              text
+              rounded
+              severity="danger"
+              :disabled="node.data.code === 'PRODUCT'"
+              title="Eliminar clase"
+              @click="confirmDeleteTechnicalClass(node.data)"
             />
           </div>
         </template>
@@ -1483,6 +1492,7 @@ import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import { useFormValidator } from "../../libs/HelperView";
 import { useToast } from "primevue/usetoast";
+import { useConfirm } from "primevue/useconfirm";
 import { useCompanyStore } from "@/stores/companyStore";
 import { useSecurityStore } from "@/stores/securityStore";
 import { PERM } from "@/services/Frm_Main/permissions";
@@ -1493,6 +1503,7 @@ import type { ProductsDTO } from "../../models/ProductsDTO";
 
 const CATEGORY_TYPE_FAMILY = 4;
 const toast = useToast();
+const confirm = useConfirm();
 const companyStore = useCompanyStore();
 const securityStore = useSecurityStore();
 const salesTaxes = ref<any[]>([]);
@@ -2657,6 +2668,62 @@ const toggleTechnicalClass = async (technicalClass: any) => {
       life: 4500,
     });
   }
+};
+
+const confirmDeleteTechnicalClass = (technicalClass: any) => {
+  const consequences = [
+    technicalClass.productCount
+      ? `${technicalClass.productCount} producto(s) pasarán a la clase Producto y a estrategia estándar.`
+      : null,
+    technicalClass.childCount
+      ? `${technicalClass.childCount} clase(s) hija(s) subirán al nivel superior.`
+      : null,
+    technicalClass.attributeCount
+      ? `${technicalClass.attributeCount} atributo(s) y sus valores dejarán de existir.`
+      : null,
+  ].filter(Boolean);
+  confirm.require({
+    header: "Eliminar clase de producto",
+    message: `Se eliminará “${technicalClass.path || technicalClass.name}”. ${consequences.join(" ")} Esta operación no se puede deshacer.`,
+    icon: "pi pi-exclamation-triangle",
+    acceptLabel: "Eliminar clase",
+    rejectLabel: "Cancelar",
+    acceptClass: "p-button-danger",
+    accept: async () => {
+      try {
+        const { data } = await axios.delete(
+          backendUrl(`/WebDeleteProductTechnicalClass/${technicalClass.pkid}`),
+        );
+        if (product.value.technicalClassId === technicalClass.pkid) {
+          product.value.technicalClassId =
+            productTechnicalClasses.value.find(
+              (item) => item.code === "PRODUCT",
+            )?.pkid ?? null;
+          product.value.supplyStrategy = "STANDARD";
+          product.value.manufacturingNature = "PHYSICAL";
+          resetManufacturingConfiguration();
+          product.value.technicalAttributeValues = [];
+        }
+        await loadCatalogs();
+        await loadTechnicalClassMaintenance();
+        toast.add({
+          severity: "success",
+          summary: "Clase eliminada",
+          detail: `${data.productsReset || 0} producto(s) reasignados a Producto.`,
+          life: 4000,
+        });
+      } catch (error: any) {
+        toast.add({
+          severity: "error",
+          summary: "No se pudo eliminar la clase",
+          detail:
+            error.response?.data ||
+            "Revisa las dependencias e inténtalo de nuevo.",
+          life: 4500,
+        });
+      }
+    },
+  });
 };
 
 const saveTechnicalClass = async () => {
