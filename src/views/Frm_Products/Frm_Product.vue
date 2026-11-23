@@ -423,43 +423,20 @@
 
       <Panel
         v-if="
-          selectedTechnicalClass && selectedTechnicalClass.code !== 'PRODUCT'
+          isManufacturingStrategy &&
+          selectedTechnicalClass &&
+          selectedTechnicalClass.code !== 'PRODUCT'
         "
         class="technical-attributes-panel"
       >
         <template #header>
-          <div class="technical-attributes-header">
-            <div class="manufacturing-panel__header">
-              <div class="manufacturing-panel__icon">
-                <i class="pi pi-sliders-h"></i>
-              </div>
-              <div>
-                <b>Características técnicas</b>
-                <small>{{ selectedTechnicalClass?.path || "Producto" }}</small>
-              </div>
+          <div class="manufacturing-panel__header">
+            <div class="manufacturing-panel__icon">
+              <i class="pi pi-sliders-h"></i>
             </div>
-            <div class="technical-attributes-actions">
-              <Button
-                label="Copiar"
-                icon="pi pi-copy"
-                severity="secondary"
-                text
-                size="small"
-                :disabled="!applicableTechnicalAttributes.length"
-                title="Copiar características desde otro producto"
-                @click="openTechnicalCopyDialog"
-              />
-              <span class="technical-attributes-actions__divider"></span>
-              <Button
-                v-if="securityStore.hasPermission(PERM.PROD_MASTER_EDIT)"
-                label="Configurar"
-                icon="pi pi-cog"
-                severity="secondary"
-                text
-                size="small"
-                title="Configurar los atributos de esta clase"
-                @click="openTechnicalAttributesDialog"
-              />
+            <div>
+              <b>Características técnicas</b>
+              <small>{{ selectedTechnicalClass?.path || "Producto" }}</small>
             </div>
           </div>
         </template>
@@ -1141,7 +1118,7 @@
           </span>
         </template>
       </Column>
-      <Column header="Acciones" style="width: 150px">
+      <Column header="Acciones" style="width: 225px">
         <template #body="{ node }">
           <div class="flex gap-1">
             <Button
@@ -1160,6 +1137,24 @@
               :disabled="node.data.code === 'PRODUCT'"
               title="Editar"
               @click="openEditTechnicalClass(node.data)"
+            />
+            <Button
+              icon="pi pi-sliders-h"
+              text
+              rounded
+              severity="secondary"
+              :disabled="node.data.code === 'PRODUCT' || !node.data.active"
+              title="Editar atributos técnicos"
+              @click="openTechnicalAttributesDialog(node.data)"
+            />
+            <Button
+              icon="pi pi-copy"
+              text
+              rounded
+              severity="secondary"
+              :disabled="node.data.code === 'PRODUCT' || !node.data.active"
+              title="Copiar atributos desde otra clase"
+              @click="openTechnicalAttributeClassCopy(node.data)"
             />
             <Button
               :icon="node.data.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
@@ -1246,9 +1241,52 @@
   </Dialog>
 
   <Dialog
+    v-model:visible="technicalAttributeClassCopyVisible"
+    modal
+    header="Copiar atributos técnicos"
+    :style="{ width: 'min(620px, 94vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="technical-attribute-class-copy">
+      <InlineMessage severity="info" class="w-full">
+        Se añadirán a
+        <b>{{ technicalAttributesClass?.path || "la clase seleccionada" }}</b>
+        los atributos que todavía no existan. Podrás revisarlos antes de
+        guardar.
+      </InlineMessage>
+      <FloatLabel variant="on">
+        <Select
+          id="technicalAttributeSourceClass"
+          v-model="technicalAttributeSourceClassId"
+          :options="technicalAttributeSourceClasses"
+          optionLabel="path"
+          optionValue="pkid"
+          filter
+          class="w-full"
+        />
+        <label for="technicalAttributeSourceClass">Copiar desde *</label>
+      </FloatLabel>
+    </div>
+    <template #footer>
+      <div class="kiwik-separator"></div>
+      <Button
+        label="Cancelar"
+        text
+        @click="technicalAttributeClassCopyVisible = false"
+      />
+      <Button
+        label="Copiar y revisar"
+        icon="pi pi-copy"
+        :disabled="!technicalAttributeSourceClassId"
+        @click="copyTechnicalAttributesFromClass"
+      />
+    </template>
+  </Dialog>
+
+  <Dialog
     v-model:visible="technicalAttributesDialogVisible"
     modal
-    :header="`Atributos de ${selectedTechnicalClass?.path || 'la clase'}`"
+    :header="`Atributos de ${technicalAttributesClass?.path || 'la clase'}`"
     :style="{ width: 'min(1400px, 97vw)' }"
     class="kiwik-dialog"
   >
@@ -1450,6 +1488,9 @@ const newTechnicalClass = ref<{
   parentId: null,
 });
 const technicalAttributesDialogVisible = ref(false);
+const technicalAttributesClassId = ref<number | null>(null);
+const technicalAttributeClassCopyVisible = ref(false);
+const technicalAttributeSourceClassId = ref<number | null>(null);
 const technicalCopyDialogVisible = ref(false);
 const technicalCopySourceId = ref<number | null>(null);
 const technicalCopySourceLabel = ref("");
@@ -1920,9 +1961,12 @@ const loadCatalogs = async () => {
 const save = async () => {
   if (!(await validate())) return;
 
-  const missingTechnical = applicableTechnicalAttributes.value.find(
-    (attribute) => attribute.required && !technicalValue(attribute.pkid).trim(),
-  );
+  const missingTechnical = isManufacturingStrategy.value
+    ? applicableTechnicalAttributes.value.find(
+        (attribute) =>
+          attribute.required && !technicalValue(attribute.pkid).trim(),
+      )
+    : null;
   if (missingTechnical) {
     toast.add({
       severity: "warn",
@@ -2118,8 +2162,48 @@ const applicableTechnicalAttributes = computed(() => {
 });
 
 const inheritedTechnicalAttributes = computed(() =>
-  applicableTechnicalAttributes.value.filter(
-    (attribute) => attribute.classId !== product.value.technicalClassId,
+  productTechnicalAttributes.value
+    .filter(
+      (attribute) =>
+        technicalAttributeClassAncestorIds.value.includes(attribute.classId) &&
+        attribute.classId !== technicalAttributesClassId.value &&
+        attribute.inheritable,
+    )
+    .sort(
+      (a, b) =>
+        (a.sortOrder || 0) - (b.sortOrder || 0) ||
+        a.name.localeCompare(b.name, "es"),
+    ),
+);
+
+const technicalAttributesClass = computed(
+  () =>
+    productTechnicalClasses.value.find(
+      (item) => item.pkid === technicalAttributesClassId.value,
+    ) ?? null,
+);
+
+const technicalAttributeClassAncestorIds = computed(() => {
+  const ids: number[] = [];
+  let current = technicalAttributesClass.value;
+  while (current?.parentId && ids.length < 20) {
+    ids.push(current.parentId);
+    current = productTechnicalClasses.value.find(
+      (item) => item.pkid === current.parentId,
+    );
+  }
+  return ids;
+});
+
+const technicalAttributeSourceClasses = computed(() =>
+  productTechnicalClasses.value.filter(
+    (item) =>
+      item.active !== false &&
+      item.code !== "PRODUCT" &&
+      item.pkid !== technicalAttributesClassId.value &&
+      productTechnicalAttributes.value.some(
+        (attribute) => attribute.classId === item.pkid,
+      ),
   ),
 );
 
@@ -2530,23 +2614,77 @@ const saveTechnicalClass = async () => {
   }
 };
 
-const openTechnicalAttributesDialog = () => {
+const prepareTechnicalAttributeDrafts = (classId: number) => {
+  technicalAttributesClassId.value = classId;
   technicalAttributeDrafts.value = productTechnicalAttributes.value
-    .filter((item) => item.classId === product.value.technicalClassId)
+    .filter((item) => item.classId === classId)
     .map((item) => ({
       ...item,
       rowKey: `attribute-${item.pkid}`,
       unit: item.unit || "",
       options: item.options || "",
     }));
+};
+
+const openTechnicalAttributesDialog = (technicalClass?: any) => {
+  const classId = technicalClass?.pkid ?? product.value.technicalClassId;
+  if (!classId) return;
+  prepareTechnicalAttributeDrafts(classId);
   technicalAttributesDialogVisible.value = true;
+};
+
+const openTechnicalAttributeClassCopy = (technicalClass: any) => {
+  prepareTechnicalAttributeDrafts(technicalClass.pkid);
+  technicalAttributeSourceClassId.value = null;
+  technicalAttributeClassCopyVisible.value = true;
+};
+
+const copyTechnicalAttributesFromClass = () => {
+  const sourceClassId = technicalAttributeSourceClassId.value;
+  const targetClassId = technicalAttributesClassId.value;
+  if (!sourceClassId || !targetClassId) return;
+
+  const existingCodes = new Set(
+    [
+      ...technicalAttributeDrafts.value,
+      ...inheritedTechnicalAttributes.value,
+    ].map((item) => item.code.toUpperCase()),
+  );
+  const sourceAttributes = productTechnicalAttributes.value.filter(
+    (item) => item.classId === sourceClassId,
+  );
+  const copied = sourceAttributes
+    .filter((item) => !existingCodes.has(item.code.toUpperCase()))
+    .map((item, index) => ({
+      ...item,
+      pkid: null,
+      classId: targetClassId,
+      rowKey: crypto.randomUUID(),
+      unit: item.unit || "",
+      options: item.options || "",
+      sortOrder: (technicalAttributeDrafts.value.length + index + 1) * 10,
+    }));
+
+  technicalAttributeDrafts.value.push(...copied);
+  technicalAttributeClassCopyVisible.value = false;
+  technicalAttributesDialogVisible.value = true;
+  toast.add({
+    severity: copied.length ? "success" : "info",
+    summary: copied.length
+      ? `${copied.length} atributo(s) preparados`
+      : "No hay atributos nuevos",
+    detail: copied.length
+      ? "Revisa la configuración y pulsa Guardar atributos."
+      : "La clase de destino ya contiene todos los atributos de origen.",
+    life: 3500,
+  });
 };
 
 const addTechnicalAttribute = () => {
   technicalAttributeDrafts.value.push({
     rowKey: crypto.randomUUID(),
     pkid: null,
-    classId: product.value.technicalClassId!,
+    classId: technicalAttributesClassId.value!,
     code: "",
     name: "",
     dataType: "TEXT",
@@ -2581,7 +2719,7 @@ const saveTechnicalAttributes = async () => {
     return;
   }
   try {
-    const classId = product.value.technicalClassId!;
+    const classId = technicalAttributesClassId.value!;
     const { data } = await axios.post(
       backendUrl(`/WebSaveProductTechnicalAttributes/${classId}`),
       technicalAttributeDrafts.value,
@@ -2599,6 +2737,8 @@ const saveTechnicalAttributes = async () => {
       product.value.technicalAttributeValues.filter((item) =>
         applicableIds.has(item.attributeId),
       );
+    if (technicalClassMaintenanceVisible.value)
+      await loadTechnicalClassMaintenance();
     technicalAttributesDialogVisible.value = false;
     toast.add({
       severity: "success",
@@ -2898,6 +3038,11 @@ const handleImageSelected = (event: Event) => {
 }
 .technical-class-dialog-save {
   white-space: nowrap;
+}
+.technical-attribute-class-copy {
+  display: grid;
+  gap: 1.25rem;
+  padding-top: 0.35rem;
 }
 .technical-copy-dialog {
   display: grid;
