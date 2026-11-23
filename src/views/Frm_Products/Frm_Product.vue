@@ -387,30 +387,67 @@
             </div>
           </div>
         </template>
+        <div class="manufacturing-nature-row">
+          <FloatLabel variant="on">
+            <Select
+              id="manufacturingNature"
+              v-model="product.manufacturingNature"
+              :options="manufacturingNatures"
+              optionLabel="label"
+              optionValue="value"
+              class="w-full"
+            />
+            <label for="manufacturingNature">Naturaleza de fabricación</label>
+          </FloatLabel>
+          <small>{{ selectedManufacturingNature?.description }}</small>
+        </div>
+        <InlineMessage
+          v-if="isLogicalManufacturingProduct"
+          severity="info"
+          class="w-full mb-3"
+        >
+          Este conjunto sólo organiza la formación. No genera existencia, número
+          de serie, lote, certificado ni controles propios; sus componentes se
+          desplegarán en el conjunto físico superior.
+        </InlineMessage>
         <div class="manufacturing-options">
           <label
-            ><Checkbox v-model="product.manufacturingSerialNumber" binary />
+            ><Checkbox
+              v-model="product.manufacturingSerialNumber"
+              binary
+              :disabled="isLogicalManufacturingProduct"
+            />
             Generar número de serie</label
           >
           <label
-            ><Checkbox v-model="product.manufacturingLotTracking" binary />
+            ><Checkbox
+              v-model="product.manufacturingLotTracking"
+              binary
+              :disabled="isLogicalManufacturingProduct"
+            />
             Control por lotes</label
           >
           <label
             ><Checkbox
               v-model="product.manufacturingCertificateRequired"
               binary
+              :disabled="isLogicalManufacturingProduct"
             />
             Necesita certificado</label
           >
           <label
-            ><Checkbox v-model="product.manufacturingQualityControl" binary />
+            ><Checkbox
+              v-model="product.manufacturingQualityControl"
+              binary
+              :disabled="isLogicalManufacturingProduct"
+            />
             Control de calidad</label
           >
           <label
             ><Checkbox
               v-model="product.manufacturingMaterialTraceability"
               binary
+              :disabled="isLogicalManufacturingProduct"
             />
             Trazabilidad de materiales</label
           >
@@ -1584,6 +1621,7 @@ type Product = {
 
   purchaseSuppliers: PurchaseSupplier[];
   supplyStrategy: "STANDARD" | "BUY" | "MAKE" | "SUBCONTRACT" | "MAKE_OR_BUY";
+  manufacturingNature: "PHYSICAL" | "ASSEMBLY" | "PHANTOM" | "MATERIAL";
   manufacturingSerialNumber: boolean;
   manufacturingLotTracking: boolean;
   manufacturingCertificateRequired: boolean;
@@ -1658,6 +1696,7 @@ const createProduct = (): Product => ({
 
   purchaseSuppliers: [],
   supplyStrategy: "STANDARD",
+  manufacturingNature: "PHYSICAL",
   manufacturingSerialNumber: false,
   manufacturingLotTracking: false,
   manufacturingCertificateRequired: false,
@@ -1681,8 +1720,38 @@ const supplyStrategies = [
   { label: "Fabricación o compra", value: "MAKE_OR_BUY" },
 ];
 const manufacturingStrategyValues = ["MAKE", "SUBCONTRACT", "MAKE_OR_BUY"];
+const manufacturingNatures = [
+  {
+    label: "Producto físico",
+    value: "PHYSICAL",
+    description: "Producto final físico, vendible o entregable.",
+  },
+  {
+    label: "Conjunto fabricado o montado",
+    value: "ASSEMBLY",
+    description: "Conjunto físico que puede tener una orden propia.",
+  },
+  {
+    label: "Conjunto lógico (fantasma)",
+    value: "PHANTOM",
+    description: "Agrupador sin existencia ni orden independiente.",
+  },
+  {
+    label: "Componente o materia prima",
+    value: "MATERIAL",
+    description: "Elemento físico consumido por otro producto o conjunto.",
+  },
+];
 const isManufacturingStrategy = computed(() =>
   manufacturingStrategyValues.includes(product.value.supplyStrategy),
+);
+const isLogicalManufacturingProduct = computed(
+  () => product.value.manufacturingNature === "PHANTOM",
+);
+const selectedManufacturingNature = computed(() =>
+  manufacturingNatures.find(
+    (item) => item.value === product.value.manufacturingNature,
+  ),
 );
 const newPurchaseSupplier = (): PurchaseSupplier => ({
   rowKey: crypto.randomUUID(),
@@ -2055,6 +2124,16 @@ watch(
   (strategy) => {
     if (["SUBCONTRACT", "MAKE_OR_BUY"].includes(strategy))
       product.value.purchase = true;
+    if (!manufacturingStrategyValues.includes(strategy)) {
+      product.value.manufacturingNature = "PHYSICAL";
+      resetManufacturingConfiguration();
+    }
+  },
+);
+watch(
+  () => product.value.manufacturingNature,
+  (nature) => {
+    if (nature === "PHANTOM") resetManufacturingConfiguration();
   },
 );
 watch(
@@ -3156,6 +3235,17 @@ const handleImageSelected = (event: Event) => {
   color: var(--primary-color);
   background: var(--primary-100);
 }
+.manufacturing-nature-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) minmax(220px, 1fr);
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.manufacturing-nature-row > small {
+  color: var(--text-color-secondary);
+  line-height: 1.4;
+}
 .manufacturing-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(220px, 1fr));
@@ -3182,6 +3272,9 @@ const handleImageSelected = (event: Event) => {
     flex-direction: column;
   }
   .supplier-notes {
+    grid-template-columns: 1fr;
+  }
+  .manufacturing-nature-row {
     grid-template-columns: 1fr;
   }
   .manufacturing-options {
