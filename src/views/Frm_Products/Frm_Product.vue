@@ -1063,14 +1063,45 @@
         @click="openNewTechnicalClass"
       />
     </div>
-    <DataTable
-      :value="technicalClassMaintenance"
-      dataKey="pkid"
+    <div class="technical-class-tree-toolbar">
+      <Button
+        label="Expandir todo"
+        icon="pi pi-angle-double-down"
+        text
+        size="small"
+        @click="expandAllTechnicalClasses"
+      />
+      <Button
+        label="Contraer todo"
+        icon="pi pi-angle-double-up"
+        text
+        size="small"
+        @click="collapseAllTechnicalClasses"
+      />
+    </div>
+    <TreeTable
+      :value="technicalClassTree"
+      v-model:expandedKeys="technicalClassExpandedKeys"
       stripedRows
       scrollable
       scrollHeight="55vh"
+      class="technical-class-tree"
     >
-      <Column field="path" header="Clase" style="min-width: 280px" />
+      <Column field="name" header="Clase" expander style="min-width: 280px">
+        <template #body="{ node }">
+          <div class="technical-class-tree-name">
+            <i
+              :class="['pi', node.children?.length ? 'pi-folder' : 'pi-tag']"
+            ></i>
+            <div>
+              <span>{{ node.data.name }}</span>
+              <small v-if="node.data.code !== 'PRODUCT'">
+                {{ node.data.code }}
+              </small>
+            </div>
+          </div>
+        </template>
+      </Column>
       <Column
         field="productCount"
         header="Productos"
@@ -1090,42 +1121,50 @@
         bodyClass="text-right"
       />
       <Column header="Estado" style="width: 110px">
-        <template #body="{ data }">
+        <template #body="{ node }">
           <span
             :class="[
               'technical-class-status',
-              data.active ? 'is-active' : 'is-inactive',
+              node.data.active ? 'is-active' : 'is-inactive',
             ]"
           >
-            {{ data.active ? "Activa" : "Inactiva" }}
+            {{ node.data.active ? "Activa" : "Inactiva" }}
           </span>
         </template>
       </Column>
       <Column header="Acciones" style="width: 150px">
-        <template #body="{ data }">
+        <template #body="{ node }">
           <div class="flex gap-1">
+            <Button
+              icon="pi pi-plus"
+              text
+              rounded
+              severity="success"
+              title="Añadir clase hija"
+              @click="openNewTechnicalClass(node.data)"
+            />
             <Button
               icon="pi pi-pencil"
               text
               rounded
               severity="secondary"
-              :disabled="data.code === 'PRODUCT'"
+              :disabled="node.data.code === 'PRODUCT'"
               title="Editar"
-              @click="openEditTechnicalClass(data)"
+              @click="openEditTechnicalClass(node.data)"
             />
             <Button
-              :icon="data.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
+              :icon="node.data.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
               text
               rounded
-              :severity="data.active ? 'danger' : 'success'"
-              :disabled="data.code === 'PRODUCT'"
-              :title="data.active ? 'Desactivar' : 'Activar'"
-              @click="toggleTechnicalClass(data)"
+              :severity="node.data.active ? 'danger' : 'success'"
+              :disabled="node.data.code === 'PRODUCT'"
+              :title="node.data.active ? 'Desactivar' : 'Activar'"
+              @click="toggleTechnicalClass(node.data)"
             />
           </div>
         </template>
       </Column>
-    </DataTable>
+    </TreeTable>
     <template #footer>
       <div class="kiwik-separator"></div>
       <Button
@@ -1341,6 +1380,7 @@ import Checkbox from "primevue/checkbox";
 import Select from "primevue/select";
 import FloatLabel from "primevue/floatlabel";
 import DataTable from "primevue/datatable";
+import TreeTable from "primevue/treetable";
 import Column from "primevue/column";
 import InputNumber from "primevue/inputnumber";
 import Textarea from "primevue/textarea";
@@ -1384,6 +1424,8 @@ const salesTaxFormMode = ref<"sale" | "purchase" | null>(null);
 const technicalClassDialogVisible = ref(false);
 const technicalClassMaintenanceVisible = ref(false);
 const technicalClassMaintenance = ref<any[]>([]);
+const technicalClassTree = ref<any[]>([]);
+const technicalClassExpandedKeys = ref<Record<string, boolean>>({});
 const newTechnicalClass = ref<{
   pkid: number | null;
   name: string;
@@ -2324,11 +2366,12 @@ const handleFamilySaved = (family: {
   product.value.familyId = family.pkid;
 };
 
-const openNewTechnicalClass = () => {
+const openNewTechnicalClass = (parentClass?: any) => {
   newTechnicalClass.value = {
     pkid: null,
     name: "",
     parentId:
+      parentClass?.pkid ??
       product.value.technicalClassId ??
       productTechnicalClasses.value.find((item) => item.code === "PRODUCT")
         ?.pkid ??
@@ -2342,6 +2385,48 @@ const loadTechnicalClassMaintenance = async () => {
     backendUrl("/WebGetProductTechnicalClassMaintenance"),
   );
   technicalClassMaintenance.value = data || [];
+  technicalClassTree.value = buildTechnicalClassTree(
+    technicalClassMaintenance.value,
+  );
+  expandAllTechnicalClasses();
+};
+
+const buildTechnicalClassTree = (rows: any[]) => {
+  const nodes = new Map<number, any>();
+  rows.forEach((row) => {
+    nodes.set(row.pkid, {
+      key: String(row.pkid),
+      data: row,
+      children: [],
+    });
+  });
+
+  const roots: any[] = [];
+  rows.forEach((row) => {
+    const node = nodes.get(row.pkid);
+    const parent = row.parentId ? nodes.get(row.parentId) : null;
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  });
+  return roots;
+};
+
+const expandAllTechnicalClasses = () => {
+  const expanded: Record<string, boolean> = {};
+  const visit = (nodes: any[]) => {
+    nodes.forEach((node) => {
+      if (node.children?.length) {
+        expanded[node.key] = true;
+        visit(node.children);
+      }
+    });
+  };
+  visit(technicalClassTree.value);
+  technicalClassExpandedKeys.value = expanded;
+};
+
+const collapseAllTechnicalClasses = () => {
+  technicalClassExpandedKeys.value = {};
 };
 
 const openTechnicalClassMaintenance = async () => {
@@ -2706,6 +2791,44 @@ const handleImageSelected = (event: Event) => {
 .technical-class-maintenance-header small {
   margin-top: 0.2rem;
   color: var(--text-color-secondary);
+}
+.technical-class-tree-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin: -0.5rem 0 0.45rem;
+}
+.technical-class-tree-name {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+.technical-class-tree-name > i {
+  color: #7d9900;
+  font-size: 0.95rem;
+}
+.technical-class-tree-name > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.technical-class-tree-name span {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.technical-class-tree-name small {
+  margin-top: 0.1rem;
+  color: var(--text-color-secondary);
+  font-size: 0.72rem;
+}
+.technical-class-tree :deep(.p-treetable-tbody > tr > td) {
+  border-bottom: 1px dotted #d7d7d7;
+}
+.technical-class-tree :deep(.p-treetable-node-toggle-button) {
+  color: #6f8700;
 }
 .technical-class-status {
   display: inline-flex;
