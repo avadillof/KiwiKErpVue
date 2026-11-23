@@ -571,7 +571,7 @@
       <!-- ========================================= -->
 
       <Tabs
-        v-if="product.sale || product.purchase"
+        v-if="product.sale || product.purchase || isManufacturingStrategy"
         v-model:value="activeTab"
         style="min-height: 400px"
       >
@@ -598,6 +598,17 @@
 
               <h4 class="m-0 text-primary font-semibold">
                 Parámetros de Compras.
+              </h4>
+            </div>
+          </Tab>
+          <Tab v-if="isManufacturingStrategy" value="2">
+            <div class="flex align-items-center">
+              <i
+                class="pi pi-sitemap text-primary mr-2"
+                style="font-size: 1.3rem"
+              />
+              <h4 class="m-0 text-primary font-semibold">
+                Lista de materiales.
               </h4>
             </div>
           </Tab>
@@ -935,6 +946,223 @@
                   />
                 </div>
               </div>
+            </Panel>
+          </TabPanel>
+
+          <TabPanel v-if="isManufacturingStrategy" value="2">
+            <Panel class="bom-panel">
+              <InlineMessage
+                v-if="!product.pkid"
+                severity="info"
+                class="w-full"
+              >
+                Guarda primero el producto para poder definir su lista de
+                materiales.
+              </InlineMessage>
+              <template v-else>
+                <div class="bom-toolbar">
+                  <div>
+                    <b><i class="pi pi-sitemap"></i> Revisiones</b>
+                    <small
+                      >Sólo puede existir una revisión vigente por
+                      producto.</small
+                    >
+                  </div>
+                  <div class="bom-toolbar__actions">
+                    <Select
+                      v-model="selectedBomId"
+                      :options="productBoms"
+                      optionLabel="displayLabel"
+                      optionValue="pkid"
+                      placeholder="Seleccionar revisión"
+                      @change="selectBomRevision"
+                    />
+                    <Button
+                      label="Nueva revisión"
+                      icon="pi pi-plus"
+                      outlined
+                      @click="newBomRevision"
+                    />
+                    <Button
+                      v-if="bomForm.pkid"
+                      icon="pi pi-trash"
+                      severity="danger"
+                      text
+                      title="Eliminar revisión"
+                      @click="confirmDeleteBom"
+                    />
+                  </div>
+                </div>
+
+                <div class="bom-header-grid">
+                  <FloatLabel variant="on">
+                    <InputText
+                      id="bomRevision"
+                      v-model="bomForm.revision"
+                      maxlength="30"
+                      class="w-full"
+                    />
+                    <label for="bomRevision">Revisión *</label>
+                  </FloatLabel>
+                  <FloatLabel variant="on">
+                    <Select
+                      id="bomStatus"
+                      v-model="bomForm.status"
+                      :options="bomStatuses"
+                      optionLabel="label"
+                      optionValue="value"
+                      class="w-full"
+                    />
+                    <label for="bomStatus">Estado</label>
+                  </FloatLabel>
+                  <FloatLabel variant="on">
+                    <DatePicker
+                      inputId="bomValidFrom"
+                      v-model="bomForm.validFrom"
+                      dateFormat="dd/mm/yy"
+                      showIcon
+                      class="w-full"
+                    />
+                    <label for="bomValidFrom">Válida desde</label>
+                  </FloatLabel>
+                  <FloatLabel variant="on">
+                    <DatePicker
+                      inputId="bomValidTo"
+                      v-model="bomForm.validTo"
+                      dateFormat="dd/mm/yy"
+                      showIcon
+                      class="w-full"
+                    />
+                    <label for="bomValidTo">Válida hasta</label>
+                  </FloatLabel>
+                  <FloatLabel variant="on" class="bom-description">
+                    <InputText
+                      id="bomDescription"
+                      v-model="bomForm.description"
+                      maxlength="255"
+                      class="w-full"
+                    />
+                    <label for="bomDescription">Descripción</label>
+                  </FloatLabel>
+                </div>
+
+                <div class="bom-lines-header">
+                  <div>
+                    <b>Componentes directos</b>
+                    <small
+                      >Los subconjuntos con lista vigente se despliegan en el
+                      árbol inferior.</small
+                    >
+                  </div>
+                  <Button
+                    label="Añadir componente"
+                    icon="pi pi-plus"
+                    size="small"
+                    @click="addBomLine"
+                  />
+                </div>
+                <DataTable
+                  :value="bomForm.lines"
+                  dataKey="rowKey"
+                  scrollable
+                  class="bom-lines-table"
+                >
+                  <template #empty
+                    ><div class="p-4 text-center text-color-secondary">
+                      Añade el primer componente de la lista.
+                    </div></template
+                  >
+                  <Column header="Posición" style="width: 105px"
+                    ><template #body="{ data }"
+                      ><InputNumber
+                        v-model="data.sequence"
+                        :min="1"
+                        :useGrouping="false"
+                        fluid /></template
+                  ></Column>
+                  <Column
+                    header="Producto / componente"
+                    style="min-width: 330px"
+                    ><template #body="{ data }"
+                      ><ProductLookup
+                        v-model="data.componentId"
+                        :label="bomComponentLabel(data)"
+                        @selected="selectBomComponent(data, $event)"
+                        @cleared="clearBomComponent(data)" /></template
+                  ></Column>
+                  <Column header="Cantidad" style="width: 130px"
+                    ><template #body="{ data }"
+                      ><InputNumber
+                        v-model="data.quantity"
+                        :min="0.000001"
+                        :maxFractionDigits="6"
+                        fluid /></template
+                  ></Column>
+                  <Column header="Unidad" style="min-width: 180px"
+                    ><template #body="{ data }"
+                      ><Select
+                        v-model="data.uomId"
+                        :options="units"
+                        optionLabel="description"
+                        optionValue="pkid"
+                        filter
+                        fluid /></template
+                  ></Column>
+                  <Column header="Notas" style="min-width: 240px"
+                    ><template #body="{ data }"
+                      ><InputText
+                        v-model="data.notes"
+                        maxlength="500"
+                        fluid /></template
+                  ></Column>
+                  <Column style="width: 55px"
+                    ><template #body="{ index }"
+                      ><Button
+                        icon="pi pi-trash"
+                        severity="danger"
+                        text
+                        rounded
+                        @click="removeBomLine(index)" /></template
+                  ></Column>
+                </DataTable>
+
+                <div v-if="bomTreeNodes.length" class="bom-tree-section">
+                  <div class="bom-lines-header">
+                    <div>
+                      <b>Vista en árbol</b>
+                      <small
+                        >Los conjuntos lógicos se identifican como
+                        “Fantasma”.</small
+                      >
+                    </div>
+                  </div>
+                  <TreeTable
+                    :value="bomTreeNodes"
+                    v-model:expandedKeys="bomExpandedKeys"
+                    class="bom-tree"
+                  >
+                    <Column field="label" header="Componente" expander />
+                    <Column
+                      field="quantityLabel"
+                      header="Cantidad"
+                      style="width: 180px"
+                    />
+                    <Column
+                      field="natureLabel"
+                      header="Naturaleza"
+                      style="width: 210px"
+                    />
+                  </TreeTable>
+                </div>
+
+                <div class="bom-actions">
+                  <Button
+                    label="Guardar lista de materiales"
+                    icon="pi pi-check"
+                    @click="saveBom"
+                  />
+                </div>
+              </template>
             </Panel>
           </TabPanel>
         </TabPanels>
@@ -1525,6 +1753,10 @@ const productCategories = ref<any[]>([]);
 const productCategoryTypes = ref<any[]>([]);
 const productTechnicalClasses = ref<any[]>([]);
 const productTechnicalAttributes = ref<TechnicalAttribute[]>([]);
+const productBoms = ref<ProductBom[]>([]);
+const selectedBomId = ref<number | null>(null);
+const bomForm = ref<ProductBom>(createEmptyBom());
+const bomExpandedKeys = ref<Record<string, boolean>>({});
 const salesTaxFormMode = ref<"sale" | "purchase" | null>(null);
 const technicalClassDialogVisible = ref(false);
 const technicalClassMaintenanceVisible = ref(false);
@@ -1583,6 +1815,44 @@ type TechnicalAttributeValue = {
   attributeId: number;
   value: string;
 };
+
+type BomLine = {
+  rowKey: string;
+  pkid: number | null;
+  componentId: number | null;
+  componentCode: string;
+  componentDescription: string;
+  quantity: number;
+  uomId: number | null;
+  uomDescription: string;
+  sequence: number;
+  notes: string;
+  manufacturingNature: string;
+  children?: BomLine[];
+};
+
+type ProductBom = {
+  pkid: number | null;
+  revision: string;
+  description: string;
+  status: "DRAFT" | "ACTIVE" | "OBSOLETE";
+  validFrom: Date | null;
+  validTo: Date | null;
+  lines: BomLine[];
+  displayLabel?: string;
+};
+
+function createEmptyBom(): ProductBom {
+  return {
+    pkid: null,
+    revision: "01",
+    description: "",
+    status: "DRAFT",
+    validFrom: null,
+    validTo: null,
+    lines: [],
+  };
+}
 
 type Product = {
   pkid: number | null;
@@ -1758,6 +2028,17 @@ const manufacturingNatures = [
     description: "Elemento físico consumido por otro producto o conjunto.",
   },
 ];
+const bomStatuses = [
+  { label: "Borrador", value: "DRAFT" },
+  { label: "Vigente", value: "ACTIVE" },
+  { label: "Obsoleta", value: "OBSOLETE" },
+];
+const manufacturingNatureLabels: Record<string, string> = {
+  PHYSICAL: "Producto físico",
+  ASSEMBLY: "Conjunto fabricado",
+  PHANTOM: "Fantasma",
+  MATERIAL: "Componente / materia prima",
+};
 const isManufacturingStrategy = computed(() =>
   manufacturingStrategyValues.includes(product.value.supplyStrategy),
 );
@@ -1768,6 +2049,9 @@ const selectedManufacturingNature = computed(() =>
   manufacturingNatures.find(
     (item) => item.value === product.value.manufacturingNature,
   ),
+);
+const bomTreeNodes = computed(() =>
+  bomForm.value.lines.map((line) => toBomTreeNode(line)),
 );
 const newPurchaseSupplier = (): PurchaseSupplier => ({
   rowKey: crypto.randomUUID(),
@@ -1952,6 +2236,9 @@ const open = async (pkid?: number, initial?: Partial<Product>) => {
   clearErrors();
 
   product.value = createProduct();
+  productBoms.value = [];
+  selectedBomId.value = null;
+  bomForm.value = createEmptyBom();
 
   activeTab.value = "0";
 
@@ -1989,6 +2276,7 @@ const loadProduct = async (pkid: number) => {
 
       purchaseSuppliers: normalizePurchaseSuppliers(data.purchaseSuppliers),
     };
+    await loadProductBoms(pkid);
   } catch (error) {
     console.error(error);
 
@@ -2003,6 +2291,222 @@ const loadProduct = async (pkid: number) => {
     });
   }
 };
+
+const normalizeBomLine = (line: any): BomLine => ({
+  rowKey: line.rowKey || `bom-line-${line.pkid || crypto.randomUUID()}`,
+  pkid: line.pkid ?? null,
+  componentId: line.componentId ?? null,
+  componentCode: line.componentCode || "",
+  componentDescription: line.componentDescription || "",
+  quantity: Number(line.quantity ?? 1),
+  uomId: line.uomId ?? null,
+  uomDescription: line.uomDescription || "",
+  sequence: Number(line.sequence ?? 10),
+  notes: line.notes || "",
+  manufacturingNature: line.manufacturingNature || "PHYSICAL",
+  children: (line.children || []).map(normalizeBomLine),
+});
+
+const normalizeBom = (bom: any): ProductBom => ({
+  pkid: bom.pkid ?? null,
+  revision: bom.revision || "01",
+  description: bom.description || "",
+  status: bom.status || "DRAFT",
+  validFrom: parseBomDate(bom.validFrom),
+  validTo: parseBomDate(bom.validTo),
+  lines: (bom.lines || []).map(normalizeBomLine),
+  displayLabel: `${bom.revision || "01"} · ${bomStatusLabel(bom.status)}${bom.description ? ` · ${bom.description}` : ""}`,
+});
+
+const loadProductBoms = async (productId: number) => {
+  try {
+    const { data } = await axios.get(
+      backendUrl(`/WebGetProductBoms/${productId}`),
+    );
+    productBoms.value = (data || []).map(normalizeBom);
+    const preferred =
+      productBoms.value.find((item) => item.status === "ACTIVE") ||
+      productBoms.value[0];
+    if (preferred) {
+      selectedBomId.value = preferred.pkid;
+      bomForm.value = normalizeBom(preferred);
+      expandBomTree();
+    } else {
+      newBomRevision();
+    }
+  } catch (error) {
+    console.error(error);
+    toast.add({
+      severity: "error",
+      summary: "No se pudo cargar la lista de materiales",
+      life: 3500,
+    });
+  }
+};
+
+const selectBomRevision = () => {
+  const selected = productBoms.value.find(
+    (item) => item.pkid === selectedBomId.value,
+  );
+  if (selected) {
+    bomForm.value = normalizeBom(selected);
+    expandBomTree();
+  }
+};
+
+const newBomRevision = () => {
+  const next = String(productBoms.value.length + 1).padStart(2, "0");
+  selectedBomId.value = null;
+  bomForm.value = { ...createEmptyBom(), revision: next };
+  bomExpandedKeys.value = {};
+};
+
+const addBomLine = () => {
+  bomForm.value.lines.push({
+    rowKey: crypto.randomUUID(),
+    pkid: null,
+    componentId: null,
+    componentCode: "",
+    componentDescription: "",
+    quantity: 1,
+    uomId: product.value.uomId,
+    uomDescription: "",
+    sequence: (bomForm.value.lines.length + 1) * 10,
+    notes: "",
+    manufacturingNature: "PHYSICAL",
+    children: [],
+  });
+};
+
+const removeBomLine = (index: number) => bomForm.value.lines.splice(index, 1);
+const bomComponentLabel = (line: BomLine) =>
+  [line.componentCode, line.componentDescription].filter(Boolean).join(" — ");
+const selectBomComponent = (line: BomLine, selected: any) => {
+  line.componentId = selected.pkid;
+  line.componentCode = selected.code || "";
+  line.componentDescription = selected.description || "";
+  line.uomId = selected.uomId ?? selected.unitOfMeasure?.pkid ?? line.uomId;
+  line.manufacturingNature = selected.manufacturingNature || "PHYSICAL";
+  line.children = [];
+};
+const clearBomComponent = (line: BomLine) => {
+  line.componentId = null;
+  line.componentCode = "";
+  line.componentDescription = "";
+  line.children = [];
+};
+
+const saveBom = async () => {
+  if (!product.value.pkid || !bomForm.value.revision.trim()) return;
+  if (
+    bomForm.value.lines.some(
+      (line) => !line.componentId || !line.uomId || line.quantity <= 0,
+    )
+  ) {
+    toast.add({
+      severity: "warn",
+      summary: "Lista incompleta",
+      detail: "Completa producto, cantidad y unidad de todas las líneas.",
+      life: 4000,
+    });
+    return;
+  }
+  try {
+    const payload = {
+      ...bomForm.value,
+      validFrom: formatBomDate(bomForm.value.validFrom),
+      validTo: formatBomDate(bomForm.value.validTo),
+    };
+    const { data } = await axios.post(
+      backendUrl(`/WebSaveProductBom/${product.value.pkid}`),
+      payload,
+    );
+    await loadProductBoms(product.value.pkid);
+    selectedBomId.value = data.pkid;
+    selectBomRevision();
+    toast.add({
+      severity: "success",
+      summary: "Lista de materiales guardada",
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.add({
+      severity: "error",
+      summary: "No se pudo guardar la lista",
+      detail: error.response?.data || "Revisa las líneas e inténtalo de nuevo.",
+      life: 4500,
+    });
+  }
+};
+
+const confirmDeleteBom = () => {
+  if (!bomForm.value.pkid) return;
+  confirm.require({
+    header: "Eliminar revisión",
+    message: `Se eliminará la revisión ${bomForm.value.revision} de la lista de materiales.`,
+    icon: "pi pi-exclamation-triangle",
+    acceptLabel: "Eliminar revisión",
+    rejectLabel: "Cancelar",
+    acceptClass: "p-button-danger",
+    accept: async () => {
+      try {
+        await axios.delete(
+          backendUrl(`/WebDeleteProductBom/${bomForm.value.pkid}`),
+        );
+        await loadProductBoms(product.value.pkid!);
+        toast.add({
+          severity: "success",
+          summary: "Revisión eliminada",
+          life: 3000,
+        });
+      } catch (error: any) {
+        toast.add({
+          severity: "error",
+          summary: "No se pudo eliminar",
+          detail: error.response?.data,
+          life: 4000,
+        });
+      }
+    },
+  });
+};
+
+function toBomTreeNode(line: BomLine): any {
+  return {
+    key: line.rowKey,
+    data: {
+      label: bomComponentLabel(line),
+      quantityLabel: `${line.quantity} ${line.uomDescription || ""}`.trim(),
+      natureLabel:
+        manufacturingNatureLabels[line.manufacturingNature] ||
+        "Producto físico",
+    },
+    children: (line.children || []).map(toBomTreeNode),
+  };
+}
+const expandBomTree = () => {
+  const expanded: Record<string, boolean> = {};
+  const visit = (lines: BomLine[]) =>
+    lines.forEach((line) => {
+      if (line.children?.length) {
+        expanded[line.rowKey] = true;
+        visit(line.children);
+      }
+    });
+  visit(bomForm.value.lines);
+  bomExpandedKeys.value = expanded;
+};
+const bomStatusLabel = (status: string) =>
+  bomStatuses.find((item) => item.value === status)?.label || "Borrador";
+const parseBomDate = (value: any) => {
+  if (!value) return null;
+  const date = new Date(`${String(value).substring(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+const formatBomDate = (value: Date | null) =>
+  value
+    ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
+    : null;
 
 const loadCatalogs = async () => {
   try {
@@ -2118,13 +2622,19 @@ const generateCode = async () => {
 };
 
 watch(
-  () => [product.value.sale, product.value.purchase],
+  () => [
+    product.value.sale,
+    product.value.purchase,
+    product.value.supplyStrategy,
+  ],
 
-  ([sale, purchase]) => {
+  ([sale, purchase, supplyStrategy]) => {
     if (sale) {
       activeTab.value = "0";
     } else if (purchase) {
       activeTab.value = "1";
+    } else if (manufacturingStrategyValues.includes(String(supplyStrategy))) {
+      activeTab.value = "2";
     } else {
       activeTab.value = "";
     }
@@ -3352,6 +3862,60 @@ const handleImageSelected = (event: Event) => {
   margin-right: 0.35rem;
   color: var(--primary-color);
 }
+.bom-panel {
+  min-height: 360px;
+}
+.bom-toolbar,
+.bom-lines-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.bom-toolbar > div:first-child,
+.bom-lines-header > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+.bom-toolbar small,
+.bom-lines-header small {
+  color: var(--text-color-secondary);
+}
+.bom-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.bom-toolbar__actions .p-select {
+  min-width: 280px;
+}
+.bom-header-grid {
+  display: grid;
+  grid-template-columns: 150px 180px 180px 180px;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+.bom-description {
+  grid-column: 1 / -1;
+}
+.bom-lines-header {
+  margin: 1rem 0 0.75rem;
+}
+.bom-lines-table {
+  margin-bottom: 1rem;
+}
+.bom-tree-section {
+  margin-top: 1.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--surface-border);
+}
+.bom-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--primary-color);
+}
 @media (max-width: 900px) {
   .supplier-section__header {
     align-items: flex-start;
@@ -3362,6 +3926,21 @@ const handleImageSelected = (event: Event) => {
   }
   .manufacturing-nature-row {
     grid-template-columns: 1fr;
+  }
+  .bom-toolbar,
+  .bom-lines-header,
+  .bom-toolbar__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .bom-toolbar__actions .p-select {
+    min-width: 0;
+  }
+  .bom-header-grid {
+    grid-template-columns: 1fr;
+  }
+  .bom-description {
+    grid-column: auto;
   }
   .manufacturing-options {
     grid-template-columns: 1fr;
