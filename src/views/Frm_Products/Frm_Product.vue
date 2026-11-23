@@ -2706,6 +2706,7 @@ const confirmDeleteTechnicalClass = (technicalClass: any) => {
         }
         await loadCatalogs();
         await loadTechnicalClassMaintenance();
+        technicalClassMaintenanceVisible.value = false;
         toast.add({
           severity: "success",
           summary: "Clase eliminada",
