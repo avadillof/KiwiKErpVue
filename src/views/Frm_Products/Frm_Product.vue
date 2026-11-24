@@ -994,171 +994,188 @@
                 materiales.
               </InlineMessage>
               <template v-else>
-                <div class="bom-toolbar">
-                  <div>
-                    <b><i class="pi pi-sitemap"></i> Revisiones</b>
-                    <small
-                      >Sólo puede existir una revisión vigente por
-                      producto.</small
-                    >
-                  </div>
-                  <div class="bom-toolbar__actions">
-                    <Select
-                      v-model="selectedBomId"
-                      :options="productBoms"
-                      optionLabel="displayLabel"
-                      optionValue="pkid"
-                      placeholder="Seleccionar revisión"
-                      @change="selectBomRevision"
-                    />
-                    <Button
-                      label="Nueva revisión"
-                      icon="pi pi-plus"
-                      outlined
-                      @click="newBomRevision"
-                    />
-                    <Button
-                      v-if="bomForm.pkid"
-                      icon="pi pi-trash"
-                      severity="danger"
-                      text
-                      title="Eliminar revisión"
-                      @click="confirmDeleteBom"
-                    />
-                  </div>
-                </div>
-
-                <div class="bom-header-grid">
-                  <FloatLabel variant="on">
-                    <InputText
-                      id="bomRevision"
-                      v-model="bomForm.revision"
-                      maxlength="30"
-                      class="w-full"
-                    />
-                    <label for="bomRevision">Revisión *</label>
-                  </FloatLabel>
-                  <FloatLabel variant="on">
-                    <Select
-                      id="bomStatus"
-                      v-model="bomForm.status"
-                      :options="bomStatuses"
-                      optionLabel="label"
-                      optionValue="value"
-                      class="w-full"
-                    />
-                    <label for="bomStatus">Estado</label>
-                  </FloatLabel>
-                  <FloatLabel variant="on">
-                    <DatePicker
-                      inputId="bomValidFrom"
-                      v-model="bomForm.validFrom"
-                      dateFormat="dd/mm/yy"
-                      showIcon
-                      class="w-full"
-                    />
-                    <label for="bomValidFrom">Válida desde</label>
-                  </FloatLabel>
-                  <FloatLabel variant="on">
-                    <DatePicker
-                      inputId="bomValidTo"
-                      v-model="bomForm.validTo"
-                      dateFormat="dd/mm/yy"
-                      showIcon
-                      class="w-full"
-                    />
-                    <label for="bomValidTo">Válida hasta</label>
-                  </FloatLabel>
-                  <FloatLabel variant="on" class="bom-description">
-                    <InputText
-                      id="bomDescription"
-                      v-model="bomForm.description"
-                      maxlength="255"
-                      class="w-full"
-                    />
-                    <label for="bomDescription">Descripción</label>
-                  </FloatLabel>
-                </div>
-
-                <div class="bom-lines-header">
-                  <div>
-                    <b>Componentes directos</b>
-                    <small
-                      >Los subconjuntos con lista vigente se despliegan en el
-                      árbol inferior.</small
-                    >
-                  </div>
-                  <Button
-                    label="Añadir componente"
-                    icon="pi pi-plus"
-                    size="small"
-                    @click="addBomLine"
-                  />
-                </div>
-                <DataTable
-                  :value="bomForm.lines"
-                  dataKey="rowKey"
-                  scrollable
-                  class="bom-lines-table"
-                >
-                  <template #empty
-                    ><div class="p-4 text-center text-color-secondary">
-                      Añade el primer componente de la lista.
-                    </div></template
-                  >
-                  <Column header="Posición" style="width: 105px"
-                    ><template #body="{ data }"
-                      ><InputNumber
-                        v-model="data.sequence"
-                        :min="1"
-                        :useGrouping="false"
-                        fluid /></template
-                  ></Column>
-                  <Column
-                    header="Producto / componente"
-                    style="min-width: 330px"
-                    ><template #body="{ data }"
-                      ><ProductLookup
-                        v-model="data.componentId"
-                        :label="bomComponentLabel(data)"
-                        @selected="selectBomComponent(data, $event)"
-                        @cleared="clearBomComponent(data)" /></template
-                  ></Column>
-                  <Column header="Cantidad" style="width: 130px"
-                    ><template #body="{ data }"
-                      ><InputNumber
-                        v-model="data.quantity"
-                        :min="0.000001"
-                        :maxFractionDigits="6"
-                        fluid /></template
-                  ></Column>
-                  <Column header="Unidad" style="min-width: 180px"
-                    ><template #body="{ data }"
-                      ><Select
-                        v-model="data.uomId"
-                        :options="units"
-                        optionLabel="description"
+                <div class="bom-revision-card">
+                  <div class="bom-toolbar">
+                    <div>
+                      <span class="bom-section-icon">
+                        <i class="pi pi-file-edit"></i>
+                      </span>
+                      <span>
+                        <b>Revisión de la lista</b>
+                        <small
+                          >Sólo puede existir una revisión vigente por
+                          producto.</small
+                        >
+                      </span>
+                    </div>
+                    <div class="bom-toolbar__actions">
+                      <Select
+                        v-model="selectedBomId"
+                        :options="productBoms"
+                        optionLabel="displayLabel"
                         optionValue="pkid"
-                        filter
-                        fluid /></template
-                  ></Column>
-                  <Column header="Notas" style="min-width: 240px"
-                    ><template #body="{ data }"
-                      ><InputText
-                        v-model="data.notes"
-                        maxlength="500"
-                        fluid /></template
-                  ></Column>
-                  <Column style="width: 55px"
-                    ><template #body="{ index }"
-                      ><Button
+                        placeholder="Seleccionar revisión"
+                        @change="selectBomRevision"
+                      />
+                      <Button
+                        label="Nueva revisión"
+                        icon="pi pi-plus"
+                        outlined
+                        @click="newBomRevision"
+                      />
+                      <Button
+                        v-if="bomForm.pkid"
                         icon="pi pi-trash"
                         severity="danger"
                         text
-                        rounded
-                        @click="removeBomLine(index)" /></template
-                  ></Column>
-                </DataTable>
+                        title="Eliminar revisión"
+                        @click="confirmDeleteBom"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="bom-header-grid">
+                    <FloatLabel variant="on">
+                      <InputText
+                        id="bomRevision"
+                        v-model="bomForm.revision"
+                        maxlength="30"
+                        class="w-full"
+                      />
+                      <label for="bomRevision">Revisión *</label>
+                    </FloatLabel>
+                    <FloatLabel variant="on">
+                      <Select
+                        id="bomStatus"
+                        v-model="bomForm.status"
+                        :options="bomStatuses"
+                        optionLabel="label"
+                        optionValue="value"
+                        class="w-full"
+                      />
+                      <label for="bomStatus">Estado</label>
+                    </FloatLabel>
+                    <FloatLabel variant="on">
+                      <DatePicker
+                        inputId="bomValidFrom"
+                        v-model="bomForm.validFrom"
+                        dateFormat="dd/mm/yy"
+                        showIcon
+                        class="w-full"
+                      />
+                      <label for="bomValidFrom">Válida desde</label>
+                    </FloatLabel>
+                    <FloatLabel variant="on">
+                      <DatePicker
+                        inputId="bomValidTo"
+                        v-model="bomForm.validTo"
+                        dateFormat="dd/mm/yy"
+                        showIcon
+                        class="w-full"
+                      />
+                      <label for="bomValidTo">Válida hasta</label>
+                    </FloatLabel>
+                    <FloatLabel variant="on" class="bom-description">
+                      <InputText
+                        id="bomDescription"
+                        v-model="bomForm.description"
+                        maxlength="255"
+                        class="w-full"
+                      />
+                      <label for="bomDescription">Descripción</label>
+                    </FloatLabel>
+                  </div>
+                </div>
+
+                <div class="bom-components-card">
+                  <div class="bom-lines-header">
+                    <div>
+                      <span class="bom-section-icon">
+                        <i class="pi pi-box"></i>
+                      </span>
+                      <span>
+                        <b>Componentes directos</b>
+                        <small
+                          >Los subconjuntos con lista vigente se despliegan en
+                          el árbol inferior.</small
+                        >
+                      </span>
+                    </div>
+                    <Button
+                      label="Añadir componente"
+                      icon="pi pi-plus"
+                      size="small"
+                      @click="addBomLine"
+                    />
+                  </div>
+                  <DataTable
+                    :value="bomForm.lines"
+                    dataKey="rowKey"
+                    scrollable
+                    class="bom-lines-table"
+                  >
+                    <template #empty
+                      ><div class="p-4 text-center text-color-secondary">
+                        Añade el primer componente de la lista.
+                      </div></template
+                    >
+                    <Column header="Posición" style="width: 105px"
+                      ><template #body="{ data }"
+                        ><InputNumber
+                          v-model="data.sequence"
+                          :min="1"
+                          :useGrouping="false"
+                          fluid /></template
+                    ></Column>
+                    <Column
+                      header="Producto / componente"
+                      style="min-width: 330px"
+                      ><template #body="{ data }"
+                        ><ProductLookup
+                          v-model="data.componentId"
+                          :label="bomComponentLabel(data)"
+                          @selected="selectBomComponent(data, $event)"
+                          @cleared="clearBomComponent(data)" /></template
+                    ></Column>
+                    <Column header="Cantidad" style="width: 130px"
+                      ><template #body="{ data }"
+                        ><InputNumber
+                          v-model="data.quantity"
+                          :min="0.000001"
+                          :maxFractionDigits="6"
+                          fluid /></template
+                    ></Column>
+                    <Column header="Unidad" style="min-width: 180px"
+                      ><template #body="{ data }"
+                        ><Select
+                          v-model="data.uomId"
+                          :options="units"
+                          optionLabel="description"
+                          optionValue="pkid"
+                          filter
+                          fluid /></template
+                    ></Column>
+                    <Column header="Notas" style="width: 150px"
+                      ><template #body="{ data }"
+                        ><Button
+                          :label="data.notes ? 'Ver notas' : 'Añadir nota'"
+                          :icon="data.notes ? 'pi pi-comment' : 'pi pi-plus'"
+                          :severity="data.notes ? 'primary' : 'secondary'"
+                          :outlined="!data.notes"
+                          size="small"
+                          @click="openBomLineNotes(data)" /></template
+                    ></Column>
+                    <Column style="width: 55px"
+                      ><template #body="{ index }"
+                        ><Button
+                          icon="pi pi-trash"
+                          severity="danger"
+                          text
+                          rounded
+                          @click="removeBomLine(index)" /></template
+                    ></Column>
+                  </DataTable>
+                </div>
 
                 <div v-if="bomTreeNodes.length" class="bom-tree-section">
                   <div class="bom-lines-header">
@@ -1323,6 +1340,39 @@
         label="Cerrar"
         icon="pi pi-check"
         @click="supplierNotesVisible = false"
+      />
+    </template>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="bomLineNotesVisible"
+    modal
+    header="Notas del componente"
+    :style="{ width: 'min(680px, 94vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="bom-notes-dialog">
+      <div class="bom-notes-dialog__component">
+        <i class="pi pi-box"></i>
+        <span>{{ bomLineNotesLabel }}</span>
+      </div>
+      <Textarea
+        v-if="bomLineNotesRow"
+        v-model="bomLineNotesRow.notes"
+        rows="8"
+        maxlength="500"
+        autoResize
+        fluid
+        placeholder="Indicaciones, observaciones o requisitos de este componente"
+      />
+      <small>{{ bomLineNotesRow?.notes?.length || 0 }} / 500</small>
+    </div>
+    <template #footer>
+      <div class="kiwik-separator"></div>
+      <Button
+        label="Aceptar"
+        icon="pi pi-check"
+        @click="bomLineNotesVisible = false"
       />
     </template>
   </Dialog>
@@ -1791,6 +1841,8 @@ const productBoms = ref<ProductBom[]>([]);
 const selectedBomId = ref<number | null>(null);
 const bomForm = ref<ProductBom>(createEmptyBom());
 const bomExpandedKeys = ref<Record<string, boolean>>({});
+const bomLineNotesVisible = ref(false);
+const bomLineNotesRow = ref<BomLine | null>(null);
 const salesTaxFormMode = ref<"sale" | "purchase" | null>(null);
 const technicalClassDialogVisible = ref(false);
 const technicalClassMaintenanceVisible = ref(false);
@@ -2415,6 +2467,13 @@ const addBomLine = () => {
 const removeBomLine = (index: number) => bomForm.value.lines.splice(index, 1);
 const bomComponentLabel = (line: BomLine) =>
   [line.componentCode, line.componentDescription].filter(Boolean).join(" — ");
+const bomLineNotesLabel = computed(
+  () => bomLineNotesRow.value && bomComponentLabel(bomLineNotesRow.value),
+);
+const openBomLineNotes = (line: BomLine) => {
+  bomLineNotesRow.value = line;
+  bomLineNotesVisible.value = true;
+};
 const selectBomComponent = (line: BomLine, selected: any) => {
   line.componentId = selected.pkid;
   line.componentCode = selected.code || "";
@@ -3899,6 +3958,21 @@ const handleImageSelected = (event: Event) => {
 .bom-panel {
   min-height: 360px;
 }
+.bom-revision-card,
+.bom-components-card {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  background: var(--surface-card);
+}
+.bom-revision-card {
+  padding: 1.1rem 1.15rem 0.1rem;
+  border-left: 4px solid var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 4%, var(--surface-card));
+}
+.bom-components-card {
+  margin-top: 1rem;
+  padding: 0 1rem;
+}
 .bom-toolbar,
 .bom-lines-header {
   display: flex;
@@ -3908,8 +3982,24 @@ const handleImageSelected = (event: Event) => {
 }
 .bom-toolbar > div:first-child,
 .bom-lines-header > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.bom-toolbar > div:first-child > span:last-child,
+.bom-lines-header > div:first-child > span:last-child {
   display: grid;
   gap: 0.2rem;
+}
+.bom-section-icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 2.35rem;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--primary-color-text);
+  background: var(--primary-color);
 }
 .bom-toolbar small,
 .bom-lines-header small {
@@ -3937,6 +4027,27 @@ const handleImageSelected = (event: Event) => {
 }
 .bom-lines-table {
   margin-bottom: 1rem;
+}
+.bom-notes-dialog {
+  display: grid;
+  gap: 0.8rem;
+}
+.bom-notes-dialog__component {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 600;
+  color: var(--text-color);
+  background: var(--surface-50);
+}
+.bom-notes-dialog__component i {
+  color: var(--primary-color);
+}
+.bom-notes-dialog > small {
+  justify-self: end;
+  color: var(--text-color-secondary);
 }
 .bom-tree-section {
   margin-top: 1.25rem;
