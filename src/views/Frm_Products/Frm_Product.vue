@@ -1193,8 +1193,15 @@
                     ></Column>
                     <Column style="width: 55px"
                       ><template #body="{ data, index }"
-                        ><Button
-                          v-if="!isInheritedBomDuplicate(data)"
+                        ><span
+                          v-if="isInheritedBomDuplicate(data)"
+                          class="bom-inherited-action"
+                          title="Se administra desde la lista del subconjunto"
+                        >
+                          <i class="pi pi-lock"></i>
+                        </span>
+                        <Button
+                          v-else
                           icon="pi pi-trash"
                           severity="danger"
                           text
@@ -2164,7 +2171,9 @@ const selectedManufacturingNature = computed(() =>
   ),
 );
 const bomTreeNodes = computed(() =>
-  bomForm.value.lines.map((line) => toBomTreeNode(line)),
+  bomForm.value.lines
+    .filter((line) => !isInheritedBomDuplicate(line))
+    .map((line) => toBomTreeNode(line)),
 );
 const inheritedBomOrigins = computed(() => {
   const origins = new Map<number, string>();
@@ -4119,6 +4128,14 @@ const handleImageSelected = (event: Event) => {
 }
 .bom-inherited-label i {
   font-size: 0.8rem;
+}
+.bom-inherited-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--text-color-secondary);
 }
 .bom-notes-dialog {
   display: grid;
