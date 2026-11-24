@@ -1192,8 +1192,9 @@
                           @click="openBomLineNotes(data)" /></template
                     ></Column>
                     <Column style="width: 55px"
-                      ><template #body="{ index }"
+                      ><template #body="{ data, index }"
                         ><Button
+                          v-if="!isInheritedBomDuplicate(data)"
                           icon="pi pi-trash"
                           severity="danger"
                           text
@@ -2505,7 +2506,11 @@ const addBomLine = () => {
   });
 };
 
-const removeBomLine = (index: number) => bomForm.value.lines.splice(index, 1);
+const removeBomLine = (index: number) => {
+  const line = bomForm.value.lines[index];
+  if (!line || isInheritedBomDuplicate(line)) return;
+  bomForm.value.lines.splice(index, 1);
+};
 const bomComponentLabel = (line: BomLine) =>
   [line.componentCode, line.componentDescription].filter(Boolean).join(" — ");
 const inheritedBomOrigin = (line: BomLine) =>
@@ -2561,21 +2566,11 @@ const clearBomComponent = (line: BomLine) => {
 
 const saveBom = async () => {
   if (!product.value.pkid || !bomForm.value.revision.trim()) return;
-  const inheritedDuplicates = bomForm.value.lines.filter(
-    isInheritedBomDuplicate,
+  const directLines = bomForm.value.lines.filter(
+    (line) => !isInheritedBomDuplicate(line),
   );
-  if (inheritedDuplicates.length) {
-    toast.add({
-      severity: "warn",
-      summary: "Hay componentes heredados duplicados",
-      detail:
-        "Elimina las líneas bloqueadas. Ya forman parte de un subconjunto y no deben guardarse también como componentes directos.",
-      life: 5500,
-    });
-    return;
-  }
   if (
-    bomForm.value.lines.some(
+    directLines.some(
       (line) => !line.componentId || !line.uomId || line.quantity <= 0,
     )
   ) {
@@ -2590,6 +2585,9 @@ const saveBom = async () => {
   try {
     const payload = {
       ...bomForm.value,
+      // Las líneas heredadas se muestran para explicar la estructura, pero su
+      // propietario es la lista del subconjunto y nunca se guardan aquí.
+      lines: directLines,
       validFrom: formatBomDate(bomForm.value.validFrom),
       validTo: formatBomDate(bomForm.value.validTo),
     };
