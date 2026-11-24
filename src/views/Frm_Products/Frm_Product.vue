@@ -372,200 +372,6 @@
         </div>
       </Panel>
 
-      <Panel v-if="isManufacturingStrategy" class="manufacturing-panel">
-        <template #header>
-          <div class="manufacturing-panel__header">
-            <div class="manufacturing-panel__icon">
-              <i class="pi pi-cog"></i>
-            </div>
-            <div>
-              <b>Parámetros de fabricación</b
-              ><small
-                >Características generales aplicables a cualquier producto
-                fabricado.</small
-              >
-            </div>
-          </div>
-        </template>
-        <div class="manufacturing-nature-row">
-          <FloatLabel variant="on">
-            <Select
-              id="manufacturingNature"
-              v-model="product.manufacturingNature"
-              :options="manufacturingNatures"
-              optionLabel="label"
-              optionValue="value"
-              class="w-full"
-            />
-            <label for="manufacturingNature">Naturaleza de fabricación</label>
-          </FloatLabel>
-          <small>{{ selectedManufacturingNature?.description }}</small>
-        </div>
-        <InlineMessage
-          v-if="isLogicalManufacturingProduct"
-          severity="info"
-          class="w-full mb-3"
-        >
-          Este conjunto sólo organiza la formación. No genera existencia, número
-          de serie, lote, certificado ni controles propios; sus componentes se
-          desplegarán en el conjunto físico superior.
-        </InlineMessage>
-        <div class="manufacturing-options">
-          <label
-            ><Checkbox
-              v-model="product.manufacturingSerialNumber"
-              binary
-              :disabled="isLogicalManufacturingProduct"
-            />
-            Generar número de serie</label
-          >
-          <label
-            ><Checkbox
-              v-model="product.manufacturingLotTracking"
-              binary
-              :disabled="isLogicalManufacturingProduct"
-            />
-            Control por lotes</label
-          >
-          <label
-            ><Checkbox
-              v-model="product.manufacturingCertificateRequired"
-              binary
-              :disabled="isLogicalManufacturingProduct"
-            />
-            Necesita certificado</label
-          >
-          <label
-            ><Checkbox
-              v-model="product.manufacturingQualityControl"
-              binary
-              :disabled="isLogicalManufacturingProduct"
-            />
-            Control de calidad</label
-          >
-          <label
-            ><Checkbox
-              v-model="product.manufacturingMaterialTraceability"
-              binary
-              :disabled="isLogicalManufacturingProduct"
-            />
-            Trazabilidad de materiales</label
-          >
-        </div>
-        <small class="manufacturing-hint"
-          ><i class="pi pi-info-circle"></i> Los procesos, fases y órdenes de
-          fabricación se configurarán más adelante.</small
-        >
-      </Panel>
-
-      <Panel
-        v-if="
-          isManufacturingStrategy &&
-          selectedTechnicalClass &&
-          selectedTechnicalClass.code !== 'PRODUCT'
-        "
-        class="technical-attributes-panel"
-      >
-        <template #header>
-          <div class="manufacturing-panel__header">
-            <div class="manufacturing-panel__icon">
-              <i class="pi pi-sliders-h"></i>
-            </div>
-            <div>
-              <b>Características técnicas</b>
-              <small>{{ selectedTechnicalClass?.path || "Producto" }}</small>
-            </div>
-          </div>
-        </template>
-
-        <div
-          v-if="applicableTechnicalAttributes.length"
-          class="technical-attributes-grid"
-        >
-          <div
-            v-for="attribute in applicableTechnicalAttributes"
-            :key="attribute.pkid"
-            class="technical-attribute-field"
-          >
-            <FloatLabel v-if="attribute.dataType === 'TEXT'" variant="on">
-              <InputText
-                :id="`technical-${attribute.pkid}`"
-                :modelValue="technicalValue(attribute.pkid)"
-                class="w-full"
-                @update:modelValue="setTechnicalValue(attribute.pkid, $event)"
-              />
-              <label :for="`technical-${attribute.pkid}`">{{
-                technicalAttributeLabel(attribute)
-              }}</label>
-            </FloatLabel>
-            <FloatLabel
-              v-else-if="attribute.dataType === 'NUMBER'"
-              variant="on"
-            >
-              <InputNumber
-                :inputId="`technical-${attribute.pkid}`"
-                :modelValue="technicalNumberValue(attribute.pkid)"
-                class="w-full"
-                :suffix="attribute.unit ? ` ${attribute.unit}` : undefined"
-                :maxFractionDigits="6"
-                @update:modelValue="setTechnicalValue(attribute.pkid, $event)"
-              />
-              <label :for="`technical-${attribute.pkid}`">{{
-                technicalAttributeLabel(attribute, false)
-              }}</label>
-            </FloatLabel>
-            <FloatLabel v-else-if="attribute.dataType === 'DATE'" variant="on">
-              <DatePicker
-                :inputId="`technical-${attribute.pkid}`"
-                :modelValue="technicalDateValue(attribute.pkid)"
-                dateFormat="dd/mm/yy"
-                showIcon
-                class="w-full"
-                @update:modelValue="
-                  setTechnicalDateValue(attribute.pkid, $event)
-                "
-              />
-              <label :for="`technical-${attribute.pkid}`">{{
-                technicalAttributeLabel(attribute)
-              }}</label>
-            </FloatLabel>
-            <FloatLabel v-else-if="attribute.dataType === 'LIST'" variant="on">
-              <Select
-                :id="`technical-${attribute.pkid}`"
-                :modelValue="technicalValue(attribute.pkid) || null"
-                :options="technicalAttributeOptions(attribute)"
-                class="w-full"
-                filter
-                showClear
-                @update:modelValue="setTechnicalValue(attribute.pkid, $event)"
-              />
-              <label :for="`technical-${attribute.pkid}`">{{
-                technicalAttributeLabel(attribute)
-              }}</label>
-            </FloatLabel>
-            <FloatLabel v-else variant="on">
-              <Select
-                :id="`technical-${attribute.pkid}`"
-                :modelValue="technicalValue(attribute.pkid) || null"
-                :options="technicalBooleanOptions"
-                optionLabel="label"
-                optionValue="value"
-                showClear
-                class="w-full"
-                @update:modelValue="setTechnicalValue(attribute.pkid, $event)"
-              />
-              <label :for="`technical-${attribute.pkid}`">{{
-                technicalAttributeLabel(attribute)
-              }}</label>
-            </FloatLabel>
-          </div>
-        </div>
-        <div v-else class="technical-attributes-empty">
-          <i class="pi pi-info-circle"></i>
-          Esta clase todavía no tiene características técnicas configuradas.
-        </div>
-      </Panel>
-
       <!-- ========================================= -->
       <!-- TABS                                      -->
       <!-- ========================================= -->
@@ -602,6 +408,17 @@
             </div>
           </Tab>
           <Tab v-if="isManufacturingStrategy" value="2">
+            <div class="flex align-items-center">
+              <i
+                class="pi pi-cog text-primary mr-2"
+                style="font-size: 1.3rem"
+              />
+              <h4 class="m-0 text-primary font-semibold">
+                Parámetros de Fabricación.
+              </h4>
+            </div>
+          </Tab>
+          <Tab v-if="isManufacturingStrategy" value="3">
             <div class="flex align-items-center">
               <i
                 class="pi pi-sitemap text-primary mr-2"
@@ -950,6 +767,223 @@
           </TabPanel>
 
           <TabPanel v-if="isManufacturingStrategy" value="2">
+            <Panel v-if="isManufacturingStrategy" class="manufacturing-panel">
+              <template #header>
+                <div class="manufacturing-panel__header">
+                  <div class="manufacturing-panel__icon">
+                    <i class="pi pi-cog"></i>
+                  </div>
+                  <div>
+                    <b>Parámetros de fabricación</b
+                    ><small
+                      >Características generales aplicables a cualquier producto
+                      fabricado.</small
+                    >
+                  </div>
+                </div>
+              </template>
+              <div class="manufacturing-nature-row">
+                <FloatLabel variant="on">
+                  <Select
+                    id="manufacturingNature"
+                    v-model="product.manufacturingNature"
+                    :options="manufacturingNatures"
+                    optionLabel="label"
+                    optionValue="value"
+                    class="w-full"
+                  />
+                  <label for="manufacturingNature"
+                    >Naturaleza de fabricación</label
+                  >
+                </FloatLabel>
+                <small>{{ selectedManufacturingNature?.description }}</small>
+              </div>
+              <InlineMessage
+                v-if="isLogicalManufacturingProduct"
+                severity="info"
+                class="w-full mb-3"
+              >
+                Este conjunto sólo organiza la formación. No genera existencia,
+                número de serie, lote, certificado ni controles propios; sus
+                componentes se desplegarán en el conjunto físico superior.
+              </InlineMessage>
+              <div class="manufacturing-options">
+                <label
+                  ><Checkbox
+                    v-model="product.manufacturingSerialNumber"
+                    binary
+                    :disabled="isLogicalManufacturingProduct"
+                  />
+                  Generar número de serie</label
+                >
+                <label
+                  ><Checkbox
+                    v-model="product.manufacturingLotTracking"
+                    binary
+                    :disabled="isLogicalManufacturingProduct"
+                  />
+                  Control por lotes</label
+                >
+                <label
+                  ><Checkbox
+                    v-model="product.manufacturingCertificateRequired"
+                    binary
+                    :disabled="isLogicalManufacturingProduct"
+                  />
+                  Necesita certificado</label
+                >
+                <label
+                  ><Checkbox
+                    v-model="product.manufacturingQualityControl"
+                    binary
+                    :disabled="isLogicalManufacturingProduct"
+                  />
+                  Control de calidad</label
+                >
+                <label
+                  ><Checkbox
+                    v-model="product.manufacturingMaterialTraceability"
+                    binary
+                    :disabled="isLogicalManufacturingProduct"
+                  />
+                  Trazabilidad de materiales</label
+                >
+              </div>
+              <small class="manufacturing-hint"
+                ><i class="pi pi-info-circle"></i> Los procesos, fases y órdenes
+                de fabricación se configurarán más adelante.</small
+              >
+            </Panel>
+
+            <Panel
+              v-if="
+                isManufacturingStrategy &&
+                selectedTechnicalClass &&
+                selectedTechnicalClass.code !== 'PRODUCT'
+              "
+              class="technical-attributes-panel"
+            >
+              <template #header>
+                <div class="manufacturing-panel__header">
+                  <div class="manufacturing-panel__icon">
+                    <i class="pi pi-sliders-h"></i>
+                  </div>
+                  <div>
+                    <b>Características técnicas</b>
+                    <small>{{
+                      selectedTechnicalClass?.path || "Producto"
+                    }}</small>
+                  </div>
+                </div>
+              </template>
+
+              <div
+                v-if="applicableTechnicalAttributes.length"
+                class="technical-attributes-grid"
+              >
+                <div
+                  v-for="attribute in applicableTechnicalAttributes"
+                  :key="attribute.pkid"
+                  class="technical-attribute-field"
+                >
+                  <FloatLabel v-if="attribute.dataType === 'TEXT'" variant="on">
+                    <InputText
+                      :id="`technical-${attribute.pkid}`"
+                      :modelValue="technicalValue(attribute.pkid)"
+                      class="w-full"
+                      @update:modelValue="
+                        setTechnicalValue(attribute.pkid, $event)
+                      "
+                    />
+                    <label :for="`technical-${attribute.pkid}`">{{
+                      technicalAttributeLabel(attribute)
+                    }}</label>
+                  </FloatLabel>
+                  <FloatLabel
+                    v-else-if="attribute.dataType === 'NUMBER'"
+                    variant="on"
+                  >
+                    <InputNumber
+                      :inputId="`technical-${attribute.pkid}`"
+                      :modelValue="technicalNumberValue(attribute.pkid)"
+                      class="w-full"
+                      :suffix="
+                        attribute.unit ? ` ${attribute.unit}` : undefined
+                      "
+                      :maxFractionDigits="6"
+                      @update:modelValue="
+                        setTechnicalValue(attribute.pkid, $event)
+                      "
+                    />
+                    <label :for="`technical-${attribute.pkid}`">{{
+                      technicalAttributeLabel(attribute, false)
+                    }}</label>
+                  </FloatLabel>
+                  <FloatLabel
+                    v-else-if="attribute.dataType === 'DATE'"
+                    variant="on"
+                  >
+                    <DatePicker
+                      :inputId="`technical-${attribute.pkid}`"
+                      :modelValue="technicalDateValue(attribute.pkid)"
+                      dateFormat="dd/mm/yy"
+                      showIcon
+                      class="w-full"
+                      @update:modelValue="
+                        setTechnicalDateValue(attribute.pkid, $event)
+                      "
+                    />
+                    <label :for="`technical-${attribute.pkid}`">{{
+                      technicalAttributeLabel(attribute)
+                    }}</label>
+                  </FloatLabel>
+                  <FloatLabel
+                    v-else-if="attribute.dataType === 'LIST'"
+                    variant="on"
+                  >
+                    <Select
+                      :id="`technical-${attribute.pkid}`"
+                      :modelValue="technicalValue(attribute.pkid) || null"
+                      :options="technicalAttributeOptions(attribute)"
+                      class="w-full"
+                      filter
+                      showClear
+                      @update:modelValue="
+                        setTechnicalValue(attribute.pkid, $event)
+                      "
+                    />
+                    <label :for="`technical-${attribute.pkid}`">{{
+                      technicalAttributeLabel(attribute)
+                    }}</label>
+                  </FloatLabel>
+                  <FloatLabel v-else variant="on">
+                    <Select
+                      :id="`technical-${attribute.pkid}`"
+                      :modelValue="technicalValue(attribute.pkid) || null"
+                      :options="technicalBooleanOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      showClear
+                      class="w-full"
+                      @update:modelValue="
+                        setTechnicalValue(attribute.pkid, $event)
+                      "
+                    />
+                    <label :for="`technical-${attribute.pkid}`">{{
+                      technicalAttributeLabel(attribute)
+                    }}</label>
+                  </FloatLabel>
+                </div>
+              </div>
+              <div v-else class="technical-attributes-empty">
+                <i class="pi pi-info-circle"></i>
+                Esta clase todavía no tiene características técnicas
+                configuradas.
+              </div>
+            </Panel>
+          </TabPanel>
+
+          <TabPanel v-if="isManufacturingStrategy" value="3">
             <Panel class="bom-panel">
               <InlineMessage
                 v-if="!product.pkid"
