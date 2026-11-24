@@ -2172,12 +2172,7 @@ const selectedManufacturingNature = computed(() =>
 );
 const bomComponentKey = (componentId: number | string | null | undefined) =>
   componentId == null ? "" : String(componentId);
-const bomTreeNodes = computed(() =>
-  bomForm.value.lines
-    .filter((line) => !isInheritedBomDuplicate(line))
-    .map((line) => toBomTreeNode(line)),
-);
-const inheritedBomOrigins = computed(() => {
+const collectInheritedBomOrigins = (lines: BomLine[]) => {
   const origins = new Map<string, string>();
   const visit = (lines: BomLine[] | undefined, origin: string) => {
     (lines || []).forEach((line) => {
@@ -2188,11 +2183,23 @@ const inheritedBomOrigins = computed(() => {
       visit(line.children, origin);
     });
   };
-  bomForm.value.lines.forEach((line) => {
+  lines.forEach((line) => {
     visit(line.children, bomComponentLabel(line));
   });
   return origins;
-});
+};
+const directBomLines = (lines: BomLine[]) => {
+  const inheritedOrigins = collectInheritedBomOrigins(lines);
+  return lines.filter(
+    (line) => !inheritedOrigins.has(bomComponentKey(line.componentId)),
+  );
+};
+const bomTreeNodes = computed(() =>
+  directBomLines(bomForm.value.lines).map((line) => toBomTreeNode(line)),
+);
+const inheritedBomOrigins = computed(() =>
+  collectInheritedBomOrigins(bomForm.value.lines),
+);
 const newPurchaseSupplier = (): PurchaseSupplier => ({
   rowKey: crypto.randomUUID(),
   id: null,
@@ -2669,7 +2676,7 @@ function toBomTreeNode(line: BomLine): any {
         manufacturingNatureLabels[line.manufacturingNature] ||
         "Producto físico",
     },
-    children: (line.children || []).map(toBomTreeNode),
+    children: directBomLines(line.children || []).map(toBomTreeNode),
   };
 }
 const expandBomTree = () => {
