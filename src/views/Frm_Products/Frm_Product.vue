@@ -1125,6 +1125,7 @@
                           v-model="data.sequence"
                           :min="1"
                           :useGrouping="false"
+                          :disabled="isInheritedBomDuplicate(data)"
                           fluid /></template
                     ></Column>
                     <Column
@@ -1134,15 +1135,26 @@
                         ><ProductLookup
                           v-model="data.componentId"
                           :label="bomComponentLabel(data)"
+                          :disabled="isInheritedBomDuplicate(data)"
                           @selected="selectBomComponent(data, $event)"
-                          @cleared="clearBomComponent(data)" /></template
-                    ></Column>
+                          @cleared="clearBomComponent(data)"
+                        />
+                        <small
+                          v-if="inheritedBomOrigin(data)"
+                          class="bom-inherited-label"
+                        >
+                          <i class="pi pi-lock"></i>
+                          Heredado de {{ inheritedBomOrigin(data) }}
+                        </small></template
+                      ></Column
+                    >
                     <Column header="Cantidad" style="width: 130px"
                       ><template #body="{ data }"
                         ><InputNumber
                           v-model="data.quantity"
                           :min="0.000001"
                           :maxFractionDigits="6"
+                          :disabled="isInheritedBomDuplicate(data)"
                           fluid /></template
                     ></Column>
                     <Column header="Unidad" style="min-width: 180px"
@@ -1153,15 +1165,29 @@
                           optionLabel="description"
                           optionValue="pkid"
                           filter
+                          :disabled="isInheritedBomDuplicate(data)"
                           fluid /></template
                     ></Column>
                     <Column header="Notas" style="width: 150px"
                       ><template #body="{ data }"
                         ><Button
-                          :label="data.notes ? 'Ver notas' : 'Añadir nota'"
-                          :icon="data.notes ? 'pi pi-comment' : 'pi pi-plus'"
+                          :label="
+                            isInheritedBomDuplicate(data)
+                              ? 'Heredado'
+                              : data.notes
+                                ? 'Ver notas'
+                                : 'Añadir nota'
+                          "
+                          :icon="
+                            isInheritedBomDuplicate(data)
+                              ? 'pi pi-lock'
+                              : data.notes
+                                ? 'pi pi-comment'
+                                : 'pi pi-plus'
+                          "
                           :severity="data.notes ? 'primary' : 'secondary'"
                           :outlined="!data.notes"
+                          :disabled="isInheritedBomDuplicate(data)"
                           size="small"
                           @click="openBomLineNotes(data)" /></template
                     ></Column>
@@ -2139,6 +2165,21 @@ const selectedManufacturingNature = computed(() =>
 const bomTreeNodes = computed(() =>
   bomForm.value.lines.map((line) => toBomTreeNode(line)),
 );
+const inheritedBomOrigins = computed(() => {
+  const origins = new Map<number, string>();
+  const visit = (lines: BomLine[] | undefined, origin: string) => {
+    (lines || []).forEach((line) => {
+      if (line.componentId != null && !origins.has(line.componentId)) {
+        origins.set(line.componentId, origin);
+      }
+      visit(line.children, origin);
+    });
+  };
+  bomForm.value.lines.forEach((line) => {
+    visit(line.children, bomComponentLabel(line));
+  });
+  return origins;
+});
 const newPurchaseSupplier = (): PurchaseSupplier => ({
   rowKey: crypto.randomUUID(),
   id: null,
@@ -2467,6 +2508,12 @@ const addBomLine = () => {
 const removeBomLine = (index: number) => bomForm.value.lines.splice(index, 1);
 const bomComponentLabel = (line: BomLine) =>
   [line.componentCode, line.componentDescription].filter(Boolean).join(" — ");
+const inheritedBomOrigin = (line: BomLine) =>
+  line.componentId == null
+    ? ""
+    : inheritedBomOrigins.value.get(line.componentId) || "";
+const isInheritedBomDuplicate = (line: BomLine) =>
+  Boolean(inheritedBomOrigin(line));
 const bomLineNotesLabel = computed(
   () => bomLineNotesRow.value && bomComponentLabel(bomLineNotesRow.value),
 );
@@ -2474,13 +2521,36 @@ const openBomLineNotes = (line: BomLine) => {
   bomLineNotesRow.value = line;
   bomLineNotesVisible.value = true;
 };
-const selectBomComponent = (line: BomLine, selected: any) => {
+const selectBomComponent = async (line: BomLine, selected: any) => {
+  const inheritedFrom = inheritedBomOrigins.value.get(selected.pkid);
+  if (inheritedFrom) {
+    clearBomComponent(line);
+    toast.add({
+      severity: "warn",
+      summary: "Componente ya incluido",
+      detail: `${selected.code || selected.description} ya se hereda de ${inheritedFrom}. No debe añadirse como componente directo.`,
+      life: 5000,
+    });
+    return;
+  }
   line.componentId = selected.pkid;
   line.componentCode = selected.code || "";
   line.componentDescription = selected.description || "";
   line.uomId = selected.uomId ?? selected.unitOfMeasure?.pkid ?? line.uomId;
   line.manufacturingNature = selected.manufacturingNature || "PHYSICAL";
   line.children = [];
+  try {
+    const { data } = await axios.get(
+      backendUrl(`/WebGetProductBoms/${selected.pkid}`),
+    );
+    const childBoms = (data || []).map(normalizeBom);
+    const preferredChildBom =
+      childBoms.find((item: ProductBom) => item.status === "ACTIVE") ||
+      childBoms[0];
+    line.children = preferredChildBom?.lines || [];
+  } catch (error) {
+    console.error(error);
+  }
 };
 const clearBomComponent = (line: BomLine) => {
   line.componentId = null;
@@ -2491,6 +2561,19 @@ const clearBomComponent = (line: BomLine) => {
 
 const saveBom = async () => {
   if (!product.value.pkid || !bomForm.value.revision.trim()) return;
+  const inheritedDuplicates = bomForm.value.lines.filter(
+    isInheritedBomDuplicate,
+  );
+  if (inheritedDuplicates.length) {
+    toast.add({
+      severity: "warn",
+      summary: "Hay componentes heredados duplicados",
+      detail:
+        "Elimina las líneas bloqueadas. Ya forman parte de un subconjunto y no deben guardarse también como componentes directos.",
+      life: 5500,
+    });
+    return;
+  }
   if (
     bomForm.value.lines.some(
       (line) => !line.componentId || !line.uomId || line.quantity <= 0,
@@ -4027,6 +4110,17 @@ const handleImageSelected = (event: Event) => {
 }
 .bom-lines-table {
   margin-bottom: 1rem;
+}
+.bom-inherited-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  color: var(--orange-700);
+  font-weight: 600;
+}
+.bom-inherited-label i {
+  font-size: 0.8rem;
 }
 .bom-notes-dialog {
   display: grid;
