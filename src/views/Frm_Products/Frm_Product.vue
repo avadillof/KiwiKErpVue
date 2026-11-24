@@ -2170,17 +2170,20 @@ const selectedManufacturingNature = computed(() =>
     (item) => item.value === product.value.manufacturingNature,
   ),
 );
+const bomComponentKey = (componentId: number | string | null | undefined) =>
+  componentId == null ? "" : String(componentId);
 const bomTreeNodes = computed(() =>
   bomForm.value.lines
     .filter((line) => !isInheritedBomDuplicate(line))
     .map((line) => toBomTreeNode(line)),
 );
 const inheritedBomOrigins = computed(() => {
-  const origins = new Map<number, string>();
+  const origins = new Map<string, string>();
   const visit = (lines: BomLine[] | undefined, origin: string) => {
     (lines || []).forEach((line) => {
-      if (line.componentId != null && !origins.has(line.componentId)) {
-        origins.set(line.componentId, origin);
+      const componentKey = bomComponentKey(line.componentId);
+      if (componentKey && !origins.has(componentKey)) {
+        origins.set(componentKey, origin);
       }
       visit(line.children, origin);
     });
@@ -2525,7 +2528,7 @@ const bomComponentLabel = (line: BomLine) =>
 const inheritedBomOrigin = (line: BomLine) =>
   line.componentId == null
     ? ""
-    : inheritedBomOrigins.value.get(line.componentId) || "";
+    : inheritedBomOrigins.value.get(bomComponentKey(line.componentId)) || "";
 const isInheritedBomDuplicate = (line: BomLine) =>
   Boolean(inheritedBomOrigin(line));
 const bomLineNotesLabel = computed(
@@ -2536,7 +2539,9 @@ const openBomLineNotes = (line: BomLine) => {
   bomLineNotesVisible.value = true;
 };
 const selectBomComponent = async (line: BomLine, selected: any) => {
-  const inheritedFrom = inheritedBomOrigins.value.get(selected.pkid);
+  const inheritedFrom = inheritedBomOrigins.value.get(
+    bomComponentKey(selected.pkid),
+  );
   if (inheritedFrom) {
     clearBomComponent(line);
     toast.add({
