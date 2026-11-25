@@ -1010,26 +1010,20 @@
                     </div>
                     <div class="bom-toolbar__actions">
                       <Button
-                        label="PDF"
+                        label="Reporte Materiales"
                         icon="pi pi-file-pdf"
-                        severity="secondary"
-                        outlined
                         :disabled="!bomForm.lines.length"
                         @click="generateBomPdf"
                       />
                       <Button
                         label="Copiar formación"
                         icon="pi pi-copy"
-                        severity="secondary"
-                        outlined
                         :disabled="!bomForm.pkid"
                         @click="openBomCopy"
                       />
                       <Button
                         label="Dónde se usa"
                         icon="pi pi-search"
-                        severity="secondary"
-                        outlined
                         @click="openBomWhereUsed"
                       />
                       <Select
@@ -4559,6 +4553,13 @@ const handleImageSelected = (event: Event) => {
   display: grid;
   grid-template-columns: 180px 1fr;
   gap: 1rem;
+}
+.bom-dialog-footer {
+  width: 100%;
+  min-width: 0;
+}
+.bom-dialog-footer .kiwik-separator {
+  width: 100%;
 }
 .bom-dialog-footer > div:last-child {
   display: flex;
