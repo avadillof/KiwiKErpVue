@@ -1009,6 +1009,29 @@
                       </span>
                     </div>
                     <div class="bom-toolbar__actions">
+                      <Button
+                        label="PDF"
+                        icon="pi pi-file-pdf"
+                        severity="secondary"
+                        outlined
+                        :disabled="!bomForm.lines.length"
+                        @click="generateBomPdf"
+                      />
+                      <Button
+                        label="Copiar formación"
+                        icon="pi pi-copy"
+                        severity="secondary"
+                        outlined
+                        :disabled="!bomForm.pkid"
+                        @click="openBomCopy"
+                      />
+                      <Button
+                        label="Dónde se usa"
+                        icon="pi pi-search"
+                        severity="secondary"
+                        outlined
+                        @click="openBomWhereUsed"
+                      />
                       <Select
                         v-model="selectedBomId"
                         :options="productBoms"
@@ -1408,6 +1431,137 @@
         icon="pi pi-check"
         @click="bomLineNotesVisible = false"
       />
+    </template>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="bomCopyVisible"
+    modal
+    header="Copiar lista de materiales"
+    :style="{ width: 'min(760px, 95vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="bom-copy-dialog">
+      <Message severity="info" :closable="false">
+        Se copiará la revisión {{ bomForm.revision }} de
+        <b>{{ product.code }}</b>. La pieza de origen no se modificará y la
+        copia se creará como borrador.
+      </Message>
+      <div>
+        <label class="bom-dialog-label">Pieza de destino *</label>
+        <ProductLookup
+          v-model="bomCopyTargetId"
+          :label="bomCopyTargetLabel"
+          @selected="selectBomCopyTarget"
+          @cleared="clearBomCopyTarget"
+        />
+      </div>
+      <div class="bom-copy-grid">
+        <FloatLabel variant="on">
+          <InputText
+            id="bomCopyRevision"
+            v-model="bomCopyRevision"
+            maxlength="30"
+            fluid
+          />
+          <label for="bomCopyRevision">Revisión de destino *</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <InputText
+            id="bomCopyDescription"
+            v-model="bomCopyDescription"
+            maxlength="255"
+            fluid
+          />
+          <label for="bomCopyDescription">Descripción</label>
+        </FloatLabel>
+      </div>
+    </div>
+    <template #footer>
+      <div class="bom-dialog-footer">
+        <div class="kiwik-separator"></div>
+        <div>
+          <Button
+            label="Cancelar"
+            severity="secondary"
+            text
+            :disabled="bomCopyBusy"
+            @click="bomCopyVisible = false"
+          />
+          <Button
+            label="Copiar formación"
+            icon="pi pi-copy"
+            :loading="bomCopyBusy"
+            :disabled="!bomCopyTargetId || !bomCopyRevision.trim()"
+            @click="copyBom"
+          />
+        </div>
+      </div>
+    </template>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="bomWhereUsedVisible"
+    modal
+    header="Dónde se usa esta pieza"
+    :style="{ width: 'min(1180px, 96vw)' }"
+    class="kiwik-dialog"
+  >
+    <div class="bom-where-used-heading">
+      <i class="pi pi-sitemap"></i>
+      <span>
+        <b>{{ product.code }} — {{ product.description }}</b>
+        <small
+          >Usos directos e indirectos encontrados en revisiones vigentes o en
+          borrador.</small
+        >
+      </span>
+    </div>
+    <DataTable
+      :value="bomWhereUsedRows"
+      :loading="bomWhereUsedLoading"
+      stripedRows
+      scrollable
+      scrollHeight="52vh"
+      class="bom-where-used-table"
+    >
+      <template #empty>
+        <div class="p-4 text-center text-color-secondary">
+          Esta pieza todavía no se utiliza en ninguna lista de materiales.
+        </div>
+      </template>
+      <Column field="productCode" header="Pieza" style="width: 150px" />
+      <Column field="productDescription" header="Descripción" />
+      <Column header="Relación" style="width: 110px">
+        <template #body="{ data }">
+          <Tag
+            :value="data.direct ? 'Directa' : `Nivel ${data.depth}`"
+            :severity="data.direct ? 'success' : 'info'"
+          />
+        </template>
+      </Column>
+      <Column field="revision" header="Revisión" style="width: 90px" />
+      <Column field="status" header="Estado" style="width: 105px">
+        <template #body="{ data }">{{ bomStatusLabel(data.status) }}</template>
+      </Column>
+      <Column header="Cantidad" style="width: 120px">
+        <template #body="{ data }">
+          {{ data.quantity }} {{ data.uomDescription }}
+        </template>
+      </Column>
+      <Column field="path" header="Ruta de utilización" />
+    </DataTable>
+    <template #footer>
+      <div class="bom-dialog-footer">
+        <div class="kiwik-separator"></div>
+        <div>
+          <Button
+            label="Cerrar"
+            icon="pi pi-times"
+            @click="bomWhereUsedVisible = false"
+          />
+        </div>
+      </div>
     </template>
   </Dialog>
 
@@ -1833,8 +1987,14 @@ import TreeTable from "primevue/treetable";
 import Column from "primevue/column";
 import InputNumber from "primevue/inputnumber";
 import Textarea from "primevue/textarea";
+import Message from "primevue/message";
+import Tag from "primevue/tag";
 import SupplierLookup from "@/components/shared/SupplierLookup.vue";
 import ProductLookup from "@/components/shared/ProductLookup.vue";
+import {
+  buildReportPdf,
+  type ReportRow,
+} from "@/services/Informes/reportEngine";
 
 import Tabs from "primevue/tabs";
 import TabList from "primevue/tablist";
@@ -1877,6 +2037,15 @@ const bomForm = ref<ProductBom>(createEmptyBom());
 const bomExpandedKeys = ref<Record<string, boolean>>({});
 const bomLineNotesVisible = ref(false);
 const bomLineNotesRow = ref<BomLine | null>(null);
+const bomCopyVisible = ref(false);
+const bomCopyTargetId = ref<number | null>(null);
+const bomCopyTargetLabel = ref("");
+const bomCopyRevision = ref("01");
+const bomCopyDescription = ref("");
+const bomCopyBusy = ref(false);
+const bomWhereUsedVisible = ref(false);
+const bomWhereUsedLoading = ref(false);
+const bomWhereUsedRows = ref<BomWhereUsed[]>([]);
 const salesTaxFormMode = ref<"sale" | "purchase" | null>(null);
 const technicalClassDialogVisible = ref(false);
 const technicalClassMaintenanceVisible = ref(false);
@@ -1960,6 +2129,19 @@ type ProductBom = {
   validTo: Date | null;
   lines: BomLine[];
   displayLabel?: string;
+};
+
+type BomWhereUsed = {
+  productId: number;
+  productCode: string;
+  productDescription: string;
+  revision: string;
+  status: string;
+  direct: boolean;
+  depth: number;
+  quantity: number;
+  uomDescription: string;
+  path: string;
 };
 
 function createEmptyBom(): ProductBom {
@@ -2635,6 +2817,186 @@ const saveBom = async (showSuccess = true): Promise<boolean> => {
       life: 4500,
     });
     return false;
+  }
+};
+
+const bomReportRows = (): ReportRow[] => {
+  const rows: ReportRow[] = [];
+  const visit = (lines: BomLine[], level: number) => {
+    directBomLines(lines).forEach((line) => {
+      rows.push({
+        position: line.sequence,
+        level,
+        code: line.componentCode,
+        description: `${"   ".repeat(Math.max(0, level - 1))}${line.componentDescription}`,
+        quantity: line.quantity,
+        unit: line.uomDescription,
+        nature:
+          manufacturingNatureLabels[line.manufacturingNature] ||
+          "Producto físico",
+        notes: line.notes || "",
+      });
+      visit(line.children || [], level + 1);
+    });
+  };
+  visit(bomForm.value.lines, 1);
+  return rows;
+};
+
+const generateBomPdf = async () => {
+  const rows = bomReportRows();
+  if (!rows.length) {
+    toast.add({
+      severity: "warn",
+      summary: "Lista sin materiales",
+      detail: "Añade al menos un componente antes de generar el PDF.",
+      life: 3500,
+    });
+    return;
+  }
+  try {
+    const validity = [
+      bomForm.value.validFrom
+        ? `Desde ${bomForm.value.validFrom.toLocaleDateString("es-ES")}`
+        : "",
+      bomForm.value.validTo
+        ? `Hasta ${bomForm.value.validTo.toLocaleDateString("es-ES")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    const pdfUrl = await buildReportPdf({
+      code: "RPT-FAB-001",
+      title: "Lista de materiales",
+      subtitle: `${product.value.code} — ${product.value.description}`,
+      filtersText: `Revisión ${bomForm.value.revision} · ${bomStatusLabel(bomForm.value.status)}${validity ? ` · ${validity}` : ""}${bomForm.value.description ? ` · ${bomForm.value.description}` : ""}`,
+      columns: [
+        { key: "position", header: "Pos.", align: "right" },
+        { key: "level", header: "Nivel", align: "center" },
+        { key: "code", header: "Código" },
+        { key: "description", header: "Descripción" },
+        { key: "quantity", header: "Cantidad", align: "right" },
+        { key: "unit", header: "Unidad" },
+        { key: "nature", header: "Naturaleza" },
+        { key: "notes", header: "Notas" },
+      ],
+      rows,
+      dottedRows: true,
+      company: {
+        name: companyStore.companyInfo.nameCompany,
+        slogan: companyStore.companyInfo.sloganCompany,
+        logoUrl: companyStore.companyInfo.urlLogo,
+      },
+    });
+    const safeCode = (product.value.code || "producto").replace(
+      /[^a-zA-Z0-9_-]+/g,
+      "_",
+    );
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    link.download = `RPT-FAB-001_${safeCode}_REV-${bomForm.value.revision}.pdf`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30000);
+  } catch (error) {
+    console.error(error);
+    toast.add({
+      severity: "error",
+      summary: "No se pudo generar el PDF",
+      detail: "Revisa la lista de materiales e inténtalo de nuevo.",
+      life: 4500,
+    });
+  }
+};
+
+const openBomCopy = () => {
+  if (!bomForm.value.pkid) return;
+  bomCopyTargetId.value = null;
+  bomCopyTargetLabel.value = "";
+  bomCopyRevision.value = bomForm.value.revision || "01";
+  bomCopyDescription.value = `Copia de ${product.value.code} · revisión ${bomForm.value.revision}`;
+  bomCopyVisible.value = true;
+};
+
+const selectBomCopyTarget = (selected: any) => {
+  if (selected.pkid === product.value.pkid) {
+    clearBomCopyTarget();
+    toast.add({
+      severity: "warn",
+      summary: "Selecciona otra pieza",
+      detail: "La formación debe copiarse a una pieza distinta del origen.",
+      life: 3500,
+    });
+    return;
+  }
+  bomCopyTargetId.value = selected.pkid;
+  bomCopyTargetLabel.value = [selected.code, selected.description]
+    .filter(Boolean)
+    .join(" — ");
+};
+
+const clearBomCopyTarget = () => {
+  bomCopyTargetId.value = null;
+  bomCopyTargetLabel.value = "";
+};
+
+const copyBom = async () => {
+  if (
+    !bomForm.value.pkid ||
+    !bomCopyTargetId.value ||
+    !bomCopyRevision.value.trim()
+  )
+    return;
+  bomCopyBusy.value = true;
+  try {
+    await axios.post(
+      backendUrl(
+        `/WebCopyProductBom/${bomForm.value.pkid}/to/${bomCopyTargetId.value}`,
+      ),
+      {
+        revision: bomCopyRevision.value.trim(),
+        description: bomCopyDescription.value.trim(),
+      },
+    );
+    bomCopyVisible.value = false;
+    toast.add({
+      severity: "success",
+      summary: "Formación copiada",
+      detail: `La revisión ${bomCopyRevision.value.trim()} se ha creado como borrador en ${bomCopyTargetLabel.value}.`,
+      life: 4500,
+    });
+  } catch (error: any) {
+    toast.add({
+      severity: "error",
+      summary: "No se pudo copiar la formación",
+      detail:
+        error.response?.data ||
+        "Revisa la pieza y la revisión de destino e inténtalo de nuevo.",
+      life: 5000,
+    });
+  } finally {
+    bomCopyBusy.value = false;
+  }
+};
+
+const openBomWhereUsed = async () => {
+  if (!product.value.pkid) return;
+  bomWhereUsedRows.value = [];
+  bomWhereUsedVisible.value = true;
+  bomWhereUsedLoading.value = true;
+  try {
+    const { data } = await axios.get(
+      backendUrl(`/WebGetProductBomWhereUsed/${product.value.pkid}`),
+    );
+    bomWhereUsedRows.value = data || [];
+  } catch (error: any) {
+    toast.add({
+      severity: "error",
+      summary: "No se pudieron consultar los usos",
+      detail: error.response?.data || "Inténtalo de nuevo.",
+      life: 4500,
+    });
+  } finally {
+    bomWhereUsedLoading.value = false;
   }
 };
 
@@ -4122,6 +4484,8 @@ const handleImageSelected = (event: Event) => {
 .bom-toolbar__actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 .bom-toolbar__actions .p-select {
@@ -4182,6 +4546,50 @@ const handleImageSelected = (event: Event) => {
   justify-self: end;
   color: var(--text-color-secondary);
 }
+.bom-copy-dialog {
+  display: grid;
+  gap: 1.25rem;
+}
+.bom-dialog-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-weight: 600;
+}
+.bom-copy-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 1rem;
+}
+.bom-dialog-footer > div:last-child {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 0.8rem;
+}
+.bom-where-used-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  background: var(--surface-50);
+}
+.bom-where-used-heading > i {
+  color: var(--primary-color);
+  font-size: 1.35rem;
+}
+.bom-where-used-heading span {
+  display: grid;
+  gap: 0.2rem;
+}
+.bom-where-used-heading small {
+  color: var(--text-color-secondary);
+}
+.bom-where-used-table {
+  min-height: 260px;
+}
 .bom-tree-section {
   margin-top: 1.25rem;
   padding-top: 0.5rem;
@@ -4215,6 +4623,9 @@ const handleImageSelected = (event: Event) => {
     min-width: 0;
   }
   .bom-header-grid {
+    grid-template-columns: 1fr;
+  }
+  .bom-copy-grid {
     grid-template-columns: 1fr;
   }
   .bom-description {
