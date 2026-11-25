@@ -1244,7 +1244,7 @@
                   <Button
                     label="Guardar lista de materiales"
                     icon="pi pi-check"
-                    @click="saveBom"
+                    @click="saveBom()"
                   />
                 </div>
               </template>
@@ -2585,8 +2585,8 @@ const clearBomComponent = (line: BomLine) => {
   line.children = [];
 };
 
-const saveBom = async () => {
-  if (!product.value.pkid || !bomForm.value.revision.trim()) return;
+const saveBom = async (showSuccess = true): Promise<boolean> => {
+  if (!product.value.pkid || !bomForm.value.revision.trim()) return false;
   const directLines = bomForm.value.lines.filter(
     (line) => !isInheritedBomDuplicate(line),
   );
@@ -2601,7 +2601,7 @@ const saveBom = async () => {
       detail: "Completa producto, cantidad y unidad de todas las líneas.",
       life: 4000,
     });
-    return;
+    return false;
   }
   try {
     const payload = {
@@ -2619,11 +2619,14 @@ const saveBom = async () => {
     await loadProductBoms(product.value.pkid);
     selectedBomId.value = data.pkid;
     selectBomRevision();
-    toast.add({
-      severity: "success",
-      summary: "Lista de materiales guardada",
-      life: 3000,
-    });
+    if (showSuccess) {
+      toast.add({
+        severity: "success",
+        summary: "Lista de materiales guardada",
+        life: 3000,
+      });
+    }
+    return true;
   } catch (error: any) {
     toast.add({
       severity: "error",
@@ -2631,6 +2634,7 @@ const saveBom = async () => {
       detail: error.response?.data || "Revisa las líneas e inténtalo de nuevo.",
       life: 4500,
     });
+    return false;
   }
 };
 
@@ -2782,9 +2786,17 @@ const save = async () => {
       ),
     });
 
+    const hasBomToSave = Boolean(
+      product.value.pkid &&
+        (bomForm.value.pkid || bomForm.value.lines.length > 0),
+    );
+    if (hasBomToSave && !(await saveBom(false))) return;
+
     toast.add({
       severity: "success",
-      summary: "Guardado correctamente",
+      summary: hasBomToSave
+        ? "Producto y lista de materiales guardados"
+        : "Guardado correctamente",
       life: companyStore.companyInfo.toastDuration ?? 3000,
     });
 
