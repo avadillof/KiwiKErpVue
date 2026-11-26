@@ -4,13 +4,13 @@
             <div class="products-title">
                 <div class="products-icon"><i class="pi pi-box"></i></div>
                 <div>
-                    <span class="breadcrumb">{{ esCompras ? 'Compras' : 'Ventas' }} / Datos maestros</span>
+                    <span class="breadcrumb">{{ moduloOrigen }} / Datos maestros</span>
                     <h1>Artículos y servicios</h1>
                     <p>Catálogo comercial, clasificación, unidades de medida y disponibilidad de compra y venta.</p>
                 </div>
             </div>
             <nav class="header-actions" aria-label="Navegación">
-                <Button :label="esCompras ? 'Compras' : 'Ventas'" icon="pi pi-arrow-left" severity="secondary" text
+                <Button :label="moduloOrigen" icon="pi pi-arrow-left" severity="secondary" text
                     @click="volver" />
                 <Button label="Inicio" icon="pi pi-home" severity="secondary" text
                     @click="router.push({ name: 'Dashboard' })" />
@@ -228,17 +228,20 @@ const canImportProducts = computed(() => canImportMasterData(securityStore, 'pro
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const esFabricacion = computed(() => route.query.from === 'fabricacion');
 // Vista compartida Ventas/Compras: el hub origen viaja en ?from=compras.
 // Sin query, si el usuario solo tiene Compras, se vuelve a Compras.
 const esCompras = computed(() => {
+    if (esFabricacion.value) return false;
     if (route.query.from === 'compras') return true;
     if (route.query.from === 'ventas') return false;
     const puedeCompras = authStore.user?.admin === true || securityStore.hasModule('PURCHASES');
     const puedeVentas = authStore.user?.admin === true || securityStore.hasModule('SALES');
     return puedeCompras && !puedeVentas;
 });
+const moduloOrigen = computed(() => esFabricacion.value ? 'Fabricación' : esCompras.value ? 'Compras' : 'Ventas');
 function volver() {
-    router.push({ name: esCompras.value ? 'Compras' : 'Ventas' });
+    router.push({ name: esFabricacion.value ? 'Fabricacion' : esCompras.value ? 'Compras' : 'Ventas' });
 }
 const tableRef = ref();
 const menuTable = ref();

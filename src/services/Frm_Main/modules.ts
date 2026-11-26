@@ -62,6 +62,19 @@ export const APP_MODULES: AppModule[] = [
     requiredPermission: 'PURCHASES'
   },
   {
+    id: 'fabricacion',
+    nombre: 'Fabricación',
+    descripcion: 'Define productos fabricables, sus características técnicas y la estructura jerárquica de sus listas de materiales.',
+    funcionalidades: ['Productos fabricables', 'Clases técnicas', 'Listas de materiales', 'Trazabilidad de componentes'],
+    icono: 'pi pi-cog',
+    ruta: 'Fabricacion',
+    colorIcono: '#536d12',
+    bgIcono: '#edf4dc',
+    disponible: true,
+    dashboardLevel: true,
+    requiredPermission: 'MANUFACTURING'
+  },
+  {
     id: 'informes',
     nombre: 'Informes',
     descripcion: 'Reunirá los indicadores, comparativas y estadísticas clave para analizar la evolución del negocio.',

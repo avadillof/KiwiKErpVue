@@ -77,6 +77,20 @@
           </button>
         </div>
       </div>
+
+      <div v-if="manufacturingActionCards.length" class="area-actions area-actions--manufacturing">
+        <div class="area-actions__heading">
+          <span class="area-actions__icon"><i class="pi pi-cog" /></span>
+          <div><span>Área de Fabricación</span><small>Productos técnicos y estructuras de materiales</small></div>
+        </div>
+        <div class="actions-grid">
+          <button v-for="k in manufacturingActionCards" :key="k.key" type="button" class="action-card" :class="{ 'action-card--quiet': !k.value }" @click="navegarA(k.route)">
+            <span class="action-icon" :style="{ background: k.gradient }"><i :class="k.icon" /></span>
+            <span class="action-copy"><strong>{{ k.value == null ? '—' : fmt(k.value) }}</strong><span>{{ k.label }}</span><small>{{ k.sub }}</small></span>
+            <i class="pi pi-chevron-right action-arrow" />
+          </button>
+        </div>
+      </div>
     </section>
 
     <SalesCalendar />
@@ -95,13 +109,13 @@ export default defineComponent({
   name: 'Pn_DashBoard',
   components: { SalesCalendar, CompanySnapshot },
   setup() {
-    const { recents, generalActionCards, salesActionCards, purchaseActionCards, fmt, navegarA, refresh } = DashboardController();
+    const { recents, generalActionCards, salesActionCards, purchaseActionCards, manufacturingActionCards, fmt, navegarA, refresh } = DashboardController();
     const messagesStore = useMessagesStore();
     watch(
       () => messagesStore.feedVersion,
       () => refresh()
     );
-    return { recents, generalActionCards, salesActionCards, purchaseActionCards, fmt, navegarA };
+    return { recents, generalActionCards, salesActionCards, purchaseActionCards, manufacturingActionCards, fmt, navegarA };
   }
 });
 </script>
@@ -131,12 +145,14 @@ export default defineComponent({
 .area-actions { margin-top: 18px; padding: 14px; border: 1px solid #e5e9f0; border-radius: 16px; background: #fbfcfd; }
 .area-actions--sales { border-left: 4px solid #9cc10a; }
 .area-actions--purchases { border-left: 4px solid #dc7c22; background: #fffaf5; }
+.area-actions--manufacturing { border-left: 4px solid #6f8e11; background: #f9fbf3; }
 .area-actions__heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .area-actions__heading > div { display: flex; flex-direction: column; }
 .area-actions__heading span { color: #253047; font-size: .92rem; font-weight: 800; }
 .area-actions__heading small { color: #8992a1; font-size: .74rem; }
 .area-actions__icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; background: #eef4dc; color: #648506 !important; }
 .area-actions--purchases .area-actions__icon { background: #fbe9d7; color: #c96a1e !important; }
+.area-actions--manufacturing .area-actions__icon { background: #edf4dc; color: #536d12 !important; }
 .action-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid #e3e8d2; border-radius: 12px; background: #fff; text-align: left; cursor: pointer; box-shadow: 0 4px 14px rgba(31,41,55,.05); transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
 .action-card:hover { transform: translateY(-3px); border-color: #cfe0a8; box-shadow: 0 10px 24px rgba(31,41,55,.1); }
 .action-card--quiet { opacity: .62; }

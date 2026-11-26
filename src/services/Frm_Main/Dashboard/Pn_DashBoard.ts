@@ -17,6 +17,7 @@ interface Stats {
   billing: { count: number; hours: number } | null;
   purchaseDeliveries: any | null;
   purchaseInvoices: any | null;
+  manufacturing: any | null;
 }
 
 export function DashboardController() {
@@ -44,12 +45,13 @@ export function DashboardController() {
         ListaPrecios: PERM.SALES_NAV_PRICELIST,
         AjustesVentas: PERM.SALES_SETTINGS,
         InformesVentas: PERM.RPT_SALES,
+        Fabricacion: PERM.MANUFACTURING_ACCESS,
         Frm_Ajustes: PERM.SYS_ACCESS,
     };
 
     const recents = ref<RecentModule[]>(visibleRecentModules());
 
-    const stats = ref<Stats>({ quotes: null, orders: null, invoices: null, rects: null, tasks: null, billing: null, purchaseDeliveries: null, purchaseInvoices: null });
+    const stats = ref<Stats>({ quotes: null, orders: null, invoices: null, rects: null, tasks: null, billing: null, purchaseDeliveries: null, purchaseInvoices: null, manufacturing: null });
 
     async function loadStats() {
         const paths = [
@@ -84,7 +86,12 @@ export function DashboardController() {
             purchasePaths.map((p) => axios.get(backendUrl(p), apiConfig()))
         );
         const [pd, pi] = purchaseSettled.map((s) => (s.status === 'fulfilled' ? s.value.data : null));
-        stats.value = { quotes: q, orders: o, invoices: f, rects: r, tasks: t, billing: b, purchaseDeliveries: pd, purchaseInvoices: pi };
+        let manufacturing = null;
+        if (canCard(PERM.MANUFACTURING_ACCESS)) {
+            try { manufacturing = (await axios.get(backendUrl('/WebGetManufacturingStatistics'), apiConfig())).data; }
+            catch { manufacturing = null; }
+        }
+        stats.value = { quotes: q, orders: o, invoices: f, rects: r, tasks: t, billing: b, purchaseDeliveries: pd, purchaseInvoices: pi, manufacturing };
     }
 
     function apiConfig() {
@@ -108,6 +115,7 @@ export function DashboardController() {
         const b = stats.value.billing;
         const pd = stats.value.purchaseDeliveries;
         const pi = stats.value.purchaseInvoices;
+        const manufacturing = stats.value.manufacturing;
         const rectTotal = r?.issuedCount ?? null;
         return [
             {
@@ -201,12 +209,27 @@ export function DashboardController() {
                 route: 'FacturasCompra', perm: PERM.PURCHASE_NAV_INVOICES, area: 'purchases',
                 gradient: 'linear-gradient(135deg,#ef8c73,#bd4e36)'
             },
+            {
+                key: 'manufacturing-products', icon: 'pi pi-box', label: 'Productos fabricables',
+                value: manufacturing?.manufacturingProducts ?? null,
+                sub: manufacturing ? `${fmt(manufacturing.productsWithBom)} con lista de materiales` : 'Pendiente de carga',
+                route: 'Fabricacion', perm: PERM.MANUFACTURING_ACCESS, area: 'manufacturing',
+                gradient: 'linear-gradient(135deg,#9cc10a,#536d12)'
+            },
+            {
+                key: 'manufacturing-boms', icon: 'pi pi-sitemap', label: 'Listas de materiales vigentes',
+                value: manufacturing?.activeBoms ?? null,
+                sub: manufacturing ? `${fmt(manufacturing.draftBoms)} en borrador` : 'Pendiente de carga',
+                route: 'Fabricacion', perm: PERM.MANUFACTURING_ACCESS, area: 'manufacturing',
+                gradient: 'linear-gradient(135deg,#38a4d8,#2875b6)'
+            },
         ].filter((k) => canCard((k as any).perm));
     });
 
     const generalActionCards = computed(() => actionCards.value.filter((card: any) => card.area === 'general'));
     const salesActionCards = computed(() => actionCards.value.filter((card: any) => card.area === 'sales'));
     const purchaseActionCards = computed(() => actionCards.value.filter((card: any) => card.area === 'purchases'));
+    const manufacturingActionCards = computed(() => actionCards.value.filter((card: any) => card.area === 'manufacturing'));
 
     function fmt(value: number): string {
         return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(Number(value ?? 0));
@@ -235,6 +258,7 @@ export function DashboardController() {
         generalActionCards,
         salesActionCards,
         purchaseActionCards,
+        manufacturingActionCards,
         fmt,
         navegarA,
         refresh: loadStats
