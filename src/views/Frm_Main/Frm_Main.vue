@@ -210,7 +210,7 @@ import NotificationPanel from './NotificationPanel.vue';
 
 const MODULE_CHILDREN: Record<string, string[]> = {
   Ventas: ['Ventas', 'Clientes', 'Presupuestos', 'Pedidos', 'Albaranes', 'Facturas', 'Rectificativas', 'ListaPrecios', 'AjustesVentas'],
-  Fabricacion: ['Fabricacion', 'ProductosFabricacion'],
+  Fabricacion: ['Fabricacion', 'ProductosFabricacion', 'FabricacionFases'],
   Frm_Ajustes: ['Frm_Ajustes', 'BankAccounts', 'Certificates', 'FamiliasProductos', 'Productos', 'Taxas', 'security']
 };
 
