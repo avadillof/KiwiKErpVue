@@ -1,6 +1,7 @@
 <template>
   <main class="phase-page">
     <Toast />
+
     <header class="page-toolbar">
       <div class="toolbar-title">
         <span class="toolbar-icon"><i class="pi pi-list-check"></i></span>
@@ -26,34 +27,13 @@
     </header>
 
     <section class="summary-grid" aria-label="Resumen de fases">
-      <article>
-        <span class="summary-icon total"><i class="pi pi-list"></i></span>
-        <div>
-          <strong>{{ fmt(summary.total) }}</strong
-          ><span>Fases registradas</span>
-        </div>
-      </article>
-      <article>
-        <span class="summary-icon active"
-          ><i class="pi pi-check-circle"></i
+      <article v-for="item in summaryCards" :key="item.label">
+        <span :class="['summary-icon', item.style]"
+          ><i :class="item.icon"></i
         ></span>
         <div>
-          <strong>{{ fmt(summary.active) }}</strong
-          ><span>Fases activas</span>
-        </div>
-      </article>
-      <article>
-        <span class="summary-icon category"><i class="pi pi-tags"></i></span>
-        <div>
-          <strong>{{ fmt(summary.categories) }}</strong
-          ><span>Categorías utilizadas</span>
-        </div>
-      </article>
-      <article>
-        <span class="summary-icon external"><i class="pi pi-send"></i></span>
-        <div>
-          <strong>{{ fmt(summary.subcontracted) }}</strong
-          ><span>Subcontratadas</span>
+          <strong>{{ fmt(item.value) }}</strong
+          ><span>{{ item.label }}</span>
         </div>
       </article>
     </section>
@@ -63,131 +43,144 @@
         <div>
           <h2>Fases de fabricación</h2>
           <p>
-            El tiempo se asignará más adelante por producto y proceso, no en
-            este catálogo general.
+            Los tiempos se asignarán por producto y proceso, no en este catálogo
+            general.
           </p>
-        </div>
-        <div class="phase-filters">
-          <IconField
-            ><InputIcon class="pi pi-search" /><InputText
-              v-model="search"
-              placeholder="Buscar por código, descripción o centro…"
-          /></IconField>
-          <Select
-            v-model="categoryFilter"
-            :options="categoryFilterOptions"
-            optionLabel="label"
-            optionValue="value"
-            class="category-filter"
-          />
         </div>
       </div>
 
-      <DataTable
-        :value="filteredPhases"
-        :loading="loading"
-        stripedRows
-        paginator
-        :rows="10"
-        :rowsPerPageOptions="[10, 25, 50]"
-        dataKey="pkid"
-        responsiveLayout="scroll"
-        class="phase-table"
-      >
-        <template #empty
-          ><div class="empty-state">
-            <i class="pi pi-list-check"></i
-            ><strong>No hay fases que coincidan con los filtros.</strong
-            ><span
-              >Crea una nueva fase o cambia los criterios de búsqueda.</span
+      <div class="phase-table-shell">
+        <GenericDataTable
+          ref="phaseTable"
+          endpoint="WebGetManufacturingPhases"
+          dataKey="pkid"
+          :requestConfig="auth.portalRequestConfig"
+          :params="{ category: categoryFilter || undefined }"
+          :showPaginator="true"
+          :filterable="true"
+          :showActions="true"
+          :pageSize="10"
+          :pageSizeOptions="[10, 25, 50]"
+          @load-error="tableLoadError"
+        >
+          <template #panelOptions>
+            <Select
+              v-model="categoryFilter"
+              :options="categoryFilterOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="category-filter"
+              @change="refreshPhases(false)"
+            />
+            <Button
+              label="Categorías"
+              icon="pi pi-tags"
+              outlined
+              severity="secondary"
+              @click="openCategoryMaintenance"
+            />
+          </template>
+          <template #headerActions>
+            <Button
+              label="Nueva fase"
+              icon="pi pi-plus"
+              @click="openNewPhase"
+            />
+          </template>
+
+          <Column field="code" header="Código" sortable style="width: 135px">
+            <template #body="{ data }"
+              ><span class="phase-code">{{ data.code }}</span></template
             >
-          </div></template
-        >
-        <Column field="code" header="Código" sortable style="width: 135px"
-          ><template #body="{ data }"
-            ><span class="phase-code">{{ data.code }}</span></template
-          ></Column
-        >
-        <Column
-          field="description"
-          header="Descripción"
-          sortable
-          style="min-width: 250px"
-          ><template #body="{ data }"
-            ><div class="description-cell">
-              <strong>{{ data.description }}</strong
-              ><small v-if="data.instructions">{{ data.instructions }}</small>
-            </div></template
-          ></Column
-        >
-        <Column
-          field="category"
-          header="Categoría"
-          sortable
-          style="width: 170px"
-          ><template #body="{ data }"
-            ><span class="category-pill"
-              ><i :class="categoryByCode(data.category).icon"></i
-              >{{ categoryByCode(data.category).label }}</span
-            ></template
-          ></Column
-        >
-        <Column
-          field="workCenter"
-          header="Centro de trabajo"
-          sortable
-          style="min-width: 180px"
-          ><template #body="{ data }">{{
-            data.workCenter || "—"
-          }}</template></Column
-        >
-        <Column
-          field="hourlyCost"
-          header="Coste/hora"
-          sortable
-          style="width: 125px"
-          bodyClass="text-right"
-          ><template #body="{ data }">{{
-            money(data.hourlyCost)
-          }}</template></Column
-        >
-        <Column header="Modalidad" style="width: 145px"
-          ><template #body="{ data }"
-            ><span v-if="data.subcontracted" class="mode-tag external-mode"
-              ><i class="pi pi-send"></i>Externa</span
-            ><span v-else class="mode-tag internal-mode"
-              ><i class="pi pi-home"></i>Interna</span
-            ></template
-          ></Column
-        >
-        <Column header="Estado" style="width: 105px"
-          ><template #body="{ data }"
-            ><span
-              :class="['status-tag', data.active ? 'is-active' : 'is-inactive']"
-              >{{ data.active ? "Activa" : "Inactiva" }}</span
-            ></template
-          ></Column
-        >
-        <Column header="Acciones" style="width: 125px"
-          ><template #body="{ data }"
-            ><div class="row-actions">
-              <Button
-                icon="pi pi-pencil"
-                text
-                rounded
-                severity="secondary"
-                title="Editar fase"
-                @click="openEditPhase(data)"
-              /><Button
-                :icon="data.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
-                text
-                rounded
-                :severity="data.active ? 'danger' : 'success'"
-                :title="data.active ? 'Desactivar fase' : 'Activar fase'"
-                @click="togglePhase(data)"
-              /></div></template
-        ></Column>
-      </DataTable>
+          </Column>
+          <Column
+            field="description"
+            header="Descripción"
+            sortable
+            style="min-width: 250px"
+          >
+            <template #body="{ data }">
+              <div class="description-cell">
+                <strong>{{ data.description }}</strong>
+                <small v-if="data.instructions">{{ data.instructions }}</small>
+              </div>
+            </template>
+          </Column>
+          <Column
+            field="category"
+            header="Categoría"
+            sortable
+            style="width: 175px"
+          >
+            <template #body="{ data }">
+              <span class="category-pill"
+                ><i class="pi pi-tag"></i
+                >{{ categoryLabel(data.category) }}</span
+              >
+            </template>
+          </Column>
+          <Column
+            field="workCenter"
+            header="Centro de trabajo"
+            sortable
+            style="min-width: 180px"
+          >
+            <template #body="{ data }">{{ data.workCenter || "—" }}</template>
+          </Column>
+          <Column
+            field="hourlyCost"
+            header="Coste/hora"
+            sortable
+            style="width: 125px"
+            bodyClass="text-right"
+          >
+            <template #body="{ data }">{{ money(data.hourlyCost) }}</template>
+          </Column>
+          <Column header="Modalidad" style="width: 135px">
+            <template #body="{ data }">
+              <span v-if="data.subcontracted" class="mode-tag external-mode"
+                ><i class="pi pi-send"></i>Externa</span
+              >
+              <span v-else class="mode-tag internal-mode"
+                ><i class="pi pi-home"></i>Interna</span
+              >
+            </template>
+          </Column>
+          <Column field="active" header="Estado" sortable style="width: 105px">
+            <template #body="{ data }">
+              <span
+                :class="[
+                  'status-tag',
+                  data.active ? 'is-active' : 'is-inactive',
+                ]"
+                >{{ data.active ? "Activa" : "Inactiva" }}</span
+              >
+            </template>
+          </Column>
+          <Column header="Acciones" style="width: 125px">
+            <template #body="{ data }">
+              <div class="row-actions">
+                <Button
+                  icon="pi pi-pencil"
+                  text
+                  rounded
+                  severity="secondary"
+                  title="Editar fase"
+                  @click="openEditPhase(data)"
+                />
+                <Button
+                  :icon="data.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                  text
+                  rounded
+                  :severity="data.active ? 'danger' : 'success'"
+                  :title="data.active ? 'Desactivar fase' : 'Activar fase'"
+                  @click="togglePhase(data)"
+                />
+              </div>
+            </template>
+          </Column>
+        </GenericDataTable>
+      </div>
     </section>
 
     <Dialog
@@ -200,52 +193,65 @@
       class="kiwik-dialog phase-dialog"
     >
       <div class="dialog-intro">
-        <span><i class="pi pi-info-circle"></i></span>
+        <i class="pi pi-info-circle"></i>
         <p>
           Una fase es una operación reutilizable. Los tiempos específicos se
           definirán al incorporarla a un proceso y asignarlo a un producto.
         </p>
       </div>
       <div class="phase-form">
-        <FloatLabel variant="on"
-          ><InputText
+        <FloatLabel variant="on">
+          <InputText
             id="phaseCode"
             v-model="form.code"
             maxlength="50"
             :disabled="Boolean(form.pkid)"
             class="w-full"
             autofocus
-          /><label for="phaseCode">Código *</label></FloatLabel
-        >
-        <FloatLabel variant="on"
-          ><InputText
+          />
+          <label for="phaseCode">Código *</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <InputText
             id="phaseDescription"
             v-model="form.description"
             maxlength="145"
             class="w-full"
-          /><label for="phaseDescription">Descripción *</label></FloatLabel
-        >
-        <FloatLabel variant="on"
-          ><Select
-            id="phaseCategory"
-            v-model="form.category"
-            :options="categories"
-            optionLabel="label"
-            optionValue="code"
-            class="w-full"
-            @change="categoryChanged"
-          /><label for="phaseCategory">Categoría *</label></FloatLabel
-        >
-        <FloatLabel variant="on"
-          ><InputText
+          />
+          <label for="phaseDescription">Descripción *</label>
+        </FloatLabel>
+        <div class="category-field">
+          <FloatLabel variant="on">
+            <Select
+              id="phaseCategory"
+              v-model="form.category"
+              :options="categorySelectOptions"
+              optionLabel="label"
+              optionValue="code"
+              class="w-full"
+              @change="categoryChanged"
+            />
+            <label for="phaseCategory">Categoría *</label>
+          </FloatLabel>
+          <Button
+            icon="pi pi-cog"
+            outlined
+            severity="secondary"
+            title="Mantener categorías"
+            @click="openCategoryMaintenance"
+          />
+        </div>
+        <FloatLabel variant="on">
+          <InputText
             id="phaseWorkCenter"
             v-model="form.workCenter"
             maxlength="145"
             class="w-full"
-          /><label for="phaseWorkCenter">Centro de trabajo</label></FloatLabel
-        >
-        <FloatLabel variant="on"
-          ><InputNumber
+          />
+          <label for="phaseWorkCenter">Centro de trabajo</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <InputNumber
             id="phaseHourlyCost"
             v-model="form.hourlyCost"
             mode="currency"
@@ -254,31 +260,32 @@
             :min="0"
             :maxFractionDigits="4"
             class="w-full"
-          /><label for="phaseHourlyCost">Coste por hora</label></FloatLabel
-        >
-        <label class="check-card"
-          ><Checkbox v-model="form.subcontracted" binary /><span
+          />
+          <label for="phaseHourlyCost">Coste por hora</label>
+        </FloatLabel>
+        <label class="check-card">
+          <Checkbox v-model="form.subcontracted" binary />
+          <span
             ><strong>Fase subcontratada</strong
             ><small
               >El trabajo lo realiza normalmente un proveedor externo.</small
             ></span
-          ></label
-        >
-        <FloatLabel variant="on" class="instructions-field"
-          ><Textarea
+          >
+        </label>
+        <FloatLabel variant="on" class="instructions-field">
+          <Textarea
             id="phaseInstructions"
             v-model="form.instructions"
             rows="6"
             maxlength="10000"
             autoResize
             class="w-full"
-          /><label for="phaseInstructions"
-            >Instrucciones generales</label
-          ></FloatLabel
-        >
+          />
+          <label for="phaseInstructions">Instrucciones generales</label>
+        </FloatLabel>
       </div>
-      <template #footer
-        ><div class="dialog-footer">
+      <template #footer>
+        <div class="dialog-footer">
           <div class="kiwik-separator"></div>
           <div>
             <Button
@@ -290,6 +297,149 @@
               icon="pi pi-check"
               :loading="saving"
               @click="savePhase"
+            />
+          </div>
+        </div>
+      </template>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="categoryMaintenanceVisible"
+      modal
+      header="Categorías de fabricación"
+      :style="{ width: 'min(850px, 96vw)' }"
+      class="kiwik-dialog category-maintenance-dialog"
+      @hide="categoriesMaintenanceClosed"
+    >
+      <div class="maintenance-heading">
+        <div>
+          <strong>Categorías disponibles para las fases</strong
+          ><small
+            >Las categorías inactivas se conservan en las fases
+            históricas.</small
+          >
+        </div>
+        <Button
+          label="Nueva categoría"
+          icon="pi pi-plus"
+          @click="openNewCategory"
+        />
+      </div>
+      <div class="category-table-shell">
+        <GenericDataTable
+          ref="categoryTable"
+          endpoint="WebGetManufacturingPhaseCategories"
+          dataKey="pkid"
+          :requestConfig="auth.portalRequestConfig"
+          :showPaginator="true"
+          :filterable="true"
+          :showActions="false"
+          :pageSize="10"
+          :pageSizeOptions="[10, 25, 50]"
+          @load-error="tableLoadError"
+        >
+          <Column field="code" header="Código" sortable style="width: 130px">
+            <template #body="{ data }"
+              ><span class="phase-code">{{ data.code }}</span></template
+            >
+          </Column>
+          <Column field="description" header="Descripción" sortable />
+          <Column
+            field="phaseCount"
+            header="Fases"
+            style="width: 100px"
+            bodyClass="text-right"
+          />
+          <Column field="active" header="Estado" sortable style="width: 110px">
+            <template #body="{ data }"
+              ><span
+                :class="[
+                  'status-tag',
+                  data.active ? 'is-active' : 'is-inactive',
+                ]"
+                >{{ data.active ? "Activa" : "Inactiva" }}</span
+              ></template
+            >
+          </Column>
+          <Column header="Acciones" style="width: 125px">
+            <template #body="{ data }">
+              <div class="row-actions">
+                <Button
+                  icon="pi pi-pencil"
+                  text
+                  rounded
+                  severity="secondary"
+                  title="Editar categoría"
+                  @click="openEditCategory(data)"
+                />
+                <Button
+                  :icon="data.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                  text
+                  rounded
+                  :severity="data.active ? 'danger' : 'success'"
+                  :title="
+                    data.active ? 'Desactivar categoría' : 'Activar categoría'
+                  "
+                  @click="toggleCategory(data)"
+                />
+              </div>
+            </template>
+          </Column>
+        </GenericDataTable>
+      </div>
+      <template #footer
+        ><div class="dialog-footer">
+          <div class="kiwik-separator"></div>
+          <div>
+            <Button
+              label="Cerrar"
+              icon="pi pi-times"
+              @click="categoryMaintenanceVisible = false"
+            />
+          </div></div
+      ></template>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="categoryDialogVisible"
+      modal
+      :header="categoryForm.pkid ? 'Editar categoría' : 'Nueva categoría'"
+      :style="{ width: 'min(560px, 94vw)' }"
+      class="kiwik-dialog"
+    >
+      <div class="category-form">
+        <FloatLabel variant="on"
+          ><InputText
+            id="categoryCode"
+            v-model="categoryForm.code"
+            maxlength="20"
+            :disabled="Boolean(categoryForm.pkid)"
+            class="w-full"
+            autofocus
+          /><label for="categoryCode">Código *</label></FloatLabel
+        >
+        <FloatLabel variant="on"
+          ><InputText
+            id="categoryDescription"
+            v-model="categoryForm.description"
+            maxlength="145"
+            class="w-full"
+          /><label for="categoryDescription">Descripción *</label></FloatLabel
+        >
+      </div>
+      <template #footer
+        ><div class="dialog-footer">
+          <div class="kiwik-separator"></div>
+          <div>
+            <Button
+              label="Cancelar"
+              text
+              @click="categoryDialogVisible = false"
+            /><Button
+              :label="categoryForm.pkid ? 'Guardar cambios' : 'Crear categoría'"
+              icon="pi pi-check"
+              :loading="categorySaving"
+              @click="saveCategory"
             />
           </div></div
       ></template>
@@ -304,17 +454,15 @@ import axios from "axios";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import Column from "primevue/column";
-import DataTable from "primevue/datatable";
 import Dialog from "primevue/dialog";
 import FloatLabel from "primevue/floatlabel";
-import IconField from "primevue/iconfield";
-import InputIcon from "primevue/inputicon";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
+import GenericDataTable from "@/components/shared/GenericDataTable.vue";
 import { backendUrl } from "@/services/backendUrl";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -329,71 +477,94 @@ type Phase = {
   subcontracted: boolean;
   active: boolean;
 };
+type PhaseCategory = {
+  pkid: number | null;
+  code: string;
+  description: string;
+  active: boolean;
+  phaseCount?: number;
+};
 
 const router = useRouter();
 const toast = useToast();
 const auth = useAuthStore();
-const loading = ref(false);
+const phaseTable = ref<InstanceType<typeof GenericDataTable>>();
+const categoryTable = ref<InstanceType<typeof GenericDataTable>>();
 const saving = ref(false);
+const categorySaving = ref(false);
 const dialogVisible = ref(false);
-const search = ref("");
-const categoryFilter = ref("ALL");
-const phases = ref<Phase[]>([]);
+const categoryMaintenanceVisible = ref(false);
+const categoryDialogVisible = ref(false);
+const categoryFilter = ref("");
+const categories = ref<PhaseCategory[]>([]);
 const summary = reactive({
   total: 0,
   active: 0,
   categories: 0,
   subcontracted: 0,
 });
-const emptyPhase = (): Phase => ({
-  pkid: null,
-  code: "",
-  description: "",
-  category: "",
-  workCenter: "",
-  hourlyCost: null,
-  instructions: "",
-  subcontracted: false,
-  active: true,
-});
 const form = reactive<Phase>(emptyPhase());
-const categories = [
-  { code: "PRE", label: "Preparación", icon: "pi pi-cog" },
-  { code: "MEC", label: "Mecanizado", icon: "pi pi-wrench" },
-  { code: "MON", label: "Montaje", icon: "pi pi-sitemap" },
-  { code: "SOL", label: "Soldadura", icon: "pi pi-bolt" },
-  { code: "TRA", label: "Tratamiento", icon: "pi pi-sparkles" },
-  { code: "MAN", label: "Manipulación", icon: "pi pi-box" },
-  { code: "CAL", label: "Calidad", icon: "pi pi-verified" },
-  { code: "PRU", label: "Pruebas", icon: "pi pi-check-circle" },
-  { code: "SUB", label: "Subcontratación", icon: "pi pi-send" },
-  { code: "EMB", label: "Embalaje", icon: "pi pi-inbox" },
-];
-const categoryFilterOptions = computed(() => [
-  { value: "ALL", label: "Todas las categorías" },
-  ...categories.map((item) => ({ value: item.code, label: item.label })),
-]);
-const categoryByCode = (code: string) =>
-  categories.find((item) => item.code === code) || {
-    code,
-    label: code || "Sin categoría",
-    icon: "pi pi-tag",
+const categoryForm = reactive<PhaseCategory>(emptyCategory());
+
+function emptyPhase(): Phase {
+  return {
+    pkid: null,
+    code: "",
+    description: "",
+    category: "",
+    workCenter: "",
+    hourlyCost: null,
+    instructions: "",
+    subcontracted: false,
+    active: true,
   };
-const filteredPhases = computed(() => {
-  const term = search.value.trim().toLocaleLowerCase("es");
-  return phases.value.filter(
-    (item) =>
-      (categoryFilter.value === "ALL" ||
-        item.category === categoryFilter.value) &&
-      (!term ||
-        [item.code, item.description, item.workCenter, item.instructions].some(
-          (value) =>
-            String(value || "")
-              .toLocaleLowerCase("es")
-              .includes(term),
-        )),
-  );
-});
+}
+function emptyCategory(): PhaseCategory {
+  return { pkid: null, code: "", description: "", active: true, phaseCount: 0 };
+}
+
+const summaryCards = computed(() => [
+  {
+    label: "Fases registradas",
+    value: summary.total,
+    icon: "pi pi-list",
+    style: "total",
+  },
+  {
+    label: "Fases activas",
+    value: summary.active,
+    icon: "pi pi-check-circle",
+    style: "active",
+  },
+  {
+    label: "Categorías utilizadas",
+    value: summary.categories,
+    icon: "pi pi-tags",
+    style: "category",
+  },
+  {
+    label: "Subcontratadas",
+    value: summary.subcontracted,
+    icon: "pi pi-send",
+    style: "external",
+  },
+]);
+const categoryFilterOptions = computed(() => [
+  { value: "", label: "Todas las categorías" },
+  ...categories.value.map((item) => ({
+    value: item.code,
+    label: item.description,
+  })),
+]);
+const categorySelectOptions = computed(() =>
+  categories.value
+    .filter((item) => item.active || item.code === form.category)
+    .map((item) => ({ code: item.code, label: item.description })),
+);
+const categoryLabel = (code: string) =>
+  categories.value.find((item) => item.code === code)?.description ||
+  code ||
+  "Sin categoría";
 const fmt = (value: number) =>
   Number(value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 });
 const money = (value: number | null) =>
@@ -408,32 +579,30 @@ const money = (value: number | null) =>
 const errorMessage = (error: any, fallback: string) =>
   typeof error?.response?.data === "string" ? error.response.data : fallback;
 
-const loadPhases = async () => {
-  loading.value = true;
-  try {
-    const [{ data }, summaryResponse] = await Promise.all([
-      axios.get(
-        backendUrl("/WebGetManufacturingPhases"),
-        auth.portalRequestConfig(),
-      ),
-      axios.get(
-        backendUrl("/WebGetManufacturingPhaseSummary"),
-        auth.portalRequestConfig(),
-      ),
-    ]);
-    phases.value = Array.isArray(data) ? data : [];
-    Object.assign(summary, summaryResponse.data || {});
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "No se pudieron cargar las fases",
-      detail: errorMessage(error, "Revisa la conexión con el servidor."),
-      life: 5000,
-    });
-  } finally {
-    loading.value = false;
-  }
+const loadSummary = async () => {
+  const { data } = await axios.get(
+    backendUrl("/WebGetManufacturingPhaseSummary"),
+    auth.portalRequestConfig(),
+  );
+  Object.assign(summary, data || {});
 };
+const loadCategories = async () => {
+  const { data } = await axios.get(
+    backendUrl("/WebGetManufacturingPhaseCategories"),
+    { ...auth.portalRequestConfig(), params: { page: 0, size: 500 } },
+  );
+  categories.value = Array.isArray(data?.content) ? data.content : [];
+};
+const refreshPhases = (silent = true) => phaseTable.value?.refresh(silent);
+const refreshCategories = (silent = true) =>
+  categoryTable.value?.refresh(silent);
+const tableLoadError = (error: any) =>
+  toast.add({
+    severity: "error",
+    summary: "No se pudieron cargar los datos",
+    detail: errorMessage(error, "Revisa la conexión con el servidor."),
+    life: 5000,
+  });
 const openNewPhase = () => {
   Object.assign(form, emptyPhase());
   dialogVisible.value = true;
@@ -445,6 +614,7 @@ const openEditPhase = (phase: Phase) => {
 const categoryChanged = () => {
   if (form.category === "SUB") form.subcontracted = true;
 };
+
 const savePhase = async () => {
   if (!form.code.trim() || !form.description.trim() || !form.category) {
     toast.add({
@@ -463,7 +633,7 @@ const savePhase = async () => {
       auth.portalRequestConfig(),
     );
     dialogVisible.value = false;
-    await loadPhases();
+    await Promise.all([refreshPhases(false), loadSummary()]);
     toast.add({
       severity: "success",
       summary: "Fase guardada",
@@ -488,7 +658,7 @@ const togglePhase = async (phase: Phase) => {
       {},
       auth.portalRequestConfig(),
     );
-    await loadPhases();
+    await Promise.all([refreshPhases(false), loadSummary()]);
     toast.add({
       severity: "success",
       summary: phase.active ? "Fase desactivada" : "Fase activada",
@@ -504,7 +674,90 @@ const togglePhase = async (phase: Phase) => {
     });
   }
 };
-onMounted(loadPhases);
+
+const openCategoryMaintenance = async () => {
+  categoryMaintenanceVisible.value = true;
+  await loadCategories();
+};
+const openNewCategory = () => {
+  Object.assign(categoryForm, emptyCategory());
+  categoryDialogVisible.value = true;
+};
+const openEditCategory = (category: PhaseCategory) => {
+  Object.assign(categoryForm, { ...category });
+  categoryDialogVisible.value = true;
+};
+const saveCategory = async () => {
+  if (!categoryForm.code.trim() || !categoryForm.description.trim()) {
+    toast.add({
+      severity: "warn",
+      summary: "Datos incompletos",
+      detail: "Indica el código y la descripción.",
+      life: 4000,
+    });
+    return;
+  }
+  categorySaving.value = true;
+  try {
+    await axios.post(
+      backendUrl("/WebSaveManufacturingPhaseCategory"),
+      categoryForm,
+      auth.portalRequestConfig(),
+    );
+    categoryDialogVisible.value = false;
+    await Promise.all([refreshCategories(false), loadCategories()]);
+    toast.add({
+      severity: "success",
+      summary: "Categoría guardada",
+      detail: categoryForm.description,
+      life: 3000,
+    });
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "No se pudo guardar la categoría",
+      detail: errorMessage(error, "Revisa los datos e inténtalo de nuevo."),
+      life: 5000,
+    });
+  } finally {
+    categorySaving.value = false;
+  }
+};
+const toggleCategory = async (category: PhaseCategory) => {
+  try {
+    await axios.post(
+      backendUrl(`/WebToggleManufacturingPhaseCategory/${category.pkid}`),
+      {},
+      auth.portalRequestConfig(),
+    );
+    await Promise.all([refreshCategories(false), loadCategories()]);
+    toast.add({
+      severity: "success",
+      summary: category.active ? "Categoría desactivada" : "Categoría activada",
+      detail: category.description,
+      life: 3000,
+    });
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "No se pudo cambiar el estado",
+      detail: errorMessage(error, "Inténtalo de nuevo."),
+      life: 4500,
+    });
+  }
+};
+const categoriesMaintenanceClosed = async () => {
+  await loadCategories();
+  refreshPhases();
+};
+
+onMounted(async () => {
+  try {
+    await Promise.all([loadCategories(), loadSummary()]);
+  } catch (error) {
+    tableLoadError(error);
+  }
+});
 </script>
 
 <style scoped>
@@ -560,9 +813,6 @@ onMounted(loadPhases);
   color: #fff;
   background: linear-gradient(135deg, #8d78dc, #6250ad);
   box-shadow: 0 7px 16px rgba(98, 80, 173, 0.22);
-}
-.toolbar-icon i {
-  font-size: 1.3rem;
 }
 .breadcrumb {
   color: #7d9e0b;
@@ -640,11 +890,7 @@ onMounted(loadPhases);
   box-shadow: 0 5px 18px rgba(31, 41, 55, 0.055);
 }
 .panel-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 17px 18px;
+  padding: 14px 18px;
   border-bottom: 2px solid #9cc10a;
   background: #fbfdf7;
 }
@@ -657,19 +903,11 @@ onMounted(loadPhases);
   color: #7d8797;
   font-size: 0.78rem;
 }
-.phase-filters {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.phase-filters input {
-  width: 310px;
+.phase-table-shell {
+  height: 620px;
 }
 .category-filter {
-  width: 220px;
-}
-.phase-table {
-  padding: 0 8px 8px;
+  width: 230px;
 }
 .phase-code {
   display: inline-flex;
@@ -728,21 +966,6 @@ onMounted(loadPhases);
   display: flex;
   gap: 2px;
 }
-.empty-state {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  gap: 6px;
-  padding: 45px;
-  color: #7e8796;
-}
-.empty-state > i {
-  font-size: 2rem;
-  color: #9cc10a;
-}
-.empty-state span {
-  font-size: 0.82rem;
-}
 .dialog-intro {
   display: flex;
   align-items: flex-start;
@@ -764,6 +987,11 @@ onMounted(loadPhases);
   grid-template-columns: 180px 1fr;
   gap: 16px 12px;
 }
+.category-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
 .instructions-field {
   grid-column: 1/-1;
 }
@@ -777,14 +1005,16 @@ onMounted(loadPhases);
   background: #fbfcf8;
   cursor: pointer;
 }
-.check-card span {
+.check-card span,
+.maintenance-heading > div {
   display: flex;
   flex-direction: column;
 }
 .check-card strong {
   font-size: 0.78rem;
 }
-.check-card small {
+.check-card small,
+.maintenance-heading small {
   color: #7d8797;
   font-size: 0.68rem;
 }
@@ -801,23 +1031,24 @@ onMounted(loadPhases);
   margin: 4px 0 12px;
   background: #9cc10a;
 }
+.maintenance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 12px;
+}
+.category-table-shell {
+  height: 470px;
+}
+.category-form {
+  display: grid;
+  gap: 16px;
+  padding: 4px 0;
+}
 @media (max-width: 1000px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .panel-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .phase-filters {
-    width: 100%;
-  }
-  .phase-filters .p-iconfield,
-  .phase-filters input {
-    width: 100%;
-  }
-  .category-filter {
-    width: 240px;
   }
 }
 @media (max-width: 680px) {
@@ -838,18 +1069,15 @@ onMounted(loadPhases);
   .summary-grid {
     grid-template-columns: 1fr 1fr;
   }
-  .phase-filters {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .category-filter {
-    width: 100%;
-  }
   .phase-form {
     grid-template-columns: 1fr;
   }
   .instructions-field {
     grid-column: auto;
+  }
+  .maintenance-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>
