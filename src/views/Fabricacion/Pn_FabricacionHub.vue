@@ -42,6 +42,11 @@
         <p>Operaciones reutilizables que definirán cómo se fabrica cada producto.</p>
       </div>
       <div class="app-grid">
+        <button class="app-card" type="button" @click="openWorkCenters">
+          <span class="app-card-icon work-centers"><i class="pi pi-building"></i></span>
+          <span class="app-card-copy"><strong>Centros de trabajo</strong><small>Mantén máquinas, puestos, líneas, áreas y centros externos disponibles para las fases.</small><span><i class="pi pi-check"></i> Capacidad y coste <i class="pi pi-check"></i> Recursos alternativos</span></span>
+          <i class="pi pi-angle-right card-arrow"></i>
+        </button>
         <button class="app-card" type="button" @click="openPhases">
           <span class="app-card-icon phases"><i class="pi pi-list-check"></i></span>
           <span class="app-card-copy"><strong>Maestro de fases</strong><small>Define mecanizado, montaje, soldadura, calidad, pruebas, subcontratación y otras operaciones.</small><span><i class="pi pi-check"></i> Catálogo reutilizable <i class="pi pi-check"></i> Costes y centros</span></span>
@@ -97,6 +102,7 @@ const stats = reactive({ manufacturingProducts: null as number | null, productsW
 const fmt = (value: number) => Number(value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 });
 const openProducts = () => router.push({ name: "ProductosFabricacion", query: { from: "fabricacion" } });
 const openPhases = () => router.push({ name: "FabricacionFases" });
+const openWorkCenters = () => router.push({ name: "FabricacionCentrosTrabajo" });
 const kpis = computed(() => [
   { label: "Productos fabricables", value: stats.manufacturingProducts, detail: "Fabricación interna, externa o mixta", icon: "pi pi-box", gradient: "linear-gradient(135deg,#8eaf23,#536d12)" },
   { label: "Productos con formación", value: stats.productsWithBom, detail: "Con lista vigente o en borrador", icon: "pi pi-sitemap", gradient: "linear-gradient(135deg,#38a4d8,#2875b6)" },
@@ -123,4 +129,5 @@ onMounted(async () => {
 .app-section{margin-top:25px}.section-title{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:12px}.section-title>div{display:flex;align-items:center;gap:8px}.section-title i{color:#7d9e0b}.section-title h2{margin:0;font-size:1rem}.section-title p{margin:0;color:#8a93a2;font-size:.86rem}.app-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px;border:1px solid #dfe4ea;border-radius:14px;background:#f7f9f4}.future-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.app-card{display:flex;align-items:center;gap:15px;min-height:132px;padding:17px 18px;border:1px solid #eef1f4;border-radius:12px;color:inherit;background:#fff;text-align:left;cursor:pointer;box-shadow:0 4px 14px rgba(31,41,55,.05);transition:transform .16s,box-shadow .16s,border-color .16s}.app-card:hover:not(.app-card--disabled){transform:translateY(-3px);border-color:#dceac0;box-shadow:0 10px 24px rgba(31,41,55,.1)}.app-card--disabled{opacity:.58;cursor:default;box-shadow:none}.app-card-icon{display:grid;width:52px;height:52px;flex:0 0 auto;place-items:center;border-radius:12px;color:#fff}.products{background:linear-gradient(135deg,#9cc10a,#719808)}.bom{background:linear-gradient(135deg,#38a4d8,#2875b6)}.process{background:linear-gradient(135deg,#8d78dc,#6250ad)}.orders{background:linear-gradient(135deg,#e8a25c,#c96a1e)}.assembly{background:linear-gradient(135deg,#42b99b,#16846e)}.app-card-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:5px}.app-card-copy strong{font-size:1.02rem}.app-card-copy small{color:#778192;font-size:.86rem;line-height:1.4}.app-card-copy span{display:flex;flex-wrap:wrap;gap:.35rem .75rem;color:#6e7867;font-size:.7rem}.app-card-copy span i{color:#86a906;font-size:.6rem}.app-card-copy em{align-self:flex-start;padding:3px 7px;border-radius:5px;color:#786a75;background:#eee8ed;font-size:.66rem;font-style:normal;font-weight:800;text-transform:uppercase}.card-arrow{color:#7d9e0b}.card-lock{color:#a3aab5}
 @media(max-width:1100px){.kpi-row,.future-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:720px){.manufacturing-hub{padding:12px 10px 84px}.manufacturing-flow{align-items:flex-start;flex-direction:column}.flow-steps{width:100%;justify-content:center}.kpi-row,.app-grid,.future-grid{grid-template-columns:1fr}.section-title{align-items:flex-start;flex-direction:column;gap:5px}}
 .phases{background:linear-gradient(135deg,#8d78dc,#6250ad)}
+.work-centers{background:linear-gradient(135deg,#38a4d8,#2875b6)}
 </style>

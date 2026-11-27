@@ -32,8 +32,7 @@
           ><i :class="item.icon"></i
         ></span>
         <div>
-          <strong>{{ fmt(item.value) }}</strong
-          ><span>{{ item.label }}</span>
+          <strong>{{ fmt(item.value) }}</strong><span>{{ item.label }}</span>
         </div>
       </article>
     </section>
@@ -120,12 +119,13 @@
             </template>
           </Column>
           <Column
-            field="workCenter"
-            header="Centro de trabajo"
-            sortable
-            style="min-width: 180px"
+            field="workCenterNames"
+            header="Centros de trabajo"
+            style="min-width: 220px"
           >
-            <template #body="{ data }">{{ data.workCenter || "—" }}</template>
+            <template #body="{ data }">{{
+              data.workCenterNames || "—"
+            }}</template>
           </Column>
           <Column
             field="hourlyCost"
@@ -241,14 +241,41 @@
             @click="openCategoryMaintenance"
           />
         </div>
+        <div class="work-centers-field">
+          <FloatLabel variant="on">
+            <MultiSelect
+              id="phaseWorkCenters"
+              v-model="form.workCenterIds"
+              :options="workCenterOptions"
+              optionLabel="label"
+              optionValue="value"
+              display="chip"
+              filter
+              class="w-full"
+              @change="workCentersChanged"
+            />
+            <label for="phaseWorkCenters">Centros compatibles</label>
+          </FloatLabel>
+          <Button
+            icon="pi pi-cog"
+            outlined
+            severity="secondary"
+            title="Mantener centros de trabajo"
+            @click="openWorkCenterMaintenance"
+          />
+        </div>
         <FloatLabel variant="on">
-          <InputText
-            id="phaseWorkCenter"
-            v-model="form.workCenter"
-            maxlength="145"
+          <Select
+            id="preferredWorkCenter"
+            v-model="form.preferredWorkCenterId"
+            :options="preferredWorkCenterOptions"
+            optionLabel="label"
+            optionValue="value"
+            :disabled="!form.workCenterIds.length"
+            showClear
             class="w-full"
           />
-          <label for="phaseWorkCenter">Centro de trabajo</label>
+          <label for="preferredWorkCenter">Centro preferente</label>
         </FloatLabel>
         <FloatLabel variant="on">
           <InputNumber
@@ -458,6 +485,7 @@ import Dialog from "primevue/dialog";
 import FloatLabel from "primevue/floatlabel";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
+import MultiSelect from "primevue/multiselect";
 import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import Toast from "primevue/toast";
@@ -471,7 +499,9 @@ type Phase = {
   code: string;
   description: string;
   category: string;
-  workCenter: string;
+  workCenterIds: number[];
+  preferredWorkCenterId: number | null;
+  workCenterNames: string;
   hourlyCost: number | null;
   instructions: string;
   subcontracted: boolean;
@@ -483,6 +513,12 @@ type PhaseCategory = {
   description: string;
   active: boolean;
   phaseCount?: number;
+};
+type WorkCenter = {
+  pkid: number;
+  code: string;
+  name: string;
+  active: boolean;
 };
 
 const router = useRouter();
@@ -497,6 +533,7 @@ const categoryMaintenanceVisible = ref(false);
 const categoryDialogVisible = ref(false);
 const categoryFilter = ref("");
 const categories = ref<PhaseCategory[]>([]);
+const workCenters = ref<WorkCenter[]>([]);
 const summary = reactive({
   total: 0,
   active: 0,
@@ -512,7 +549,9 @@ function emptyPhase(): Phase {
     code: "",
     description: "",
     category: "",
-    workCenter: "",
+    workCenterIds: [],
+    preferredWorkCenterId: null,
+    workCenterNames: "",
     hourlyCost: null,
     instructions: "",
     subcontracted: false,
@@ -561,6 +600,19 @@ const categorySelectOptions = computed(() =>
     .filter((item) => item.active || item.code === form.category)
     .map((item) => ({ code: item.code, label: item.description })),
 );
+const workCenterOptions = computed(() =>
+  workCenters.value
+    .filter((item) => item.active || form.workCenterIds.includes(item.pkid))
+    .map((item) => ({
+      value: item.pkid,
+      label: `${item.code} — ${item.name}`,
+    })),
+);
+const preferredWorkCenterOptions = computed(() =>
+  workCenterOptions.value.filter((item) =>
+    form.workCenterIds.includes(item.value),
+  ),
+);
 const categoryLabel = (code: string) =>
   categories.value.find((item) => item.code === code)?.description ||
   code ||
@@ -593,6 +645,13 @@ const loadCategories = async () => {
   );
   categories.value = Array.isArray(data?.content) ? data.content : [];
 };
+const loadWorkCenters = async () => {
+  const { data } = await axios.get(
+    backendUrl("/WebGetManufacturingWorkCenters"),
+    { ...auth.portalRequestConfig(), params: { page: 0, size: 500 } },
+  );
+  workCenters.value = Array.isArray(data?.content) ? data.content : [];
+};
 const refreshPhases = (silent = true) => phaseTable.value?.refresh(silent);
 const refreshCategories = (silent = true) =>
   categoryTable.value?.refresh(silent);
@@ -613,6 +672,15 @@ const openEditPhase = (phase: Phase) => {
 };
 const categoryChanged = () => {
   if (form.category === "SUB") form.subcontracted = true;
+};
+const workCentersChanged = () => {
+  if (!form.workCenterIds.includes(form.preferredWorkCenterId || -1)) {
+    form.preferredWorkCenterId = form.workCenterIds[0] || null;
+  }
+};
+const openWorkCenterMaintenance = () => {
+  dialogVisible.value = false;
+  router.push({ name: "FabricacionCentrosTrabajo" });
 };
 
 const savePhase = async () => {
@@ -753,7 +821,7 @@ const categoriesMaintenanceClosed = async () => {
 
 onMounted(async () => {
   try {
-    await Promise.all([loadCategories(), loadSummary()]);
+    await Promise.all([loadCategories(), loadWorkCenters(), loadSummary()]);
   } catch (error) {
     tableLoadError(error);
   }
@@ -990,6 +1058,11 @@ onMounted(async () => {
 .category-field {
   display: grid;
   grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+.work-centers-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
 }
 .instructions-field {
