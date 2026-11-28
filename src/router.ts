@@ -197,6 +197,12 @@ const routes = [
         component: () => import('./views/Fabricacion/Frm_CentrosTrabajo.vue')
       },
       {
+        path: '/fabricacion/procesos',
+        name: 'FabricacionProcesos',
+        meta: { perm: PERM.MANUFACTURING_PHASES },
+        component: () => import('./views/Fabricacion/Frm_ProcesosFabricacion.vue')
+      },
+      {
         path: '/tareas',
         name: 'Tareas',
         meta: { perm: PERM.TASK_ACCESS },

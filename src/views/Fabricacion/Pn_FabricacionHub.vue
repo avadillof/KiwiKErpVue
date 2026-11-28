@@ -23,7 +23,7 @@
         <i class="pi pi-angle-right"></i>
         <button type="button" @click="openPhases"><i class="pi pi-list-check"></i><span>Fases</span></button>
         <i class="pi pi-angle-right"></i>
-        <button type="button" disabled><i class="pi pi-sliders-h"></i><span>Proceso</span></button>
+        <button type="button" @click="openProcesses"><i class="pi pi-sliders-h"></i><span>Proceso</span></button>
         <i class="pi pi-angle-right"></i>
         <button type="button" disabled><i class="pi pi-wrench"></i><span>Orden</span></button>
       </div>
@@ -52,7 +52,7 @@
           <span class="app-card-copy"><strong>Maestro de fases</strong><small>Define mecanizado, montaje, soldadura, calidad, pruebas, subcontratación y otras operaciones.</small><span><i class="pi pi-check"></i> Catálogo reutilizable <i class="pi pi-check"></i> Costes y centros</span></span>
           <i class="pi pi-angle-right card-arrow"></i>
         </button>
-        <article class="app-card app-card--disabled"><span class="app-card-icon process"><i class="pi pi-sliders-h"></i></span><span class="app-card-copy"><strong>Procesos de fabricación</strong><small>Revisiones, operaciones, dependencias, tiempos y asignación a productos.</small><em>Siguiente etapa</em></span><i class="pi pi-lock card-lock"></i></article>
+        <button class="app-card" type="button" @click="openProcesses"><span class="app-card-icon process"><i class="pi pi-sliders-h"></i></span><span class="app-card-copy"><strong>Procesos de fabricación</strong><small>Revisiones, operaciones, dependencias y tiempos para organizar flujos secuenciales o paralelos.</small><span><i class="pi pi-check"></i> Revisiones protegidas <i class="pi pi-check"></i> Dependencias sin ciclos</span></span><i class="pi pi-angle-right card-arrow"></i></button>
       </div>
     </section>
 
@@ -103,6 +103,7 @@ const fmt = (value: number) => Number(value || 0).toLocaleString("es-ES", { maxi
 const openProducts = () => router.push({ name: "ProductosFabricacion", query: { from: "fabricacion" } });
 const openPhases = () => router.push({ name: "FabricacionFases" });
 const openWorkCenters = () => router.push({ name: "FabricacionCentrosTrabajo" });
+const openProcesses = () => router.push({ name: "FabricacionProcesos" });
 const kpis = computed(() => [
   { label: "Productos fabricables", value: stats.manufacturingProducts, detail: "Fabricación interna, externa o mixta", icon: "pi pi-box", gradient: "linear-gradient(135deg,#8eaf23,#536d12)" },
   { label: "Productos con formación", value: stats.productsWithBom, detail: "Con lista vigente o en borrador", icon: "pi pi-sitemap", gradient: "linear-gradient(135deg,#38a4d8,#2875b6)" },
