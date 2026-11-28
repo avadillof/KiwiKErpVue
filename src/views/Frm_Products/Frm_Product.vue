@@ -2816,19 +2816,42 @@ const saveBom = async (showSuccess = true): Promise<boolean> => {
 
 const bomReportRows = (): ReportRow[] => {
   const rows: ReportRow[] = [];
+  const quantityFormatter = (value: unknown) => {
+    const quantity = Number(value);
+    if (!Number.isFinite(quantity)) return String(value ?? "");
+    return new Intl.NumberFormat("es-ES", {
+      minimumFractionDigits: Number.isInteger(quantity) ? 0 : 2,
+      maximumFractionDigits: 3,
+    }).format(quantity);
+  };
+  const unitLabel = (value: unknown) => {
+    const unit = String(value ?? "").trim();
+    if (["unit(s)", "units", "unidad(es)"].includes(unit.toLowerCase())) {
+      return "Ud.";
+    }
+    return unit;
+  };
   const visit = (lines: BomLine[], level: number) => {
     directBomLines(lines).forEach((line) => {
+      const hasChildren = directBomLines(line.children || []).length > 0;
+      const treePrefix =
+        level === 1
+          ? hasChildren
+            ? "+ "
+            : "- "
+          : `${"|   ".repeat(Math.max(0, level - 2))}|-- `;
+      const notes = String(line.notes || "").trim();
       rows.push({
         position: line.sequence,
         level,
         code: line.componentCode,
-        description: `${"   ".repeat(Math.max(0, level - 1))}${line.componentDescription}`,
-        quantity: line.quantity,
-        unit: line.uomDescription,
+        description: `${treePrefix}${line.componentDescription}`,
+        quantity: quantityFormatter(line.quantity),
+        unit: unitLabel(line.uomDescription),
         nature:
           manufacturingNatureLabels[line.manufacturingNature] ||
           "Producto físico",
-        notes: line.notes || "",
+        notes: notes.toLowerCase() === "datos de muestra" ? "" : notes,
       });
       visit(line.children || [], level + 1);
     });
